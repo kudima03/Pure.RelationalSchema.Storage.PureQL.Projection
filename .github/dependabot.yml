@@ -2,8 +2,8 @@ version: 2
 updates:
 - package-ecosystem: nuget
   directories:
-    - "src/"
-    - "src/Tests/"
+    - "src/Pure.RelationalSchema.Storage.PureQL.Projection"
+    - "src/Tests/Pure.RelationalSchema.Storage.PureQL.Projection.Tests"
   schedule:
     interval: daily
 - package-ecosystem: "github-actions"
