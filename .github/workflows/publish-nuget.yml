@@ -25,7 +25,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: 9.x.x
+        dotnet-version: 10.x.x
     - name: Package
       run: dotnet pack --configuration Release -p:PackageVersion=${{ github.ref_name }} --output .
     - name: Publish to GitHub packages
