@@ -1,12 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
@@ -16,13 +14,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\Pure.RelationalSchema.Storage.PureQL.Projection\Pure.RelationalSchema.Storage.PureQL.Projection.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
-
 </Project>
