@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>Pure.RelationalSchema.Storage.PureQL.Projection</PackageId>
+    <RootNamespace>Pure.RelationalSchema.Storage.PureQL.Projection</RootNamespace>
+    <AssemblyName>Pure.RelationalSchema.Storage.PureQL.Projection</AssemblyName>
+    <Authors>Dmitry Kurochkin</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection</PackageProjectUrl>
+  </PropertyGroup>
 </Project>
