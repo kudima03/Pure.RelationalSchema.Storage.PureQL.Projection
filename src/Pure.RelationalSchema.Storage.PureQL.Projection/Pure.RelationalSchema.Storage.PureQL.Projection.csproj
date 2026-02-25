@@ -21,5 +21,6 @@
       Include="Pure.RelationalSchema.Storage.Abstractions"
       Version="0.1.0-preview.4.1.0"
     />
+    <PackageReference Include="PureQL.CSharp.Model" Version="0.1.0-preview.10.0.0" />
   </ItemGroup>
 </Project>
