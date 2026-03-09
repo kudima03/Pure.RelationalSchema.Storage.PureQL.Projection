@@ -8,38 +8,32 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 public sealed record PureQLProjection : IStoredTableDataSet
 {
-#pragma warning disable IDE0052 // Remove unread private members
-
-    private readonly IEnumerable<IStoredSchemaDataSet> _datasets;
-
-    private readonly Query _query;
-
-#pragma warning restore IDE0052 // Remove unread private members
+    private readonly IQueryable<IRow> _rows;
 
     public PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)
     {
-        _datasets = datasets;
-        _query = query;
+        TableSchema = new TableFromQuery(query);
+        _rows = new RowsFromDatasets(datasets, query).AsQueryable();
     }
 
-    public ITable TableSchema => new TableFromQuery(_query);
+    public ITable TableSchema { get; }
 
-    public Type ElementType => throw new NotImplementedException();
+    public Type ElementType => _rows.ElementType;
 
-    public Expression Expression => throw new NotImplementedException();
+    public Expression Expression => _rows.Expression;
 
-    public IQueryProvider Provider => throw new NotImplementedException();
+    public IQueryProvider Provider => _rows.Provider;
 
     public IAsyncEnumerator<IRow> GetAsyncEnumerator(
         CancellationToken cancellationToken = default
     )
     {
-        throw new NotImplementedException();
+        return _rows.ToAsyncEnumerable().GetAsyncEnumerator(cancellationToken);
     }
 
     public IEnumerator<IRow> GetEnumerator()
     {
-        throw new NotImplementedException();
+        return _rows.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
