@@ -4,7 +4,7 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsAotCompatible>true</IsAotCompatible>
+    <IsAotCompatible>false</IsAotCompatible>
     <EnablePackageValidation>true</EnablePackageValidation>
     <PackageValidationBaselineVersion>0.1.0-preview.0.1.0</PackageValidationBaselineVersion>
   </PropertyGroup>
