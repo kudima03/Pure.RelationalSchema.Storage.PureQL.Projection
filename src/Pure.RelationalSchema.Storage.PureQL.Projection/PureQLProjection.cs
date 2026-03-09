@@ -22,7 +22,7 @@ public sealed record PureQLProjection : IStoredTableDataSet
         _query = query;
     }
 
-    public ITable TableSchema => throw new NotImplementedException();
+    public ITable TableSchema => new TableFromQuery(_query);
 
     public Type ElementType => throw new NotImplementedException();
 
