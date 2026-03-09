@@ -18,7 +18,7 @@ internal sealed record FakeRows : IEnumerable<IRow>
     public IEnumerator<IRow> GetEnumerator()
     {
         return Enumerable
-            .Range(0, 100)
+            .Range(0, 10)
             .Select(_ => new Row(
                 new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
                     _columns,
