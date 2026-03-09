@@ -2,18 +2,20 @@ using System.Collections;
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
-using PureQL.CSharp.Model;
 
-namespace Pure.RelationalSchema.Storage.PureQL.Projection;
+namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Fakes;
 
-public sealed record PureQLProjection : IStoredTableDataSet
+internal sealed record FakeStoredTableDataset : IStoredTableDataSet
 {
     private readonly IQueryable<IRow> _rows;
 
-    public PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)
+    public FakeStoredTableDataset(ITable tableSchema)
+        : this(tableSchema, new FakeRows(tableSchema.Columns).ToArray().AsQueryable()) { }
+
+    public FakeStoredTableDataset(ITable tableSchema, IQueryable<IRow> rows)
     {
-        TableSchema = new TableFromQuery(query);
-        _rows = new RowsFromDatasets(datasets, query).AsQueryable();
+        TableSchema = tableSchema;
+        _rows = rows;
     }
 
     public ITable TableSchema { get; }
