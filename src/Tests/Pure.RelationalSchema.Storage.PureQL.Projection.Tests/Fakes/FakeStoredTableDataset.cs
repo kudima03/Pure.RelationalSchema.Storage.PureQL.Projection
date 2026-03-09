@@ -10,7 +10,7 @@ internal sealed record FakeStoredTableDataset : IStoredTableDataSet
     private readonly IQueryable<IRow> _rows;
 
     public FakeStoredTableDataset(ITable tableSchema)
-        : this(tableSchema, new FakeRows(tableSchema.Columns).AsQueryable()) { }
+        : this(tableSchema, new FakeRows(tableSchema.Columns).ToArray().AsQueryable()) { }
 
     public FakeStoredTableDataset(ITable tableSchema, IQueryable<IRow> rows)
     {
