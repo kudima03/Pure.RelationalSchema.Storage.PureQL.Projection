@@ -57,7 +57,7 @@ jobs:
         output: both
         thresholds: "${{ env.COVERAGE_THRESHOLD }} ${{ env.COVERAGE_WARNING_THRESHOLD }}"
     - name: Add Coverage PR Comment
-      uses: marocchino/sticky-pull-request-comment@v2
+      uses: marocchino/sticky-pull-request-comment@v3
       if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
       with:
         recreate: true
