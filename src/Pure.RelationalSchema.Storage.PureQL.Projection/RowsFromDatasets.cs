@@ -77,6 +77,11 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
             queryable = OrderByApplicator.Apply(queryable, query.OrderBy);
         }
 
+        if (query.GroupBy is not null)
+        {
+            queryable = GroupByApplicator.Apply(queryable, query.GroupBy, query.Having);
+        }
+
         if (query.Pagination is not null)
         {
             queryable = queryable.Skip((int)query.Pagination.Skip);
