@@ -442,12 +442,42 @@ internal static class WhereExpressionBuilder
         );
     }
 
+    private static readonly MethodInfo StringCompareOrdinalMethod =
+        typeof(string).GetMethod(
+            nameof(string.CompareOrdinal),
+            [typeof(string), typeof(string)]
+        )!;
+
     private static Expression BuildTypedComparison(
         Expression left,
         Expression right,
         ComparisonOperator op
     )
     {
+        if (left.Type == typeof(string))
+        {
+            Expression compareExpr = Expression.Call(
+                StringCompareOrdinalMethod,
+                left,
+                right
+            );
+            Expression zero = Expression.Constant(0);
+            return op switch
+            {
+                ComparisonOperator.GreaterThan => Expression.GreaterThan(compareExpr, zero),
+                ComparisonOperator.GreaterThanOrEqual => Expression.GreaterThanOrEqual(
+                    compareExpr,
+                    zero
+                ),
+                ComparisonOperator.LessThan => Expression.LessThan(compareExpr, zero),
+                ComparisonOperator.LessThanOrEqual => Expression.LessThanOrEqual(
+                    compareExpr,
+                    zero
+                ),
+                _ => throw new NotSupportedException($"Unknown comparison operator: {op}"),
+            };
+        }
+
         return op switch
         {
             ComparisonOperator.GreaterThan => Expression.GreaterThan(left, right),
