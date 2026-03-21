@@ -82,7 +82,7 @@ internal static class WhereExpressionBuilder
             scalar => Expression.Constant(scalar.Value),
             equality => BuildEquality(equality, row),
             op => BuildBooleanOperator(op, row),
-            comparison => BuildComparison(comparison, row)
+            BuildComparison
         );
     }
 
@@ -92,14 +92,13 @@ internal static class WhereExpressionBuilder
     )
     {
         return equality.Match(
-            single => BuildSingleValueEquality(single, row),
+            BuildSingleValueEquality,
             array => BuildArrayEquality(array, row)
         );
     }
 
     private static Expression BuildSingleValueEquality(
-        SingleValueEquality equality,
-        ParameterExpression row
+        SingleValueEquality equality
     )
     {
         return equality.Match(
@@ -404,8 +403,7 @@ internal static class WhereExpressionBuilder
     }
 
     private static Expression BuildComparison(
-        Comparison comparison,
-        ParameterExpression row
+        Comparison comparison
     )
     {
         return comparison.Match(
@@ -464,7 +462,10 @@ internal static class WhereExpressionBuilder
             Expression zero = Expression.Constant(0);
             return op switch
             {
-                ComparisonOperator.GreaterThan => Expression.GreaterThan(compareExpr, zero),
+                ComparisonOperator.GreaterThan => Expression.GreaterThan(
+                    compareExpr,
+                    zero
+                ),
                 ComparisonOperator.GreaterThanOrEqual => Expression.GreaterThanOrEqual(
                     compareExpr,
                     zero
@@ -474,7 +475,9 @@ internal static class WhereExpressionBuilder
                     compareExpr,
                     zero
                 ),
-                _ => throw new NotSupportedException($"Unknown comparison operator: {op}"),
+                _ => throw new NotSupportedException(
+                    $"Unknown comparison operator: {op}"
+                ),
             };
         }
 
