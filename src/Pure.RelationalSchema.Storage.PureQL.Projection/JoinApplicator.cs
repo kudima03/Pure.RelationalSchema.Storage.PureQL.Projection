@@ -140,16 +140,17 @@ internal static class JoinApplicator
             .Cells.Keys.Select(c => c.Name.TextValue)
             .ToHashSet();
 
-        IEnumerable<KeyValuePair<IColumn, ICell>> rightOnly = rightRow
-            .Cells.Where(kvp => !leftNames.Contains(kvp.Key.Name.TextValue));
+        List<KeyValuePair<IColumn, ICell>> rightOnly = rightRow
+            .Cells.Where(kvp => !leftNames.Contains(kvp.Key.Name.TextValue))
+            .ToList();
 
         List<IColumn> allColumns = leftRow
             .Cells.Keys.Concat(rightOnly.Select(kvp => kvp.Key))
             .ToList();
 
-        IReadOnlyDictionary<IColumn, ICell> allCells = leftRow
+        List<KeyValuePair<IColumn, ICell>> allCells = leftRow
             .Cells.Concat(rightOnly)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            .ToList();
 
         return new Row(
             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
