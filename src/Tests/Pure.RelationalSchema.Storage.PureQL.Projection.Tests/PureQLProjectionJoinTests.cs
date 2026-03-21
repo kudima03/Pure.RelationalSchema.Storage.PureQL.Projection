@@ -110,33 +110,25 @@ public sealed record PureQLProjectionJoinTests
                             rightDataset[rightTable]
                                 .AsEnumerable()
                                 .Where(r =>
-                                    r.Cells
-                                        .First(
-                                            kvp =>
-                                                kvp.Key.Name.TextValue == rightCol.Name.TextValue
-                                        )
-                                        .Value.Value.TextValue
-                                    == l.Cells
-                                        .First(
-                                            kvp =>
-                                                kvp.Key.Name.TextValue == leftCol.Name.TextValue
-                                        )
-                                        .Value.Value.TextValue
+                                    r.Cells.First(kvp =>
+                                        kvp.Key.Name.TextValue == rightCol.Name.TextValue
+                                    ).Value.Value.TextValue
+                                    == l.Cells.First(kvp =>
+                                        kvp.Key.Name.TextValue == leftCol.Name.TextValue
+                                    ).Value.Value.TextValue
                                 )
-                                .Select(_ =>
-                                    new Row(
-                                        new Collections.Generic.Dictionary<
-                                            IColumn,
-                                            IColumn,
-                                            ICell
-                                        >(
-                                            [leftCol],
-                                            c => c,
-                                            c => l.Cells[c],
-                                            c => new ColumnHash(c)
-                                        )
+                                .Select(_ => new Row(
+                                    new Collections.Generic.Dictionary<
+                                        IColumn,
+                                        IColumn,
+                                        ICell
+                                    >(
+                                        [leftCol],
+                                        c => c,
+                                        c => l.Cells[c],
+                                        c => new ColumnHash(c)
                                     )
-                                )
+                                ))
                         )
                         .Select(x => new RowHash(x))
                 )
@@ -211,16 +203,14 @@ public sealed record PureQLProjectionJoinTests
                 new DeterminedHash(
                     leftDataset[leftTable]
                         .AsEnumerable()
-                        .Select(l =>
-                            new Row(
-                                new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
-                                    [leftCol],
-                                    c => c,
-                                    c => l.Cells[c],
-                                    c => new ColumnHash(c)
-                                )
+                        .Select(l => new Row(
+                            new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
+                                [leftCol],
+                                c => c,
+                                c => l.Cells[c],
+                                c => new ColumnHash(c)
                             )
-                        )
+                        ))
                         .Select(x => new RowHash(x))
                 )
             )
@@ -294,16 +284,14 @@ public sealed record PureQLProjectionJoinTests
                 new DeterminedHash(
                     rightDataset[rightTable]
                         .AsEnumerable()
-                        .Select(r =>
-                            new Row(
-                                new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
-                                    [rightCol],
-                                    c => c,
-                                    c => r.Cells[c],
-                                    c => new ColumnHash(c)
-                                )
+                        .Select(r => new Row(
+                            new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
+                                [rightCol],
+                                c => c,
+                                c => r.Cells[c],
+                                c => new ColumnHash(c)
                             )
-                        )
+                        ))
                         .Select(x => new RowHash(x))
                 )
             )
@@ -402,33 +390,25 @@ public sealed record PureQLProjectionJoinTests
                             rightDataset[rightTable]
                                 .AsEnumerable()
                                 .Where(r =>
-                                    r.Cells
-                                        .First(
-                                            kvp =>
-                                                kvp.Key.Name.TextValue == rightCol.Name.TextValue
-                                        )
-                                        .Value.Value.TextValue
-                                    == l.Cells
-                                        .First(
-                                            kvp =>
-                                                kvp.Key.Name.TextValue == leftCol.Name.TextValue
-                                        )
-                                        .Value.Value.TextValue
+                                    r.Cells.First(kvp =>
+                                        kvp.Key.Name.TextValue == rightCol.Name.TextValue
+                                    ).Value.Value.TextValue
+                                    == l.Cells.First(kvp =>
+                                        kvp.Key.Name.TextValue == leftCol.Name.TextValue
+                                    ).Value.Value.TextValue
                                 )
-                                .Select(_ =>
-                                    new Row(
-                                        new Collections.Generic.Dictionary<
-                                            IColumn,
-                                            IColumn,
-                                            ICell
-                                        >(
-                                            [leftCol],
-                                            c => c,
-                                            c => l.Cells[c],
-                                            c => new ColumnHash(c)
-                                        )
+                                .Select(_ => new Row(
+                                    new Collections.Generic.Dictionary<
+                                        IColumn,
+                                        IColumn,
+                                        ICell
+                                    >(
+                                        [leftCol],
+                                        c => c,
+                                        c => l.Cells[c],
+                                        c => new ColumnHash(c)
                                     )
-                                )
+                                ))
                         )
                         .Select(x => new RowHash(x))
                 )
