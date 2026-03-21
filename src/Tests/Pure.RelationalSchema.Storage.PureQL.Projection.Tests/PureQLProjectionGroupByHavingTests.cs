@@ -12,7 +12,6 @@ using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.ArrayScalars;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
 using Query = PureQL.CSharp.Model.Query;
 using String = Pure.Primitives.String.String;
 
@@ -88,7 +87,10 @@ public sealed record PureQLProjectionGroupByHavingTests
                     new SelectExpression(
                         new ArrayReturning(
                             new StringArrayReturning(
-                                new StringField($"{schemaName}.{tableName}", col1.Name.TextValue)
+                                new StringField(
+                                    $"{schemaName}.{tableName}",
+                                    col1.Name.TextValue
+                                )
                             )
                         )
                     ),
@@ -112,22 +114,19 @@ public sealed record PureQLProjectionGroupByHavingTests
                 result.AsEnumerable().Select(x => new RowHash(x))
             ).SequenceEqual(
                 new DeterminedHash(
-                    rows
-                        .GroupBy(r =>
-                            r.Cells
-                                .First(kvp => kvp.Key.Name.TextValue == col1.Name.TextValue)
-                                .Value.Value.TextValue
+                    rows.GroupBy(r =>
+                            r.Cells.First(kvp =>
+                                kvp.Key.Name.TextValue == col1.Name.TextValue
+                            ).Value.Value.TextValue
                         )
-                        .Select(g =>
-                            new Row(
-                                new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
-                                    [col1],
-                                    c => c,
-                                    c => g.First().Cells[c],
-                                    c => new ColumnHash(c)
-                                )
+                        .Select(g => new Row(
+                            new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
+                                [col1],
+                                c => c,
+                                c => g.First().Cells[c],
+                                c => new ColumnHash(c)
                             )
-                        )
+                        ))
                         .Select(x => new RowHash(x))
                 )
             )
@@ -206,7 +205,10 @@ public sealed record PureQLProjectionGroupByHavingTests
                     new SelectExpression(
                         new ArrayReturning(
                             new StringArrayReturning(
-                                new StringField($"{schemaName}.{tableName}", col1.Name.TextValue)
+                                new StringField(
+                                    $"{schemaName}.{tableName}",
+                                    col1.Name.TextValue
+                                )
                             )
                         )
                     ),
@@ -246,11 +248,10 @@ public sealed record PureQLProjectionGroupByHavingTests
                 result.AsEnumerable().Select(x => new RowHash(x))
             ).SequenceEqual(
                 new DeterminedHash(
-                    rows
-                        .GroupBy(r =>
-                            r.Cells
-                                .First(kvp => kvp.Key.Name.TextValue == col1.Name.TextValue)
-                                .Value.Value.TextValue
+                    rows.GroupBy(r =>
+                            r.Cells.First(kvp =>
+                                kvp.Key.Name.TextValue == col1.Name.TextValue
+                            ).Value.Value.TextValue
                         )
                         .Where(g =>
                             g.First()
@@ -259,16 +260,14 @@ public sealed record PureQLProjectionGroupByHavingTests
                                 )
                                 .Value.Value.TextValue == passingFirstRowSecondColValue
                         )
-                        .Select(g =>
-                            new Row(
-                                new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
-                                    [col1],
-                                    c => c,
-                                    c => g.First().Cells[c],
-                                    c => new ColumnHash(c)
-                                )
+                        .Select(g => new Row(
+                            new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
+                                [col1],
+                                c => c,
+                                c => g.First().Cells[c],
+                                c => new ColumnHash(c)
                             )
-                        )
+                        ))
                         .Select(x => new RowHash(x))
                 )
             )
