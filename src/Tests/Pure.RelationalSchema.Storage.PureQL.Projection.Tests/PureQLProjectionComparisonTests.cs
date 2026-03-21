@@ -9,10 +9,10 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Fakes;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Comparisons;
-using ModelStringComparison = PureQL.CSharp.Model.Comparisons.StringComparison;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Returnings;
 using PureQL.CSharp.Model.Scalars;
+using ModelStringComparison = PureQL.CSharp.Model.Comparisons.StringComparison;
 using Query = PureQL.CSharp.Model.Query;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests;
@@ -136,9 +136,7 @@ public sealed record PureQLProjectionComparisonTests
             new DeterminedHash(
                 result.AsEnumerable().Select(x => new RowHash(x))
             ).SequenceEqual(
-                new DeterminedHash(
-                    Enumerable.Empty<IRow>().Select(x => new RowHash(x))
-                )
+                new DeterminedHash(Enumerable.Empty<IRow>().Select(x => new RowHash(x)))
             )
         );
     }
