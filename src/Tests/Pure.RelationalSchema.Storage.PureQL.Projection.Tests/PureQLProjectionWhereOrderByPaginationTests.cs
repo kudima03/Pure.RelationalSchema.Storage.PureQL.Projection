@@ -31,13 +31,17 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
 
         IEnumerable<IColumn> columnsToSelect = tableToSelect.Columns;
 
+        IColumn firstColumn = columnsToSelect.First();
+
+        IColumn lastColumn = columnsToSelect.Last();
+
         string schemaName = schema.Name.TextValue;
 
         string tableName = tableToSelect.Name.TextValue;
 
-        const string firstColumnValue = "test_and_1";
+        const string firstColumnValue = "test3";
 
-        const string secondColumnValue = "test_and_2";
+        const string secondColumnValue = "test3";
 
         IStoredTableDataSet result = new PureQLProjection(
             [dataset],
@@ -63,7 +67,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                                             new StringArrayReturning(
                                                 new StringField(
                                                     $"{schemaName}.{tableName}",
-                                                    columnsToSelect.First().Name.TextValue
+                                                    firstColumn.Name.TextValue
                                                 )
                                             ),
                                             new StringArrayReturning(
@@ -80,7 +84,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                                             new StringArrayReturning(
                                                 new StringField(
                                                     $"{schemaName}.{tableName}",
-                                                    columnsToSelect.Last().Name.TextValue
+                                                    lastColumn.Name.TextValue
                                                 )
                                             ),
                                             new StringArrayReturning(
@@ -109,10 +113,8 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                     dataset[tableToSelect]
                         .AsEnumerable()
                         .Where(x =>
-                            x.Cells[columnsToSelect.First()].Value.TextValue
-                                == firstColumnValue
-                            && x.Cells[columnsToSelect.Last()].Value.TextValue
-                                == secondColumnValue
+                            x.Cells[firstColumn].Value.TextValue == firstColumnValue
+                            && x.Cells[lastColumn].Value.TextValue == secondColumnValue
                         )
                         .Select(x => new Row(
                             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
@@ -139,13 +141,15 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
 
         IEnumerable<IColumn> columnsToSelect = tableToSelect.Columns;
 
+        IColumn firstColumn = columnsToSelect.First();
+
         string schemaName = schema.Name.TextValue;
 
         string tableName = tableToSelect.Name.TextValue;
 
-        const string firstValue = "test_or_1";
+        const string firstValue = "test3";
 
-        const string secondValue = "test_or_2";
+        const string secondValue = "test5";
 
         IStoredTableDataSet result = new PureQLProjection(
             [dataset],
@@ -171,7 +175,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                                             new StringArrayReturning(
                                                 new StringField(
                                                     $"{schemaName}.{tableName}",
-                                                    columnsToSelect.First().Name.TextValue
+                                                    firstColumn.Name.TextValue
                                                 )
                                             ),
                                             new StringArrayReturning(
@@ -188,7 +192,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                                             new StringArrayReturning(
                                                 new StringField(
                                                     $"{schemaName}.{tableName}",
-                                                    columnsToSelect.First().Name.TextValue
+                                                    firstColumn.Name.TextValue
                                                 )
                                             ),
                                             new StringArrayReturning(
@@ -217,7 +221,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                     dataset[tableToSelect]
                         .AsEnumerable()
                         .Where(x =>
-                            x.Cells[columnsToSelect.First()].Value.TextValue
+                            x.Cells[firstColumn].Value.TextValue
                                 is firstValue
                                     or secondValue
                         )
@@ -246,11 +250,13 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
 
         IEnumerable<IColumn> columnsToSelect = tableToSelect.Columns;
 
+        IColumn firstColumn = columnsToSelect.First();
+
         string schemaName = schema.Name.TextValue;
 
         string tableName = tableToSelect.Name.TextValue;
 
-        const string valueToExclude = "test_not";
+        const string valueToExclude = "test5";
 
         IStoredTableDataSet result = new PureQLProjection(
             [dataset],
@@ -276,7 +282,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                                             new StringArrayReturning(
                                                 new StringField(
                                                     $"{schemaName}.{tableName}",
-                                                    columnsToSelect.First().Name.TextValue
+                                                    firstColumn.Name.TextValue
                                                 )
                                             ),
                                             new StringArrayReturning(
@@ -305,8 +311,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                     dataset[tableToSelect]
                         .AsEnumerable()
                         .Where(x =>
-                            x.Cells[columnsToSelect.First()].Value.TextValue
-                            != valueToExclude
+                            x.Cells[firstColumn].Value.TextValue != valueToExclude
                         )
                         .Select(x => new Row(
                             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
@@ -437,6 +442,8 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
 
         IEnumerable<IColumn> columnsToSelect = tableToSelect.Columns;
 
+        IColumn firstColumn = columnsToSelect.First();
+
         string schemaName = schema.Name.TextValue;
 
         string tableName = tableToSelect.Name.TextValue;
@@ -464,7 +471,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                     new Field(
                         new StringField(
                             $"{schemaName}.{tableName}",
-                            columnsToSelect.First().Name.TextValue
+                            firstColumn.Name.TextValue
                         )
                     ),
                 ],
@@ -479,7 +486,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                 new DeterminedHash(
                     dataset[tableToSelect]
                         .AsEnumerable()
-                        .OrderBy(x => x.Cells[columnsToSelect.First()].Value.TextValue)
+                        .OrderBy(x => x.Cells[firstColumn].Value.TextValue)
                         .Select(x => new Row(
                             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
                                 columnsToSelect,
@@ -504,6 +511,10 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
         ITable tableToSelect = schema.Tables.First();
 
         IEnumerable<IColumn> columnsToSelect = tableToSelect.Columns;
+
+        IColumn firstColumn = columnsToSelect.First();
+
+        IColumn lastColumn = columnsToSelect.Last();
 
         string schemaName = schema.Name.TextValue;
 
@@ -541,8 +552,8 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                 new DeterminedHash(
                     dataset[tableToSelect]
                         .AsEnumerable()
-                        .OrderBy(x => x.Cells[columnsToSelect.First()].Value.TextValue)
-                        .ThenBy(x => x.Cells[columnsToSelect.Last()].Value.TextValue)
+                        .OrderBy(x => x.Cells[firstColumn].Value.TextValue)
+                        .ThenBy(x => x.Cells[lastColumn].Value.TextValue)
                         .Select(x => new Row(
                             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
                                 columnsToSelect,
@@ -633,11 +644,20 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
 
         IEnumerable<IColumn> columnsToSelect = tableToSelect.Columns;
 
+        IColumn firstColumn = columnsToSelect.First();
+
         string schemaName = schema.Name.TextValue;
 
         string tableName = tableToSelect.Name.TextValue;
 
-        const string valueToFilter = "test_combined";
+        IEnumerable<string> valuesToFilter =
+        [
+            "test1",
+            "test2",
+            "test3",
+            "test4",
+            "test5",
+        ];
 
         const int skip = 1;
 
@@ -664,11 +684,11 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                                 new StringArrayReturning(
                                     new StringField(
                                         $"{schemaName}.{tableName}",
-                                        columnsToSelect.First().Name.TextValue
+                                        firstColumn.Name.TextValue
                                     )
                                 ),
                                 new StringArrayReturning(
-                                    new StringArrayScalar([valueToFilter])
+                                    new StringArrayScalar(valuesToFilter)
                                 )
                             )
                         )
@@ -682,7 +702,7 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                     new Field(
                         new StringField(
                             $"{schemaName}.{tableName}",
-                            columnsToSelect.First().Name.TextValue
+                            firstColumn.Name.TextValue
                         )
                     ),
                 ],
@@ -698,10 +718,9 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                     dataset[tableToSelect]
                         .AsEnumerable()
                         .Where(x =>
-                            x.Cells[columnsToSelect.First()].Value.TextValue
-                            == valueToFilter
+                            valuesToFilter.Contains(x.Cells[firstColumn].Value.TextValue)
                         )
-                        .OrderBy(x => x.Cells[columnsToSelect.First()].Value.TextValue)
+                        .OrderBy(x => x.Cells[firstColumn].Value.TextValue)
                         .Skip(skip)
                         .Take(take)
                         .Select(x => new Row(
