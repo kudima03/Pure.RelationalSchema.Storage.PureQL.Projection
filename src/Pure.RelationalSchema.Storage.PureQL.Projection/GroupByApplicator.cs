@@ -12,10 +12,11 @@ internal static class GroupByApplicator
         BooleanReturning? having
     )
     {
-        List<Field> groupByList = groupBy.ToList();
+        List<Field> groupByList = [.. groupBy];
 
-        Func<IRow, bool>? havingCondition =
-            having is not null ? WhereExpressionBuilder.Build(having).Compile() : null;
+        Func<IRow, bool>? havingCondition = having is not null
+            ? WhereExpressionBuilder.Build(having).Compile()
+            : null;
 
         IEnumerable<IRow> grouped = source
             .AsEnumerable()
@@ -32,7 +33,9 @@ internal static class GroupByApplicator
             "\0",
             fields.Select(field =>
                 field.Match(
-                    f => CellValueExtractor.GetBoolValue(row, f.Field)?.ToString() ?? string.Empty,
+                    f =>
+                        CellValueExtractor.GetBoolValue(row, f.Field)?.ToString()
+                        ?? string.Empty,
                     f =>
                         CellValueExtractor.GetDateOnlyValue(row, f.Field)?.ToString()
                         ?? string.Empty,
@@ -46,7 +49,8 @@ internal static class GroupByApplicator
                         CellValueExtractor.GetTimeOnlyValue(row, f.Field)?.ToString()
                         ?? string.Empty,
                     f =>
-                        CellValueExtractor.GetGuidValue(row, f.Field)?.ToString() ?? string.Empty,
+                        CellValueExtractor.GetGuidValue(row, f.Field)?.ToString()
+                        ?? string.Empty,
                     f => CellValueExtractor.GetTextValue(row, f.Field) ?? string.Empty
                 )
             )
