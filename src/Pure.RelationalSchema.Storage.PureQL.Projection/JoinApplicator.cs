@@ -13,8 +13,8 @@ internal static class JoinApplicator
         Join join
     )
     {
-        IEnumerable<string> reversedPath = join.Entity
-            .Split(".")
+        IEnumerable<string> reversedPath = join
+            .Entity.Split(".")
             .AsEnumerable()
             .Reverse();
 
@@ -28,8 +28,8 @@ internal static class JoinApplicator
 
         Func<IRow, bool> onCondition = WhereExpressionBuilder.Build(join.On).Compile();
 
-        List<IRow> leftList = left.ToList();
-        List<IRow> rightList = right.ToList();
+        List<IRow> leftList = [.. left];
+        List<IRow> rightList = [.. right];
 
         IEnumerable<IRow> result = join.Type switch
         {
@@ -37,7 +37,9 @@ internal static class JoinApplicator
             JoinType.Left => LeftJoin(leftList, rightList, onCondition),
             JoinType.Right => RightJoin(leftList, rightList, onCondition),
             JoinType.Full => FullJoin(leftList, rightList, onCondition),
-            _ => throw new NotSupportedException($"JoinType {join.Type} is not supported."),
+            _ => throw new NotSupportedException(
+                $"JoinType {join.Type} is not supported."
+            ),
         };
 
         return result.AsQueryable();
@@ -49,8 +51,7 @@ internal static class JoinApplicator
         Func<IRow, bool> onCondition
     )
     {
-        return left
-            .SelectMany(l => right.Select(r => MergeRows(l, r)))
+        return left.SelectMany(l => right.Select(r => MergeRows(l, r)))
             .Where(onCondition);
     }
 
@@ -62,10 +63,9 @@ internal static class JoinApplicator
     {
         return left.SelectMany(l =>
         {
-            List<IRow> matched = right
+            List<IRow> matched = [.. right
                 .Select(r => MergeRows(l, r))
-                .Where(onCondition)
-                .ToList();
+                .Where(onCondition)];
 
             return matched.Count > 0 ? matched : [l];
         });
@@ -79,10 +79,7 @@ internal static class JoinApplicator
     {
         return right.SelectMany(r =>
         {
-            List<IRow> matched = left
-                .Select(l => MergeRows(l, r))
-                .Where(onCondition)
-                .ToList();
+            List<IRow> matched = [.. left.Select(l => MergeRows(l, r)).Where(onCondition)];
 
             return matched.Count > 0 ? matched : [r];
         });
@@ -109,7 +106,7 @@ internal static class JoinApplicator
                 if (onCondition(merged))
                 {
                     matched.Add(merged);
-                    matchedRightIndexes.Add(i);
+                    _ = matchedRightIndexes.Add(i);
                 }
             }
 
@@ -136,27 +133,34 @@ internal static class JoinApplicator
 
     private static IRow MergeRows(IRow leftRow, IRow rightRow)
     {
-        HashSet<string> leftNames = leftRow
-            .Cells.Keys.Select(c => c.Name.TextValue)
-            .ToHashSet();
+        HashSet<string> leftNames = [.. leftRow
+            .Cells.Keys.Select(c => c.Name.TextValue)];
 
-        List<KeyValuePair<IColumn, ICell>> rightOnly = rightRow
-            .Cells.Where(kvp => !leftNames.Contains(kvp.Key.Name.TextValue))
-            .ToList();
+        List<KeyValuePair<IColumn, ICell>> rightOnly = [.. rightRow
+            .Cells.Where(kvp => !leftNames.Contains(kvp.Key.Name.TextValue))];
 
-        List<IColumn> allColumns = leftRow
-            .Cells.Keys.Concat(rightOnly.Select(kvp => kvp.Key))
-            .ToList();
+        List<IColumn> allColumns =
+        [
+            .. leftRow
+                        .Cells.Keys,
+            .. rightOnly.Select(kvp => kvp.Key),
+        ];
 
-        List<KeyValuePair<IColumn, ICell>> allCells = leftRow
-            .Cells.Concat(rightOnly)
-            .ToList();
+        List<KeyValuePair<IColumn, ICell>> allCells =
+        [
+            .. leftRow
+                        .Cells,
+            .. rightOnly,
+        ];
 
         return new Row(
             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
                 allColumns,
                 c => c,
-                c => allCells.First(kvp => kvp.Key.Name.TextValue == c.Name.TextValue).Value,
+                c =>
+                    allCells
+                        .First(kvp => kvp.Key.Name.TextValue == c.Name.TextValue)
+                        .Value,
                 c => new ColumnHash(c)
             )
         );
