@@ -13,7 +13,7 @@ public sealed record PureQLProjection : IStoredTableDataSet
     public PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)
     {
         TableSchema = new TableFromQuery(query);
-        _rows = new RowsFromDatasets(datasets, query).AsQueryable();
+        _rows = new RowsFromDatasets(datasets, query);
     }
 
     public ITable TableSchema { get; }
