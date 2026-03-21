@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
-using Pure.RelationalSchema.Abstractions.ColumnType;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -42,7 +41,7 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
         Query query
     )
     {
-        List<IStoredSchemaDataSet> datasetList = datasets.ToList();
+        List<IStoredSchemaDataSet> datasetList = [.. datasets];
 
         IEnumerable<string> reversedPath = query
             .From.Entity.Split(".")
@@ -89,8 +88,7 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
         }
 
         IEnumerable<IColumn> columns = query
-            .SelectExpressions.Select(ColumnFromSelectExpression)
-            .ToList();
+            .SelectExpressions.Select(ColumnFromSelectExpression);
 
         return queryable.Select(row =>
             (IRow)
@@ -107,17 +105,11 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
 
     private static IColumn ColumnFromSelectExpression(SelectExpression expression)
     {
-        if (expression.TryPickT0(out SingleValueReturning singleValue, out _))
-        {
-            return ColumnFromSingleValueReturning(singleValue);
-        }
-
-        if (expression.TryPickT1(out ArrayReturning arrayReturning, out _))
-        {
-            return ColumnFromArrayReturning(arrayReturning);
-        }
-
-        throw new NotSupportedException();
+        return expression.TryPickT0(out SingleValueReturning singleValue, out _)
+            ? ColumnFromSingleValueReturning(singleValue)
+            : expression.TryPickT1(out ArrayReturning arrayReturning, out _)
+                ? ColumnFromArrayReturning(arrayReturning)
+                : throw new NotSupportedException();
     }
 
     private static IColumn ColumnFromSingleValueReturning(SingleValueReturning _)
