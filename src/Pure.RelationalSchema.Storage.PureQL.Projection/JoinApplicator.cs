@@ -26,7 +26,9 @@ internal static class JoinApplicator
             .First(x => x.Key.Name.TextValue == tableName)
             .Value;
 
-        Func<IRow, bool> onCondition = WhereExpressionBuilder.Build(join.On).Compile();
+        Func<IRow, bool> onCondition = WhereExpressionBuilder
+            .BuildPredicate(join.On)
+            .Compile();
 
         List<IRow> leftList = [.. left];
         List<IRow> rightList = [.. right];

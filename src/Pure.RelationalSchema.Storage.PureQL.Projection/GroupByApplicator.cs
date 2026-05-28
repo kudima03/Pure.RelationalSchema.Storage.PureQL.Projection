@@ -42,6 +42,7 @@ internal static class GroupByApplicator
                     f =>
                         CellValueExtractor.GetDateTimeValue(row, f.Field)?.ToString()
                         ?? string.Empty,
+                    _ => string.Empty,
                     f =>
                         CellValueExtractor.GetDoubleValue(row, f.Field)?.ToString()
                         ?? string.Empty,

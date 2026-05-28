@@ -468,10 +468,12 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                 having: null,
                 orderBy:
                 [
-                    new Field(
-                        new StringField(
-                            $"{schemaName}.{tableName}",
-                            firstColumn.Name.TextValue
+                    new OrderByItem(
+                        new Field(
+                            new StringField(
+                                $"{schemaName}.{tableName}",
+                                firstColumn.Name.TextValue
+                            )
                         )
                     ),
                 ],
@@ -538,8 +540,10 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                 join: null,
                 groupBy: null,
                 having: null,
-                orderBy: columnsToSelect.Select(x => new Field(
-                    new StringField($"{schemaName}.{tableName}", x.Name.TextValue)
+                orderBy: columnsToSelect.Select(x => new OrderByItem(
+                    new Field(
+                        new StringField($"{schemaName}.{tableName}", x.Name.TextValue)
+                    )
                 )),
                 pagination: null
             )
@@ -699,10 +703,12 @@ public sealed record PureQlProjectionWhereOrderByPaginationTests
                 having: null,
                 orderBy:
                 [
-                    new Field(
-                        new StringField(
-                            $"{schemaName}.{tableName}",
-                            firstColumn.Name.TextValue
+                    new OrderByItem(
+                        new Field(
+                            new StringField(
+                                $"{schemaName}.{tableName}",
+                                firstColumn.Name.TextValue
+                            )
                         )
                     ),
                 ],
