@@ -68,7 +68,9 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
 
         if (query.Where is not null)
         {
-            queryable = queryable.Where(WhereExpressionBuilder.Build(query.Where));
+            queryable = queryable.Where(
+                WhereExpressionBuilder.BuildPredicate(query.Where.Value)
+            );
         }
 
         if (query.OrderBy is not null)
@@ -79,6 +81,11 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
         if (query.GroupBy is not null)
         {
             queryable = GroupByApplicator.Apply(queryable, query.GroupBy, query.Having);
+        }
+
+        if (query.Distinct)
+        {
+            queryable = DistinctApplicator.Apply(queryable);
         }
 
         if (query.Pagination is not null)

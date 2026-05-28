@@ -38,10 +38,16 @@ public sealed record PureQLProjection : IStoredTableDataSet
 | `FROM` | Resolves `schema.table` path into a source `IStoredTableDataSet` |
 | `SELECT` | `ColumnsFromQuery` — derives column schema; `RowsFromDatasets` — projects row cells |
 | `JOIN` (INNER / LEFT / RIGHT / FULL) | `JoinApplicator` |
-| `WHERE` | `WhereExpressionBuilder` — compiles a `BooleanReturning` AST node into a `Func<IRow, bool>` |
-| `ORDER BY` | `OrderByApplicator` |
+| `WHERE` | `WhereExpressionBuilder` — compiles `BooleanReturning` and per-row `BooleanArrayReturning` (`each*`) AST nodes into a `Func<IRow, bool>` |
+| `ORDER BY` | `OrderByApplicator` — honours per-item `SortDirection` (`Asc` / `Desc`) |
 | `GROUP BY` / `HAVING` | `GroupByApplicator` |
 | `LIMIT` / `OFFSET` (`Pagination`) | `.Skip().Take()` |
+| `DISTINCT` | `DistinctApplicator` |
+| `each*` predicates / arithmetic | Per-row evaluation in `WhereExpressionBuilder` — supports `EachEquality`, `EachComparison`, `EachAnd`/`EachOr`/`EachNot`, `EachArithmetic`, `EachDateAddDays` / `EachDateDiffDays`, `EachTimeAddSeconds` / `EachTimeDiffSeconds`, `EachDateTimeAddSeconds` / `EachDateTimeDiffSeconds` inside filters and join conditions |
+
+Constructs the executor does not yet implement (parameters, aggregates
+outside `groupBy`, computed `select` columns, single-value `Arithmetic`)
+are documented in [`EXECUTION_GAPS.md`](EXECUTION_GAPS.md).
 
 ## Dependencies
 
@@ -49,7 +55,7 @@ public sealed record PureQLProjection : IStoredTableDataSet
 - [`Pure.RelationalSchema`](https://github.com/kudima03/Pure.RelationalSchema/tree/2.0.0) — relational schema abstractions (`ISchema`, `ITable`, `IColumn`, column type hierarchy)
 - [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.3.0) — structural hash codes for relational schema types
 - [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.7.0.0) — in-memory relational data model (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`, `ICell`)
-- [`PureQL.CSharp.Model`](https://github.com/kudima03/PureQL.CSharp.Model/tree/0.1.0-preview.10.0.0) — PureQL query AST (`Query`, `SelectExpression`, `BooleanReturning`, `Join`, `Pagination`, …)
+- [`PureQL.CSharp.Model`](https://github.com/kudima03/PureQL.CSharp.Model/tree/0.1.0-preview.11.0.0) — PureQL query AST (`Query`, `SelectExpression`, `BooleanReturning`, `BooleanArrayReturning`, `Join`, `OrderByItem`, `Pagination`, …) — tracks PureQL specification `0.1.0-preview.0.5.0`
 - [`Pure.Collections.Generic`](https://github.com/kudima03/Pure.Collections.Generic/tree/0.1.0-preview.3.0.0) — generic collection utilities used in row projection
 
 ## Target Frameworks

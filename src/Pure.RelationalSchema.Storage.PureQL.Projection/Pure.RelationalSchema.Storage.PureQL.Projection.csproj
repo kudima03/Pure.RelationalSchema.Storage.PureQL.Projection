@@ -21,7 +21,7 @@
     <PackageReference Include="Pure.RelationalSchema" Version="2.0.2" />
     <PackageReference Include="Pure.RelationalSchema.HashCodes" Version="3.3.0" />
     <PackageReference Include="Pure.RelationalSchema.Storage" Version="0.1.0-preview.8.0.0" />
-    <PackageReference Include="PureQL.CSharp.Model" Version="0.1.0-preview.10.0.0" />
+    <PackageReference Include="PureQL.CSharp.Model" Version="0.1.0-preview.11.0.0" />
     <PackageReference Include="System.Linq.Async" Version="7.0.1" />
     <PackageReference Include="Pure.Collections.Generic" Version="0.1.0-preview.3.0.0" />
   </ItemGroup>

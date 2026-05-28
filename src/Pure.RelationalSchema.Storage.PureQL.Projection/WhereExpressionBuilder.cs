@@ -1,24 +1,29 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using OneOf;
 using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model.ArrayEqualities;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.BooleanOperations;
 using PureQL.CSharp.Model.Comparisons;
+using PureQL.CSharp.Model.EachArithmetics;
+using PureQL.CSharp.Model.EachComparisons;
+using PureQL.CSharp.Model.EachDateArithmetics;
+using PureQL.CSharp.Model.EachDateTimeArithmetics;
+using PureQL.CSharp.Model.EachEqualities;
+using PureQL.CSharp.Model.EachTimeArithmetics;
 using PureQL.CSharp.Model.Equalities;
 using PureQL.CSharp.Model.Returnings;
 using ModelEquality = PureQL.CSharp.Model.Equality;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-/// <summary>
-/// Translates a PureQL <see cref="BooleanReturning"/> AST node into a LINQ expression tree
-/// suitable for use with <see cref="IQueryable{T}.Where"/>.
-/// </summary>
 internal static class WhereExpressionBuilder
 {
-    // *ArrayReturning field position is T1 for all types.
-    // Scalar position differs: T0 for BooleanArrayReturning, T2 for all others.
+    private const string ParameterNotSupported =
+        "Parameter binding is not supported in expression tree translation.";
+    private const string AggregateNotSupported =
+        "Aggregate expressions are not supported outside groupBy projection.";
 
     private static readonly MethodInfo GetTextValueMethod =
         typeof(CellValueExtractor).GetMethod(
@@ -69,16 +74,25 @@ internal static class WhereExpressionBuilder
         return Expression.Lambda<Func<IRow, bool>>(body, rowParam);
     }
 
+    internal static Expression<Func<IRow, bool>> BuildPredicate(
+        OneOf<BooleanReturning, BooleanArrayReturning> condition
+    )
+    {
+        ParameterExpression rowParam = Expression.Parameter(typeof(IRow), "row");
+        Expression body = condition.Match(
+            single => BuildBoolean(single, rowParam),
+            each => BuildBoolArrayPerRow(each, rowParam)
+        );
+        return Expression.Lambda<Func<IRow, bool>>(body, rowParam);
+    }
+
     private static Expression BuildBoolean(
         BooleanReturning returning,
         ParameterExpression row
     )
     {
         return returning.Match(
-            _ =>
-                throw new NotSupportedException(
-                    "Parameter binding is not supported in expression tree translation."
-                ),
+            _ => throw new NotSupportedException(ParameterNotSupported),
             scalar => Expression.Constant(scalar.Value),
             equality => BuildEquality(equality, row),
             op => BuildBooleanOperator(op, row),
@@ -146,9 +160,7 @@ internal static class WhereExpressionBuilder
     )
     {
         return equality.Match(
-            // BooleanArrayReturning: T0=BooleanArrayScalar, T1=BooleanField, T2=BooleanArrayParameter
             eq => BuildBoolArrayEquality(eq, row),
-            // All others: T0=*ArrayParameter, T1=*Field, T2=*ArrayScalar
             eq =>
                 BuildContainmentEquality(
                     left: eq.Left.IsT1,
@@ -228,7 +240,6 @@ internal static class WhereExpressionBuilder
         );
     }
 
-    // BooleanArrayReturning has T0=Scalar, T1=Field, T2=Parameter (reversed from other types)
     private static Expression BuildBoolArrayEquality(
         BooleanArrayEquality eq,
         ParameterExpression row
@@ -281,7 +292,6 @@ internal static class WhereExpressionBuilder
             )
             .MakeGenericMethod(typeof(T));
 
-        // field vs scalar  →  scalar.Contains(cellValue)
         if (left && rightScalar is not null)
         {
             Expression fieldExpr = Expression.Call(
@@ -296,7 +306,6 @@ internal static class WhereExpressionBuilder
             return Expression.Call(containsMethod, scalarExpr, fieldExpr);
         }
 
-        // scalar vs field  →  scalar.Contains(cellValue)
         if (right && leftScalar is not null)
         {
             Expression fieldExpr = Expression.Call(
@@ -311,7 +320,6 @@ internal static class WhereExpressionBuilder
             return Expression.Call(containsMethod, scalarExpr, fieldExpr);
         }
 
-        // field vs field  →  cellValue1 == cellValue2
         if (left && right)
         {
             Expression left1 = Expression.Call(
@@ -327,7 +335,6 @@ internal static class WhereExpressionBuilder
             return Expression.Equal(left1, right1);
         }
 
-        // scalar vs scalar  →  constant SequenceEqual
         if (leftScalar is not null && rightScalar is not null)
         {
             MethodInfo sequenceEqual = typeof(Enumerable)
@@ -345,9 +352,7 @@ internal static class WhereExpressionBuilder
             return Expression.Call(sequenceEqual, leftConst, rightConst);
         }
 
-        throw new NotSupportedException(
-            "Parameter binding is not supported in expression tree translation."
-        );
+        throw new NotSupportedException(ParameterNotSupported);
     }
 
     private static Expression BuildBooleanOperator(
@@ -363,7 +368,7 @@ internal static class WhereExpressionBuilder
                             .Select(c => BuildBoolean(c, row))
                             .Aggregate(Expression.AndAlso),
                     arrayReturning =>
-                        BuildBoolArrayReturningAsSingleBool(arrayReturning, row)
+                        BuildBoolArrayPerRow(arrayReturning, row)
                 ),
             or =>
                 or.Conditions.Match(
@@ -372,19 +377,20 @@ internal static class WhereExpressionBuilder
                             .Select(c => BuildBoolean(c, row))
                             .Aggregate(Expression.OrElse),
                     arrayReturning =>
-                        BuildBoolArrayReturningAsSingleBool(arrayReturning, row)
+                        BuildBoolArrayPerRow(arrayReturning, row)
                 ),
             not => Expression.Not(BuildBoolean(not.Condition, row))
         );
     }
 
-    // BooleanArrayReturning: T0=BooleanArrayScalar, T1=BooleanField, T2=BooleanArrayParameter
-    private static Expression BuildBoolArrayReturningAsSingleBool(
+    // ===== Per-row evaluation of BooleanArrayReturning =====
+
+    private static Expression BuildBoolArrayPerRow(
         BooleanArrayReturning returning,
         ParameterExpression row
     )
     {
-        return returning.Match<Expression>(
+        return returning.Match(
             scalar => Expression.Constant(scalar.Value.All(v => v)),
             field =>
                 Expression.Equal(
@@ -395,12 +401,597 @@ internal static class WhereExpressionBuilder
                     ),
                     Expression.Constant((bool?)true, typeof(bool?))
                 ),
-            _ =>
-                throw new NotSupportedException(
-                    "Parameter binding is not supported in expression tree translation."
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            comparison => BuildEachComparisonPerRow(comparison, row),
+            equality => BuildEachEqualityPerRow(equality, row),
+            and =>
+                and.Conditions
+                    .Select(c => BuildBoolArrayPerRow(c, row))
+                    .Aggregate(Expression.AndAlso),
+            or =>
+                or.Conditions
+                    .Select(c => BuildBoolArrayPerRow(c, row))
+                    .Aggregate(Expression.OrElse),
+            not => Expression.Not(BuildBoolArrayPerRow(not.Condition, row))
+        );
+    }
+
+    private static Expression BuildEachEqualityPerRow(
+        EachEquality equality,
+        ParameterExpression row
+    )
+    {
+        return equality.Match(
+            eq =>
+                Expression.Equal(
+                    BuildBoolArrayValuePerRow(eq.Left, row),
+                    BuildBoolPerRow(eq.Right, row)
+                ),
+            eq =>
+                Expression.Equal(
+                    BuildNumberArrayValuePerRow(eq.Left, row),
+                    BuildNumberPerRow(eq.Right, row)
+                ),
+            eq =>
+                Expression.Equal(
+                    BuildStringArrayValuePerRow(eq.Left, row),
+                    BuildStringPerRow(eq.Right, row)
+                ),
+            eq =>
+                Expression.Equal(
+                    BuildDateArrayValuePerRow(eq.Left, row),
+                    BuildDatePerRow(eq.Right, row)
+                ),
+            eq =>
+                Expression.Equal(
+                    BuildTimeArrayValuePerRow(eq.Left, row),
+                    BuildTimePerRow(eq.Right, row)
+                ),
+            eq =>
+                Expression.Equal(
+                    BuildDateTimeArrayValuePerRow(eq.Left, row),
+                    BuildDateTimePerRow(eq.Right, row)
+                ),
+            eq =>
+                Expression.Equal(
+                    BuildUuidArrayValuePerRow(eq.Left, row),
+                    BuildUuidPerRow(eq.Right, row)
                 )
         );
     }
+
+    private static Expression BuildEachComparisonPerRow(
+        EachComparison comparison,
+        ParameterExpression row
+    )
+    {
+        return comparison.Match(
+            c =>
+                BuildTypedComparison(
+                    BuildNumberArrayValuePerRow(c.Left, row),
+                    BuildNumberPerRow(c.Right, row),
+                    ToComparisonOperator(c.Operator)
+                ),
+            c =>
+                BuildTypedComparison(
+                    BuildStringArrayValuePerRow(c.Left, row),
+                    BuildStringPerRow(c.Right, row),
+                    ToComparisonOperator(c.Operator)
+                ),
+            c =>
+                BuildTypedComparison(
+                    BuildDateArrayValuePerRow(c.Left, row),
+                    BuildDatePerRow(c.Right, row),
+                    ToComparisonOperator(c.Operator)
+                ),
+            c =>
+                BuildTypedComparison(
+                    BuildDateTimeArrayValuePerRow(c.Left, row),
+                    BuildDateTimePerRow(c.Right, row),
+                    ToComparisonOperator(c.Operator)
+                ),
+            c =>
+                BuildTypedComparison(
+                    BuildTimeArrayValuePerRow(c.Left, row),
+                    BuildTimePerRow(c.Right, row),
+                    ToComparisonOperator(c.Operator)
+                )
+        );
+    }
+
+    private static ComparisonOperator ToComparisonOperator(EachComparisonOperator op)
+    {
+        return op switch
+        {
+            EachComparisonOperator.EachGreaterThan => ComparisonOperator.GreaterThan,
+            EachComparisonOperator.EachGreaterThanOrEqual =>
+                ComparisonOperator.GreaterThanOrEqual,
+            EachComparisonOperator.EachLessThan => ComparisonOperator.LessThan,
+            EachComparisonOperator.EachLessThanOrEqual =>
+                ComparisonOperator.LessThanOrEqual,
+            _ => throw new NotSupportedException($"Unknown each operator: {op}"),
+        };
+    }
+
+    private static Expression BuildBoolPerRow(
+        OneOf<BooleanReturning, BooleanArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildBoolReturningAsExpr,
+            each => BuildBoolArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildNumberPerRow(
+        OneOf<NumberReturning, NumberArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildNumberReturningAsExpr,
+            each => BuildNumberArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildStringPerRow(
+        OneOf<StringReturning, StringArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildStringReturningAsExpr,
+            each => BuildStringArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildDatePerRow(
+        OneOf<DateReturning, DateArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildDateReturningAsExpr,
+            each => BuildDateArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildTimePerRow(
+        OneOf<TimeReturning, TimeArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildTimeReturningAsExpr,
+            each => BuildTimeArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildDateTimePerRow(
+        OneOf<DateTimeReturning, DateTimeArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildDateTimeReturningAsExpr,
+            each => BuildDateTimeArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildUuidPerRow(
+        OneOf<UuidReturning, UuidArrayReturning> value,
+        ParameterExpression row
+    )
+    {
+        return value.Match(
+            BuildUuidReturningAsExpr,
+            each => BuildUuidArrayValuePerRow(each, row)
+        );
+    }
+
+    private static Expression BuildBoolArrayValuePerRow(
+        BooleanArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match<Expression>(
+            scalar => Expression.Constant(
+                (bool?)scalar.Value.FirstOrDefault(),
+                typeof(bool?)
+            ),
+            field =>
+                Expression.Call(
+                    GetBoolValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            _ => throw new NotSupportedException(
+                "Nested each-comparison as a boolean value is not supported."
+            ),
+            _ => throw new NotSupportedException(
+                "Nested each-equality as a boolean value is not supported."
+            ),
+            _ => throw new NotSupportedException(
+                "Nested each-and as a boolean value is not supported."
+            ),
+            _ => throw new NotSupportedException(
+                "Nested each-or as a boolean value is not supported."
+            ),
+            _ => throw new NotSupportedException(
+                "Nested each-not as a boolean value is not supported."
+            )
+        );
+    }
+
+    private static Expression BuildNumberArrayValuePerRow(
+        NumberArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match(
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            field =>
+                Expression.Call(
+                    GetDoubleValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            scalar => Expression.Constant(
+                (double?)scalar.Value.FirstOrDefault(),
+                typeof(double?)
+            ),
+            arithmetic => BuildEachArithmeticPerRow(arithmetic, row),
+            diff => BuildEachDateDiffDaysPerRow(diff, row),
+            diff => BuildEachDateTimeDiffSecondsPerRow(diff, row),
+            diff => BuildEachTimeDiffSecondsPerRow(diff, row)
+        );
+    }
+
+    private static Expression BuildStringArrayValuePerRow(
+        StringArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match<Expression>(
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            field =>
+                Expression.Call(
+                    GetTextValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            scalar => Expression.Constant(
+                scalar.Value.FirstOrDefault(),
+                typeof(string)
+            )
+        );
+    }
+
+    private static Expression BuildDateArrayValuePerRow(
+        DateArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match(
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            field =>
+                Expression.Call(
+                    GetDateOnlyValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            scalar => Expression.Constant(
+                (DateOnly?)scalar.Value.FirstOrDefault(),
+                typeof(DateOnly?)
+            ),
+            addDays => BuildEachDateAddDaysPerRow(addDays, row)
+        );
+    }
+
+    private static Expression BuildTimeArrayValuePerRow(
+        TimeArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match(
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            field =>
+                Expression.Call(
+                    GetTimeOnlyValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            scalar => Expression.Constant(
+                (TimeOnly?)scalar.Value.FirstOrDefault(),
+                typeof(TimeOnly?)
+            ),
+            addSeconds => BuildEachTimeAddSecondsPerRow(addSeconds, row)
+        );
+    }
+
+    private static Expression BuildDateTimeArrayValuePerRow(
+        DateTimeArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match(
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            field =>
+                Expression.Call(
+                    GetDateTimeValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            scalar => Expression.Constant(
+                (DateTime?)scalar.Value.FirstOrDefault(),
+                typeof(DateTime?)
+            ),
+            addSeconds => BuildEachDateTimeAddSecondsPerRow(addSeconds, row)
+        );
+    }
+
+    private static Expression BuildUuidArrayValuePerRow(
+        UuidArrayReturning returning,
+        ParameterExpression row
+    )
+    {
+        return returning.Match<Expression>(
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            field =>
+                Expression.Call(
+                    GetGuidValueMethod,
+                    row,
+                    Expression.Constant(field.Field)
+                ),
+            scalar => Expression.Constant(
+                (Guid?)scalar.Value.FirstOrDefault(),
+                typeof(Guid?)
+            )
+        );
+    }
+
+    // ===== EachArithmetic per row =====
+
+    private static Expression BuildEachArithmeticPerRow(
+        EachArithmetic arithmetic,
+        ParameterExpression row
+    )
+    {
+        return arithmetic.Match(
+            add =>
+                add.Values
+                    .Select(v => BuildNumberPerRow(v, row))
+                    .Aggregate(NullableDoubleAdd),
+            sub =>
+                sub.Values
+                    .Select(v => BuildNumberPerRow(v, row))
+                    .Aggregate(NullableDoubleSubtract),
+            mul =>
+                mul.Values
+                    .Select(v => BuildNumberPerRow(v, row))
+                    .Aggregate(NullableDoubleMultiply),
+            div =>
+                div.Values
+                    .Select(v => BuildNumberPerRow(v, row))
+                    .Aggregate(NullableDoubleDivide)
+        );
+    }
+
+    private static readonly MethodInfo AddNullableDoubleMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(AddDoubles),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo SubtractNullableDoubleMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(SubtractDoubles),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo MultiplyNullableDoubleMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(MultiplyDoubles),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo DivideNullableDoubleMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(DivideDoubles),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    internal static double? AddDoubles(double? a, double? b)
+    {
+        return a.HasValue && b.HasValue ? a.Value + b.Value : null;
+    }
+
+    internal static double? SubtractDoubles(double? a, double? b)
+    {
+        return a.HasValue && b.HasValue ? a.Value - b.Value : null;
+    }
+
+    internal static double? MultiplyDoubles(double? a, double? b)
+    {
+        return a.HasValue && b.HasValue ? a.Value * b.Value : null;
+    }
+
+    internal static double? DivideDoubles(double? a, double? b)
+    {
+        return a.HasValue && b.HasValue && b.Value != 0 ? a.Value / b.Value : null;
+    }
+
+    private static Expression NullableDoubleAdd(Expression a, Expression b)
+    {
+        return Expression.Call(AddNullableDoubleMethod, a, b);
+    }
+
+    private static Expression NullableDoubleSubtract(Expression a, Expression b)
+    {
+        return Expression.Call(SubtractNullableDoubleMethod, a, b);
+    }
+
+    private static Expression NullableDoubleMultiply(Expression a, Expression b)
+    {
+        return Expression.Call(MultiplyNullableDoubleMethod, a, b);
+    }
+
+    private static Expression NullableDoubleDivide(Expression a, Expression b)
+    {
+        return Expression.Call(DivideNullableDoubleMethod, a, b);
+    }
+
+    // ===== Date/Time/DateTime per-row arithmetic =====
+
+    private static readonly MethodInfo AddDaysMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(AddDays),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo DiffDaysMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(DiffDays),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo AddSecondsToTimeMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(AddSecondsToTime),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo DiffSecondsTimeMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(DiffSecondsTime),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo AddSecondsToDateTimeMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(AddSecondsToDateTime),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    private static readonly MethodInfo DiffSecondsDateTimeMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(DiffSecondsDateTime),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    internal static DateOnly? AddDays(DateOnly? d, double? n)
+    {
+        return d.HasValue && n.HasValue ? d.Value.AddDays((int)n.Value) : null;
+    }
+
+    internal static double? DiffDays(DateOnly? l, DateOnly? r)
+    {
+        return l.HasValue && r.HasValue
+            ? (l.Value.DayNumber - r.Value.DayNumber)
+            : null;
+    }
+
+    internal static TimeOnly? AddSecondsToTime(TimeOnly? t, double? n)
+    {
+        return t.HasValue && n.HasValue
+            ? t.Value.Add(TimeSpan.FromSeconds(n.Value))
+            : null;
+    }
+
+    internal static double? DiffSecondsTime(TimeOnly? l, TimeOnly? r)
+    {
+        return l.HasValue && r.HasValue
+            ? (l.Value - r.Value).TotalSeconds
+            : null;
+    }
+
+    internal static DateTime? AddSecondsToDateTime(DateTime? d, double? n)
+    {
+        return d.HasValue && n.HasValue
+            ? d.Value.AddSeconds(n.Value)
+            : null;
+    }
+
+    internal static double? DiffSecondsDateTime(DateTime? l, DateTime? r)
+    {
+        return l.HasValue && r.HasValue ? (l.Value - r.Value).TotalSeconds : null;
+    }
+
+    private static Expression BuildEachDateAddDaysPerRow(
+        EachDateAddDays op,
+        ParameterExpression row
+    )
+    {
+        return Expression.Call(
+            AddDaysMethod,
+            BuildDatePerRow(op.Left, row),
+            BuildNumberPerRow(op.Right, row)
+        );
+    }
+
+    private static Expression BuildEachDateDiffDaysPerRow(
+        EachDateDiffDays op,
+        ParameterExpression row
+    )
+    {
+        return Expression.Call(
+            DiffDaysMethod,
+            BuildDatePerRow(op.Left, row),
+            BuildDatePerRow(op.Right, row)
+        );
+    }
+
+    private static Expression BuildEachTimeAddSecondsPerRow(
+        EachTimeAddSeconds op,
+        ParameterExpression row
+    )
+    {
+        return Expression.Call(
+            AddSecondsToTimeMethod,
+            BuildTimePerRow(op.Left, row),
+            BuildNumberPerRow(op.Right, row)
+        );
+    }
+
+    private static Expression BuildEachTimeDiffSecondsPerRow(
+        EachTimeDiffSeconds op,
+        ParameterExpression row
+    )
+    {
+        return Expression.Call(
+            DiffSecondsTimeMethod,
+            BuildTimePerRow(op.Left, row),
+            BuildTimePerRow(op.Right, row)
+        );
+    }
+
+    private static Expression BuildEachDateTimeAddSecondsPerRow(
+        EachDateTimeAddSeconds op,
+        ParameterExpression row
+    )
+    {
+        return Expression.Call(
+            AddSecondsToDateTimeMethod,
+            BuildDateTimePerRow(op.Left, row),
+            BuildNumberPerRow(op.Right, row)
+        );
+    }
+
+    private static Expression BuildEachDateTimeDiffSecondsPerRow(
+        EachDateTimeDiffSeconds op,
+        ParameterExpression row
+    )
+    {
+        return Expression.Call(
+            DiffSecondsDateTimeMethod,
+            BuildDateTimePerRow(op.Left, row),
+            BuildDateTimePerRow(op.Right, row)
+        );
+    }
+
+    // ===== Comparison handling =====
 
     private static Expression BuildComparison(
         Comparison comparison
@@ -452,7 +1043,7 @@ internal static class WhereExpressionBuilder
         ComparisonOperator op
     )
     {
-        if (left.Type == typeof(string))
+        if (left.Type == typeof(string) || right.Type == typeof(string))
         {
             Expression compareExpr = Expression.Call(
                 StringCompareOrdinalMethod,
@@ -494,73 +1085,79 @@ internal static class WhereExpressionBuilder
         };
     }
 
-    // Scalar-only returnings (no field access, row-independent expressions)
+    // ===== Scalar-only returnings =====
 
     private static Expression BuildBoolReturningAsExpr(BooleanReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(bool)),
-            _ =>
-                throw new NotSupportedException(
-                    "Nested equality in scalar boolean context is not supported."
-                ),
-            _ =>
-                throw new NotSupportedException(
-                    "Nested boolean operator in scalar boolean context is not supported."
-                ),
-            _ =>
-                throw new NotSupportedException(
-                    "Nested comparison in scalar boolean context is not supported."
-                )
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant((bool?)scalar.Value, typeof(bool?)),
+            _ => throw new NotSupportedException(
+                "Nested equality in scalar boolean context is not supported."
+            ),
+            _ => throw new NotSupportedException(
+                "Nested boolean operator in scalar boolean context is not supported."
+            ),
+            _ => throw new NotSupportedException(
+                "Nested comparison in scalar boolean context is not supported."
+            )
         );
     }
 
     private static Expression BuildNumberReturningAsExpr(NumberReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(double))
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant((double?)scalar.Value, typeof(double?)),
+            _ => throw new NotSupportedException(
+                "Single-value Arithmetic outside per-row context is not supported."
+            ),
+            _ => throw new NotSupportedException(AggregateNotSupported),
+            _ => throw new NotSupportedException(AggregateNotSupported)
         );
     }
 
     private static Expression BuildStringReturningAsExpr(StringReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(string))
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant(scalar.Value, typeof(string)),
+            _ => throw new NotSupportedException(AggregateNotSupported)
         );
     }
 
     private static Expression BuildDateReturningAsExpr(DateReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(DateOnly))
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant((DateOnly?)scalar.Value, typeof(DateOnly?)),
+            _ => throw new NotSupportedException(AggregateNotSupported)
         );
     }
 
     private static Expression BuildDateTimeReturningAsExpr(DateTimeReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(DateTime))
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant((DateTime?)scalar.Value, typeof(DateTime?)),
+            _ => throw new NotSupportedException(AggregateNotSupported)
         );
     }
 
     private static Expression BuildTimeReturningAsExpr(TimeReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(TimeOnly))
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant((TimeOnly?)scalar.Value, typeof(TimeOnly?)),
+            _ => throw new NotSupportedException(AggregateNotSupported)
         );
     }
 
     private static Expression BuildUuidReturningAsExpr(UuidReturning returning)
     {
         return returning.Match(
-            _ => throw new NotSupportedException("Parameter binding is not supported."),
-            scalar => Expression.Constant(scalar.Value, typeof(Guid))
+            _ => throw new NotSupportedException(ParameterNotSupported),
+            scalar => Expression.Constant((Guid?)scalar.Value, typeof(Guid?))
         );
     }
 }

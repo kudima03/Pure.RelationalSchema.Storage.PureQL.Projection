@@ -31,9 +31,10 @@ All translation work is done by internal classes:
 - **`TableFromQuery`** — derives the virtual `ITable` schema from the query's SELECT expressions
 - **`RowsFromDatasets`** — orchestrates the full query pipeline: locates the source table dataset by `schema.table` path, then applies each clause in order
 - **`JoinApplicator`** — materializes joined datasets into lists and applies join conditions (supports INNER, LEFT, RIGHT, FULL)
-- **`WhereExpressionBuilder`** — compiles a `BooleanReturning` AST node from `PureQL.CSharp.Model` into a `Func<IRow, bool>` LINQ predicate
-- **`OrderByApplicator`** — applies `IEnumerable<Field>` ordering via LINQ `OrderBy`/`ThenBy`
+- **`WhereExpressionBuilder`** — compiles a `BooleanReturning` *or* per-row `BooleanArrayReturning` AST node from `PureQL.CSharp.Model` into a `Func<IRow, bool>` LINQ predicate (entry point: `BuildPredicate(OneOf<BooleanReturning, BooleanArrayReturning>)`). Implements the per-row `each*` family — `EachEquality`, `EachComparison`, `EachAnd`/`EachOr`/`EachNot`, plus per-row arithmetic (`EachArithmetic`, `EachDateAddDays`/`EachDateDiffDays`, `EachTimeAddSeconds`/`EachTimeDiffSeconds`, `EachDateTimeAddSeconds`/`EachDateTimeDiffSeconds`)
+- **`OrderByApplicator`** — applies `IEnumerable<OrderByItem>` ordering, honouring per-item `SortDirection` (`Asc`/`Desc`)
 - **`GroupByApplicator`** — applies GROUP BY fields and an optional HAVING predicate
+- **`DistinctApplicator`** — deduplicates the row set when `Query.Distinct == true`
 - **`CellValueExtractor`** — extracts typed .NET values from `ICell` for the seven supported column types: bool, date, datetime, double, string, time, uuid
 - **`ColumnsFromQuery`** — maps `SelectExpression` nodes to `IColumn` instances for the result schema
 
@@ -46,6 +47,8 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`) because the qu
 **Publishing:** triggered by pushing a semver tag matching `*.*.*`. The tag value becomes the `PackageVersion`.
 
 **CI thresholds:** code coverage warning at 99%, failure below 52%; mutation score failure below 32%.
+
+**Known execution gaps:** parameters, aggregates outside the `groupBy` projection, computed `select` columns, and single-value `Arithmetic` are not yet implemented — see [`EXECUTION_GAPS.md`](EXECUTION_GAPS.md). These constructs raise `NotSupportedException` rather than silently producing wrong results.
 
 ## Code Style
 
