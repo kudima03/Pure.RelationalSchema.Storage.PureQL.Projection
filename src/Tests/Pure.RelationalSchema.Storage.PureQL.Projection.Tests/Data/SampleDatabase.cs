@@ -265,6 +265,7 @@ internal sealed class SampleDatabase
         new(Id(201), "Widget", 9.99, true),
         new(Id(202), "Gadget", 19.99, false),
         new(Id(203), "Gizmo", 4.50, true),
+        new(Id(204), "Deluxe", 250.00, true),
     ];
 
     public IReadOnlyList<OrderItemRow> OrderItemRows { get; } = [
