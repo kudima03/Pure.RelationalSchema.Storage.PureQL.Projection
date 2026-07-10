@@ -23,6 +23,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 internal sealed class SampleDatabase
 {
     public const string SchemaName = "shop";
+    public const string AuditSchemaName = "audit";
 
     public static class Users
     {
@@ -69,6 +70,16 @@ internal sealed class SampleDatabase
         public const string Qty = "item_qty";
     }
 
+    // Table in the second schema ("audit"), for cross-schema joins.
+    public static class Logins
+    {
+        public const string TableName = "logins";
+        public const string Entity = "audit.logins";
+        public const string Id = "login_id";
+        public const string UserId = "login_user_id";
+        public const string At = "login_at";
+    }
+
     private static readonly IReadOnlyList<IColumn> UserColumns =
     [
         new Column.Column(new String(Users.Id), new UuidColumnType()),
@@ -104,6 +115,13 @@ internal sealed class SampleDatabase
         new Column.Column(new String(OrderItems.OrderId), new UuidColumnType()),
         new Column.Column(new String(OrderItems.ProductId), new UuidColumnType()),
         new Column.Column(new String(OrderItems.Qty), new DoubleColumnType()),
+    ];
+
+    private static readonly IReadOnlyList<IColumn> LoginColumns =
+    [
+        new Column.Column(new String(Logins.Id), new UuidColumnType()),
+        new Column.Column(new String(Logins.UserId), new UuidColumnType()),
+        new Column.Column(new String(Logins.At), new DateTimeColumnType()),
     ];
 
     private readonly IReadOnlyList<IStoredSchemaDataSet> _datasets;
@@ -157,7 +175,35 @@ internal sealed class SampleDatabase
                 table => new TableHash(table)
             );
 
-        _datasets = [new StoredSchemaDataset(schema, datasetsByTable)];
+        ITable loginsTable = new Table.Table(
+            new String(Logins.TableName),
+            LoginColumns,
+            []
+        );
+
+        ISchema auditSchema = new Schema.Schema(
+            new String(AuditSchemaName),
+            [loginsTable],
+            []
+        );
+
+        IReadOnlyDictionary<ITable, IStoredTableDataSet> auditDatasetsByTable =
+            new Collections.Generic.Dictionary<
+                IStoredTableDataSet,
+                ITable,
+                IStoredTableDataSet
+            >(
+                [new SampleTableDataset(loginsTable, BuildLoginRows())],
+                dataset => dataset.TableSchema,
+                dataset => dataset,
+                table => new TableHash(table)
+            );
+
+        _datasets =
+        [
+            new StoredSchemaDataset(schema, datasetsByTable),
+            new StoredSchemaDataset(auditSchema, auditDatasetsByTable),
+        ];
     }
 
     public IEnumerable<IStoredSchemaDataSet> Datasets => _datasets;
@@ -275,6 +321,15 @@ internal sealed class SampleDatabase
         new(Id(304), Id(105), Id(201), 3),
     ];
 
+    // Logins reference users by id: Ann (Id 1) x2, Bob (Id 2) x1, Eve (Id 5) x1;
+    // Cara and Dan have none. Used for cross-schema joins to shop.users.
+    public IReadOnlyList<LoginRow> LoginRows { get; } = [
+        new(Id(401), Id(1), new DateTime(2024, 6, 1, 7, 0, 0)),
+        new(Id(402), Id(1), new DateTime(2024, 6, 2, 7, 30, 0)),
+        new(Id(403), Id(2), new DateTime(2024, 6, 3, 8, 0, 0)),
+        new(Id(404), Id(5), new DateTime(2024, 6, 4, 6, 45, 0)),
+    ];
+
     private static Guid Id(int seed)
     {
         return new Guid(seed, 0, 0, new byte[8]);
@@ -355,6 +410,24 @@ internal sealed class SampleDatabase
                         [OrderItems.OrderId] = CellText.From(item.ItemOrderId),
                         [OrderItems.ProductId] = CellText.From(item.ItemProductId),
                         [OrderItems.Qty] = CellText.From(item.ItemQty),
+                    }
+                )
+            ),
+        ];
+    }
+
+    private IReadOnlyList<IRow> BuildLoginRows()
+    {
+        return
+        [
+            .. LoginRows.Select(login =>
+                BuildRow(
+                    LoginColumns,
+                    new Dictionary<string, string>
+                    {
+                        [Logins.Id] = CellText.From(login.LoginId),
+                        [Logins.UserId] = CellText.From(login.LoginUserId),
+                        [Logins.At] = CellText.From(login.LoginAt),
                     }
                 )
             ),

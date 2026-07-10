@@ -36,3 +36,6 @@ internal sealed record OrderItemRow(
     Guid ItemProductId,
     double ItemQty
 );
+
+// Lives in a second schema ("audit") to exercise cross-schema joins.
+internal sealed record LoginRow(Guid LoginId, Guid LoginUserId, DateTime LoginAt);
