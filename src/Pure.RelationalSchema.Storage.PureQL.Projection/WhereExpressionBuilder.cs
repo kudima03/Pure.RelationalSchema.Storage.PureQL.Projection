@@ -86,6 +86,79 @@ internal static class WhereExpressionBuilder
         return Expression.Lambda<Func<IRow, bool>>(body, rowParam);
     }
 
+    internal static Func<IRow, bool?> BuildBoolSelector(
+        BooleanArrayReturning returning
+    )
+    {
+        return CompileSelector<bool?>(row => BuildBoolArrayValuePerRow(returning, row));
+    }
+
+    internal static Func<IRow, double?> BuildNumberSelector(
+        NumberArrayReturning returning
+    )
+    {
+        return CompileSelector<double?>(row =>
+            BuildNumberArrayValuePerRow(returning, row)
+        );
+    }
+
+    internal static Func<IRow, string?> BuildStringSelector(
+        StringArrayReturning returning
+    )
+    {
+        return CompileSelector<string?>(row =>
+            BuildStringArrayValuePerRow(returning, row)
+        );
+    }
+
+    internal static Func<IRow, DateOnly?> BuildDateSelector(
+        DateArrayReturning returning
+    )
+    {
+        return CompileSelector<DateOnly?>(row =>
+            BuildDateArrayValuePerRow(returning, row)
+        );
+    }
+
+    internal static Func<IRow, TimeOnly?> BuildTimeSelector(
+        TimeArrayReturning returning
+    )
+    {
+        return CompileSelector<TimeOnly?>(row =>
+            BuildTimeArrayValuePerRow(returning, row)
+        );
+    }
+
+    internal static Func<IRow, DateTime?> BuildDateTimeSelector(
+        DateTimeArrayReturning returning
+    )
+    {
+        return CompileSelector<DateTime?>(row =>
+            BuildDateTimeArrayValuePerRow(returning, row)
+        );
+    }
+
+    internal static Func<IRow, Guid?> BuildUuidSelector(
+        UuidArrayReturning returning
+    )
+    {
+        return CompileSelector<Guid?>(row =>
+            BuildUuidArrayValuePerRow(returning, row)
+        );
+    }
+
+    private static Func<IRow, T> CompileSelector<T>(
+        Func<ParameterExpression, Expression> bodyFactory
+    )
+    {
+        ParameterExpression rowParam = Expression.Parameter(typeof(IRow), "row");
+        Expression body = bodyFactory(rowParam);
+        Expression typedBody = body.Type == typeof(T)
+            ? body
+            : Expression.Convert(body, typeof(T));
+        return Expression.Lambda<Func<IRow, T>>(typedBody, rowParam).Compile();
+    }
+
     private static Expression BuildBoolean(
         BooleanReturning returning,
         ParameterExpression row

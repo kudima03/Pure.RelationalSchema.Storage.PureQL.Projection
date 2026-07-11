@@ -9,19 +9,12 @@ using PureQL.CSharp.Model.Scalars;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
-// HAVING filters groups by an aggregate over each group's rows. The translator
-// does not yet support aggregates in HAVING (it raises NotSupportedException),
-// so these spec-correct tests currently fail. They are kept failing on purpose
-// to document the gap - do not weaken them; they should pass once aggregate
-// evaluation is implemented.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// HAVING filters groups by an aggregate over each group's rows.
 [Trait("Clause", "GroupBy")]
 [Trait("Feature", "Having")]
-[Trait("Status", "KnownGap")]
 public sealed class HavingTests
 {
-    [Fact(Skip = "KnownGap: aggregates in HAVING raise NotSupportedException. "
-        + "Enable once aggregate evaluation over groups is implemented.")]
+    [Fact]
     public void HavingCountGreaterThanKeepsOnlyGroupsAboveThreshold()
     {
         SampleDatabase db = new SampleDatabase();

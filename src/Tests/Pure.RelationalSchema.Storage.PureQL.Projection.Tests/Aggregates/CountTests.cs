@@ -8,16 +8,12 @@ using PureQL.CSharp.Model.Returnings;
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
 // `count` counts the rows in each group, regardless of the counted column's
-// type. The translator does not yet evaluate aggregate projections, so these
-// spec-correct tests are disabled and document the intended SQL behaviour.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// type.
 [Trait("Clause", "Aggregate")]
 [Trait("Feature", "Count")]
-[Trait("Status", "KnownGap")]
 public sealed class CountTests
 {
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void CountOfUuidColumnPerUserProjectsGroupRowCount()
     {
         SampleDatabase db = new SampleDatabase();
@@ -71,8 +67,7 @@ public sealed class CountTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void CountOfStringColumnPerUserProjectsSameGroupRowCount()
     {
         SampleDatabase db = new SampleDatabase();

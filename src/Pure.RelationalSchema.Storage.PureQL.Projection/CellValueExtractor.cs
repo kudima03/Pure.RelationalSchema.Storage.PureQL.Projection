@@ -6,17 +6,30 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 internal static class CellValueExtractor
 {
-    internal static string? GetTextValue(IRow row, string fieldName)
+    internal static ICell? GetCell(IRow row, string fieldName)
     {
         foreach (KeyValuePair<IColumn, ICell> kvp in row.Cells)
         {
             if (kvp.Key.Name.TextValue == fieldName)
             {
-                return kvp.Value.Value.TextValue;
+                return kvp.Value;
             }
         }
 
         return null;
+    }
+
+    internal static ICell GetRequiredCell(IRow row, string fieldName)
+    {
+        return GetCell(row, fieldName)
+            ?? throw new KeyNotFoundException(
+                $"Row has no column named '{fieldName}'."
+            );
+    }
+
+    internal static string? GetTextValue(IRow row, string fieldName)
+    {
+        return GetCell(row, fieldName)?.Value.TextValue;
     }
 
     internal static double? GetDoubleValue(IRow row, string fieldName)

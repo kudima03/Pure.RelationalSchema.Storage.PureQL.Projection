@@ -5,18 +5,13 @@ using PureQL.CSharp.Model.Fields;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
-// A select alias should rename the output column. The translator names the
-// projected row column after the underlying field and ignores the alias, so
-// these spec-correct tests currently fail and are kept failing to document the
-// gap. They should pass once aliases drive the projected column name.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// A select alias renames the output column, both in the table schema and in
+// the projected row cells.
 [Trait("Clause", "Select")]
 [Trait("Feature", "SelectAlias")]
-[Trait("Status", "KnownGap")]
 public sealed class SelectAliasTests
 {
-    [Fact(Skip = "KnownGap: the projected column is named after the field; the "
-        + "select alias is ignored. Enable once aliases drive the output name.")]
+    [Fact]
     public void AliasRenamesTheProjectedColumn()
     {
         SampleDatabase db = new SampleDatabase();

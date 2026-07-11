@@ -7,17 +7,14 @@ using PureQL.CSharp.Model.Returnings;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
-// Numeric aggregates (sum / avg / min / max) over a group or the whole set. The
-// translator does not yet evaluate aggregate projections, so these spec-correct
-// tests are disabled and document the intended SQL behaviour.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// Numeric aggregates (sum / avg / min / max) over a group or the whole set.
+// With groupBy they fold each group; without it they fold the whole set into
+// a single result row.
 [Trait("Clause", "Aggregate")]
 [Trait("Feature", "NumericAggregate")]
-[Trait("Status", "KnownGap")]
 public sealed class NumericAggregateTests
 {
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void AverageOfTotalPerUserProjectsGroupMean()
     {
         SampleDatabase db = new SampleDatabase();
@@ -71,8 +68,7 @@ public sealed class NumericAggregateTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MinOfTotalPerUserProjectsGroupMinimum()
     {
         SampleDatabase db = new SampleDatabase();
@@ -126,8 +122,7 @@ public sealed class NumericAggregateTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MaxOfTotalPerUserProjectsGroupMaximum()
     {
         SampleDatabase db = new SampleDatabase();
@@ -181,8 +176,7 @@ public sealed class NumericAggregateTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void SumOfAllTotalsProjectsSingleWholeSetValue()
     {
         SampleDatabase db = new SampleDatabase();
