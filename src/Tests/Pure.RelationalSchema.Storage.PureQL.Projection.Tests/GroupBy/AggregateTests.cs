@@ -8,19 +8,13 @@ using PureQL.CSharp.Model.Returnings;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
-// Aggregate projections (sum/count/... over each group). The translator does
-// not yet project aggregate select expressions (it raises
-// NotSupportedException), so these spec-correct tests currently fail and are
-// kept failing to document the gap. They should pass once aggregate projection
-// is implemented.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// Aggregate projections (sum/count/... over each group): one result row per
+// group, holding the folded aggregate value.
 [Trait("Clause", "GroupBy")]
 [Trait("Feature", "Aggregate")]
-[Trait("Status", "KnownGap")]
 public sealed class AggregateTests
 {
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void SumAggregateProjectsPerGroupTotal()
     {
         SampleDatabase db = new SampleDatabase();
@@ -66,8 +60,7 @@ public sealed class AggregateTests
         Assert.Equal(expectedGroups, result.Count);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void CountAggregateProjectsPerGroupRowCount()
     {
         SampleDatabase db = new SampleDatabase();

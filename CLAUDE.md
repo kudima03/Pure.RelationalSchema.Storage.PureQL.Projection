@@ -33,10 +33,14 @@ All translation work is done by internal classes:
 - **`JoinApplicator`** — materializes joined datasets into lists and applies join conditions (supports INNER, LEFT, RIGHT, FULL)
 - **`WhereExpressionBuilder`** — compiles a `BooleanReturning` *or* per-row `BooleanArrayReturning` AST node from `PureQL.CSharp.Model` into a `Func<IRow, bool>` LINQ predicate (entry point: `BuildPredicate(OneOf<BooleanReturning, BooleanArrayReturning>)`). Implements the per-row `each*` family — `EachEquality`, `EachComparison`, `EachAnd`/`EachOr`/`EachNot`, plus per-row arithmetic (`EachArithmetic`, `EachDateAddDays`/`EachDateDiffDays`, `EachTimeAddSeconds`/`EachTimeDiffSeconds`, `EachDateTimeAddSeconds`/`EachDateTimeDiffSeconds`)
 - **`OrderByApplicator`** — applies `IEnumerable<OrderByItem>` ordering, honouring per-item `SortDirection` (`Asc`/`Desc`)
-- **`GroupByApplicator`** — applies GROUP BY fields and an optional HAVING predicate
-- **`DistinctApplicator`** — deduplicates the row set when `Query.Distinct == true`
+- **`GroupByApplicator`** — groups rows by the GROUP BY fields (or the whole set when only aggregates are selected), filters groups with HAVING, and emits one projected row per group (aggregate select expressions fold the group; field select expressions take the group key value)
+- **`AggregateEvaluator`** — evaluates single-value expressions over a group of rows: `Count`, `NumberAggregate` (sum/min/max/avg), `StringAggregate` (min/max, ordinal), `Date`/`DateTime`/`TimeAggregate` (min/max), plus HAVING boolean composites (equality/comparison/and/or/not over constants and aggregates)
+- **`DistinctApplicator`** — deduplicates the *projected* row set when `Query.Distinct == true` (SQL `SELECT DISTINCT` semantics)
 - **`CellValueExtractor`** — extracts typed .NET values from `ICell` for the seven supported column types: bool, date, datetime, double, string, time, uuid
-- **`ColumnsFromQuery`** — maps `SelectExpression` nodes to `IColumn` instances for the result schema
+- **`SelectColumns`** — the single source of truth for output columns: one per `SelectExpression`, named by the alias (falling back to the field name) and typed by the value type; used by both the schema and the row projection
+- **`ValueText`** — formats computed (aggregate) values as canonical invariant cell text that `CellValueExtractor` round-trips
+
+The pipeline order in `RowsFromDatasets.Build` is: locate table → JOIN → WHERE → ORDER BY → (GROUP BY + HAVING + projection | per-row projection) → DISTINCT → pagination.
 
 The library is **not AOT-compatible** (`IsAotCompatible = false`) because the query translation relies on LINQ expression trees and reflection-based `IQueryable` composition.
 
@@ -48,7 +52,7 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`) because the qu
 
 **CI thresholds:** code coverage warning at 99%, failure below 52%; mutation score failure below 32%.
 
-**Known execution gaps:** parameters, aggregates outside the `groupBy` projection, computed `select` columns, and single-value `Arithmetic` are not yet implemented — see [`EXECUTION_GAPS.md`](EXECUTION_GAPS.md). These constructs raise `NotSupportedException` rather than silently producing wrong results.
+**Known execution gaps:** parameter binding (no public binding API), computed/scalar `select` columns, single-value `Arithmetic`, temporal `Average` aggregates (undefined rounding semantics), and aggregates inside WHERE are not implemented. These constructs raise `NotSupportedException` rather than silently producing wrong results.
 
 ## Code Style
 

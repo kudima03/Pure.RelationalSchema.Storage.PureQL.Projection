@@ -5,19 +5,13 @@ using PureQL.CSharp.Model.Fields;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
-// DISTINCT should deduplicate the projected result rows. The translator applies
-// distinct to the full source rows before projection, so a low-cardinality
-// projected column is not actually deduplicated. These spec-correct tests
-// currently fail and are kept failing to document the gap. They should pass
-// once distinct is applied to the projected result.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// DISTINCT deduplicates the projected result rows (not the source rows), so a
+// low-cardinality projected column collapses to its distinct values.
 [Trait("Clause", "Select")]
 [Trait("Feature", "Distinct")]
-[Trait("Status", "KnownGap")]
 public sealed class DistinctTests
 {
-    [Fact(Skip = "KnownGap: DISTINCT is applied to the full source rows before "
-        + "projection, so a low-cardinality projected column is not deduplicated.")]
+    [Fact]
     public void DistinctOnStringColumnCollapsesDuplicateValues()
     {
         SampleDatabase db = new SampleDatabase();
@@ -55,8 +49,7 @@ public sealed class DistinctTests
         );
     }
 
-    [Fact(Skip = "KnownGap: DISTINCT is applied to the full source rows before "
-        + "projection, so a low-cardinality projected column is not deduplicated.")]
+    [Fact]
     public void DistinctOnBooleanColumnCollapsesDuplicateValues()
     {
         SampleDatabase db = new SampleDatabase();

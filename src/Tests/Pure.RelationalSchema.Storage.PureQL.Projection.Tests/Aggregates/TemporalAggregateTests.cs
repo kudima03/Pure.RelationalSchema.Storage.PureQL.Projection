@@ -9,18 +9,14 @@ using PureQL.CSharp.Model.Returnings;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
-// Temporal aggregates: min / max / avg for date, datetime and time. The
-// translator does not yet evaluate aggregate projections, so these spec-correct
-// tests are disabled and document the intended SQL behaviour. (avg over temporal
-// values additionally needs a rounding rule - see Semantics/README.md.)
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// Temporal aggregates: min / max / avg for date, datetime and time.
+// Min/max fold each group (avg over temporal values stays unsupported: it
+// needs a rounding rule - see Semantics/README.md).
 [Trait("Clause", "Aggregate")]
 [Trait("Feature", "TemporalAggregate")]
-[Trait("Status", "KnownGap")]
 public sealed class TemporalAggregateTests
 {
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MaxPlacedOnPerUserProjectsGroupLatestDate()
     {
         SampleDatabase db = new SampleDatabase();
@@ -74,8 +70,7 @@ public sealed class TemporalAggregateTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MinPlacedAtPerUserProjectsGroupEarliestInstant()
     {
         SampleDatabase db = new SampleDatabase();
@@ -130,8 +125,7 @@ public sealed class TemporalAggregateTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MaxShiftStartOverAllUsersProjectsSingleLatestTime()
     {
         SampleDatabase db = new SampleDatabase();

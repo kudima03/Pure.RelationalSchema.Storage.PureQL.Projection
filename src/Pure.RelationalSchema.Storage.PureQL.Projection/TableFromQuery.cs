@@ -10,7 +10,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 internal sealed record TableFromQuery : ITable
 {
     public TableFromQuery(Query query)
-        : this(new EmptyString(), new ColumnsFromQuery(query.SelectExpressions), []) { }
+        : this(new EmptyString(), new SelectColumns(query.SelectExpressions), []) { }
 
     internal TableFromQuery(
         IString name,

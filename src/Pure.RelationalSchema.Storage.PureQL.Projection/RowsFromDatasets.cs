@@ -1,13 +1,11 @@
 using System.Collections;
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
-using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Returnings;
-using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
@@ -78,10 +76,21 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
             queryable = OrderByApplicator.Apply(queryable, query.OrderBy);
         }
 
-        if (query.GroupBy is not null)
-        {
-            queryable = GroupByApplicator.Apply(queryable, query.GroupBy, query.Having);
-        }
+        bool groupMode =
+            query.GroupBy is not null
+            || query.SelectExpressions.Any(expression =>
+                expression.TryPickT0(out SingleValueReturning singleValue, out _)
+                && AggregateEvaluator.IsAggregate(singleValue)
+            );
+
+        queryable = groupMode
+            ? GroupByApplicator.Apply(
+                queryable,
+                query.GroupBy,
+                query.Having,
+                query.SelectExpressions
+            )
+            : ApplyRowProjection(queryable, query.SelectExpressions);
 
         if (query.Distinct)
         {
@@ -94,48 +103,41 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
             queryable = queryable.Take((int)query.Pagination.Take);
         }
 
-        IEnumerable<IColumn> columns = query
-            .SelectExpressions.Select(ColumnFromSelectExpression);
+        return queryable;
+    }
 
-        return queryable.Select(row =>
+    private static IQueryable<IRow> ApplyRowProjection(
+        IQueryable<IRow> source,
+        IEnumerable<SelectExpression> selectExpressions
+    )
+    {
+        List<ProjectionItem> plan = [.. selectExpressions.Select(ProjectionItemOf)];
+
+        return source.Select(row =>
             (IRow)
                 new Row(
-                    new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
-                        columns,
-                        c => c,
-                        c => row.Cells[c],
-                        c => new ColumnHash(c)
+                    new Collections.Generic.Dictionary<ProjectionItem, IColumn, ICell>(
+                        plan,
+                        item => item.Column,
+                        item => CellValueExtractor.GetRequiredCell(row, item.FieldName),
+                        column => new ColumnHash(column)
                     )
                 )
         );
     }
 
-    private static IColumn ColumnFromSelectExpression(SelectExpression expression)
+    private static ProjectionItem ProjectionItemOf(SelectExpression expression)
     {
-        return expression.TryPickT0(out SingleValueReturning singleValue, out _)
-            ? ColumnFromSingleValueReturning(singleValue)
-            : expression.TryPickT1(out ArrayReturning arrayReturning, out _)
-                ? ColumnFromArrayReturning(arrayReturning)
-                : throw new NotSupportedException();
+        return expression.TryPickT0(out SingleValueReturning _, out ArrayReturning array)
+            ? throw new NotSupportedException(
+                "SingleValueReturning (scalar/parameter) cannot be projected "
+                    + "as a column field."
+            )
+            : new ProjectionItem(
+                SelectColumns.OutputColumn(expression),
+                SelectColumns.FieldName(array)
+            );
     }
 
-    private static IColumn ColumnFromSingleValueReturning(SingleValueReturning _)
-    {
-        throw new NotSupportedException(
-            "SingleValueReturning (scalar/parameter) cannot be projected as a column field."
-        );
-    }
-
-    private static IColumn ColumnFromArrayReturning(ArrayReturning returning)
-    {
-        return returning.Match(
-            b => new Column.Column(new String(b.AsT1.Field), new BoolColumnType()),
-            d => new Column.Column(new String(d.AsT1.Field), new DateColumnType()),
-            dt => new Column.Column(new String(dt.AsT1.Field), new DateTimeColumnType()),
-            n => new Column.Column(new String(n.AsT1.Field), new DoubleColumnType()),
-            s => new Column.Column(new String(s.AsT1.Field), new StringColumnType()),
-            t => new Column.Column(new String(t.AsT1.Field), new TimeColumnType()),
-            u => new Column.Column(new String(u.AsT1.Field), new UuidColumnType())
-        );
-    }
+    private sealed record ProjectionItem(IColumn Column, string FieldName);
 }

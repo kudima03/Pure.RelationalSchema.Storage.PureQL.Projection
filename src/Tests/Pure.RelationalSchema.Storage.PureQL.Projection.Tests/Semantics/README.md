@@ -20,19 +20,15 @@ a category (or promote an existing `KnownGap` test) accordingly.
 | `and`/`or` over a bare boolean vector | The schema permits a `booleanArrayReturning` directly inside a single-value `and`/`or`, but whether this means an ALL/ANY fold is undocumented. | P-2 |
 | Self-joins | `joinItem` has no per-join alias, so joining an entity to itself is field-reference-ambiguous. | P-5 |
 
-## Separately: known translator gaps (written spec-correct, skipped)
+## Separately: remaining translator gaps (fail fast, no tests to enable)
 
-Some behaviour **is** defined by the spec/SQL semantics but not yet implemented
-by the translator. Those tests are written to assert the correct result and are
-disabled with `[Fact(Skip = "KnownGap: ...")]` (tagged `[Trait("Status",
-"KnownGap")]`) so the build stays green while the gap is documented. Enable each
-one when the translator implements the feature:
+Some behaviour is defined by the spec but still unimplemented; the translator
+raises `NotSupportedException` instead of guessing. These have no spec-correct
+tests waiting to be enabled (their exact semantics either need a public API or
+a spec decision first):
 
-- Aggregates in `having` (`GroupBy/HavingTests`).
-- Aggregate projections in `select` (`GroupBy/AggregateTests`).
-- Select aliases renaming the projected column (`Select/SelectAliasTests`).
-- `distinct` applied to the projected result rather than the pre-projection
-  source rows (`Select/DistinctTests`).
-
-List the gaps: `dotnet test --filter "Status=KnownGap"` (they report as skipped).
-The full suite is green; no test fails.
+- Parameter binding (`Parameters/ParameterTests` pins the fail-fast contract;
+  the public API exposes no way to supply values).
+- Computed/scalar `select` columns and single-value `Arithmetic`.
+- Temporal `average` aggregates (rounding undefined, see U-4 above).
+- Aggregates inside `where`.

@@ -7,17 +7,13 @@ using PureQL.CSharp.Model.Returnings;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
-// String aggregates are limited to min / max (there is no string sum/avg). The
-// translator does not yet evaluate aggregate projections, so these spec-correct
-// tests are disabled and document the intended SQL behaviour.
-#pragma warning disable xUnit1004 // skipped: documents a known translator gap
+// String aggregates are limited to min / max (there is no string sum/avg).
+// They fold each group's values using ordinal comparison.
 [Trait("Clause", "Aggregate")]
 [Trait("Feature", "StringAggregate")]
-[Trait("Status", "KnownGap")]
 public sealed class StringAggregateTests
 {
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MinStatusPerUserProjectsGroupMinimum()
     {
         SampleDatabase db = new SampleDatabase();
@@ -71,8 +67,7 @@ public sealed class StringAggregateTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(Skip = "KnownGap: aggregate projections raise NotSupportedException. "
-        + "Enable once aggregate select expressions are implemented.")]
+    [Fact]
     public void MaxStatusPerUserProjectsGroupMaximum()
     {
         SampleDatabase db = new SampleDatabase();
