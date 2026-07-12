@@ -1,14 +1,24 @@
+using System.Runtime.CompilerServices;
 using Pure.RelationalSchema.Abstractions.Column;
-using Pure.RelationalSchema.HashCodes;
+using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model;
+using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
+// Applies one join: resolves the right-hand table by its "schema.table"
+// path, tags its columns with the join entity (QualifiedColumn) so
+// same-named columns from both sides stay distinct and addressable, merges
+// matched rows keeping every cell, and pads unmatched outer-join rows with
+// empty cells for the missing side so projection always sees every column.
 internal static class JoinApplicator
 {
-    internal static IQueryable<IRow> Apply(
+    private static readonly ICell EmptyCell = new Cell(new String(string.Empty));
+
+    internal static JoinedRows Apply(
         IQueryable<IRow> left,
+        IReadOnlyList<IColumn> leftColumns,
         List<IStoredSchemaDataSet> datasets,
         Join join
     )
@@ -21,30 +31,50 @@ internal static class JoinApplicator
         string tableName = reversedPath.First();
         string schemaName = reversedPath.Skip(1).First();
 
-        IEnumerable<IRow> right = datasets
+        KeyValuePair<ITable, IStoredTableDataSet> rightDataset = datasets
             .First(x => x.Schema.Name.TextValue == schemaName)
-            .First(x => x.Key.Name.TextValue == tableName)
-            .Value;
+            .First(x => x.Key.Name.TextValue == tableName);
+
+        List<IColumn> rightColumns =
+        [
+            .. rightDataset.Key.Columns.Select(column =>
+                (IColumn)new QualifiedColumn(join.Entity, column)
+            ),
+        ];
 
         Func<IRow, bool> onCondition = WhereExpressionBuilder
             .BuildPredicate(join.On)
             .Compile();
 
         List<IRow> leftList = [.. left];
-        List<IRow> rightList = [.. right];
+        List<IRow> rightList =
+        [
+            .. rightDataset
+                .Value.AsEnumerable()
+                .Select(row => Qualify(join.Entity, row)),
+        ];
 
         IEnumerable<IRow> result = join.Type switch
         {
             JoinType.Inner => InnerJoin(leftList, rightList, onCondition),
-            JoinType.Left => LeftJoin(leftList, rightList, onCondition),
-            JoinType.Right => RightJoin(leftList, rightList, onCondition),
-            JoinType.Full => FullJoin(leftList, rightList, onCondition),
+            JoinType.Left => LeftJoin(leftList, rightList, onCondition, rightColumns),
+            JoinType.Right => RightJoin(leftList, rightList, onCondition, leftColumns),
+            JoinType.Full => FullJoin(
+                leftList,
+                rightList,
+                onCondition,
+                leftColumns,
+                rightColumns
+            ),
             _ => throw new NotSupportedException(
                 $"JoinType {join.Type} is not supported."
             ),
         };
 
-        return result.AsQueryable();
+        return new JoinedRows(
+            result.AsQueryable(),
+            [.. leftColumns, .. rightColumns]
+        );
     }
 
     private static IEnumerable<IRow> InnerJoin(
@@ -60,7 +90,8 @@ internal static class JoinApplicator
     private static IEnumerable<IRow> LeftJoin(
         List<IRow> left,
         List<IRow> right,
-        Func<IRow, bool> onCondition
+        Func<IRow, bool> onCondition,
+        IReadOnlyList<IColumn> rightColumns
     )
     {
         return left.SelectMany(l =>
@@ -69,28 +100,31 @@ internal static class JoinApplicator
                 .Select(r => MergeRows(l, r))
                 .Where(onCondition)];
 
-            return matched.Count > 0 ? matched : [l];
+            return matched.Count > 0 ? matched : [Pad(l, rightColumns)];
         });
     }
 
     private static IEnumerable<IRow> RightJoin(
         List<IRow> left,
         List<IRow> right,
-        Func<IRow, bool> onCondition
+        Func<IRow, bool> onCondition,
+        IReadOnlyList<IColumn> leftColumns
     )
     {
         return right.SelectMany(r =>
         {
             List<IRow> matched = [.. left.Select(l => MergeRows(l, r)).Where(onCondition)];
 
-            return matched.Count > 0 ? matched : [r];
+            return matched.Count > 0 ? matched : [Pad(r, leftColumns)];
         });
     }
 
     private static IEnumerable<IRow> FullJoin(
         List<IRow> left,
         List<IRow> right,
-        Func<IRow, bool> onCondition
+        Func<IRow, bool> onCondition,
+        IReadOnlyList<IColumn> leftColumns,
+        IReadOnlyList<IColumn> rightColumns
     )
     {
         HashSet<int> matchedRightIndexes = [];
@@ -118,7 +152,7 @@ internal static class JoinApplicator
             }
             else
             {
-                result.Add(l);
+                result.Add(Pad(l, rightColumns));
             }
         }
 
@@ -126,45 +160,81 @@ internal static class JoinApplicator
         {
             if (!matchedRightIndexes.Contains(i))
             {
-                result.Add(right[i]);
+                result.Add(Pad(right[i], leftColumns));
             }
         }
 
         return result;
     }
 
+    private static IRow Qualify(string entity, IRow row)
+    {
+        Dictionary<IColumn, ICell> cells = new(ReferenceColumnComparer.Instance);
+
+        foreach (KeyValuePair<IColumn, ICell> cell in row.Cells)
+        {
+            cells[new QualifiedColumn(entity, cell.Key)] = cell.Value;
+        }
+
+        return new Row(cells);
+    }
+
     private static IRow MergeRows(IRow leftRow, IRow rightRow)
     {
-        HashSet<string> leftNames = [.. leftRow
-            .Cells.Keys.Select(c => c.Name.TextValue)];
+        Dictionary<IColumn, ICell> cells = new(ReferenceColumnComparer.Instance);
 
-        List<KeyValuePair<IColumn, ICell>> rightOnly = [.. rightRow
-            .Cells.Where(kvp => !leftNames.Contains(kvp.Key.Name.TextValue))];
+        foreach (KeyValuePair<IColumn, ICell> cell in leftRow.Cells)
+        {
+            cells[cell.Key] = cell.Value;
+        }
 
-        List<IColumn> allColumns =
-        [
-            .. leftRow
-                        .Cells.Keys,
-            .. rightOnly.Select(kvp => kvp.Key),
-        ];
+        foreach (KeyValuePair<IColumn, ICell> cell in rightRow.Cells)
+        {
+            cells[cell.Key] = cell.Value;
+        }
 
-        List<KeyValuePair<IColumn, ICell>> allCells =
-        [
-            .. leftRow
-                        .Cells,
-            .. rightOnly,
-        ];
+        return new Row(cells);
+    }
 
-        return new Row(
-            new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
-                allColumns,
-                c => c,
-                c =>
-                    allCells
-                        .First(kvp => kvp.Key.Name.TextValue == c.Name.TextValue)
-                        .Value,
-                c => new ColumnHash(c)
-            )
-        );
+    private static IRow Pad(IRow row, IReadOnlyList<IColumn> missingColumns)
+    {
+        Dictionary<IColumn, ICell> cells = new(ReferenceColumnComparer.Instance);
+
+        foreach (KeyValuePair<IColumn, ICell> cell in row.Cells)
+        {
+            cells[cell.Key] = cell.Value;
+        }
+
+        foreach (IColumn column in missingColumns)
+        {
+            cells[column] = EmptyCell;
+        }
+
+        return new Row(cells);
+    }
+
+    // Column instances are the identity of a cell within a row. The schema
+    // column types' own Equals/GetHashCode throw by design (hashing is meant
+    // to go through ColumnHash), so row dictionaries key by reference.
+    private sealed class ReferenceColumnComparer : IEqualityComparer<IColumn>
+    {
+        public static readonly ReferenceColumnComparer Instance = new();
+
+        public bool Equals(IColumn? x, IColumn? y)
+        {
+            return ReferenceEquals(x, y);
+        }
+
+        public int GetHashCode(IColumn obj)
+        {
+            return RuntimeHelpers.GetHashCode(obj);
+        }
     }
 }
+
+// One applied join: the joined row set plus the columns every emitted row
+// carries (left side's columns followed by the qualified right columns).
+internal sealed record JoinedRows(
+    IQueryable<IRow> Rows,
+    IReadOnlyList<IColumn> Columns
+);

@@ -11,7 +11,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 // A multi-schema dataset where every table carries a same-named primary-key
 // column ("id") — the shape of any real schema that uses a conventional PK
 // name. This deliberately violates SampleDatabase's globally-unique-name
-// invariant to reproduce the joined-column resolution bugs of issues #77 and
+// invariant to cover the joined-column resolution bugs of issues #77 and
 // #78: planner.needs joins to refs.specialties (needs.spec_id -> specialties.id)
 // and to billing.estimates (needs.id -> estimates.need_id, 1:1).
 internal sealed class CollidingNameDatabase

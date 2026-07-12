@@ -80,11 +80,12 @@ internal static class GroupByApplicator
             );
         }
 
+        string fieldEntity = SelectColumns.FieldEntity(arrayReturning);
         string fieldName = SelectColumns.FieldName(arrayReturning);
 
         return new ProjectionItem(
             column,
-            rows => CellValueExtractor.GetRequiredCell(rows[0], fieldName)
+            rows => CellValueExtractor.GetRequiredCell(rows[0], fieldEntity, fieldName)
         );
     }
 
@@ -118,25 +119,33 @@ internal static class GroupByApplicator
             fields.Select(field =>
                 field.Match(
                     f =>
-                        CellValueExtractor.GetBoolValue(row, f.Field)?.ToString()
-                        ?? string.Empty,
+                        CellValueExtractor
+                            .GetBoolValue(row, f.Entity, f.Field)
+                            ?.ToString() ?? string.Empty,
                     f =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Field)?.ToString()
-                        ?? string.Empty,
+                        CellValueExtractor
+                            .GetDateOnlyValue(row, f.Entity, f.Field)
+                            ?.ToString() ?? string.Empty,
                     f =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Field)?.ToString()
-                        ?? string.Empty,
+                        CellValueExtractor
+                            .GetDateTimeValue(row, f.Entity, f.Field)
+                            ?.ToString() ?? string.Empty,
                     _ => string.Empty,
                     f =>
-                        CellValueExtractor.GetDoubleValue(row, f.Field)?.ToString()
-                        ?? string.Empty,
+                        CellValueExtractor
+                            .GetDoubleValue(row, f.Entity, f.Field)
+                            ?.ToString() ?? string.Empty,
                     f =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Field)?.ToString()
-                        ?? string.Empty,
+                        CellValueExtractor
+                            .GetTimeOnlyValue(row, f.Entity, f.Field)
+                            ?.ToString() ?? string.Empty,
                     f =>
-                        CellValueExtractor.GetGuidValue(row, f.Field)?.ToString()
-                        ?? string.Empty,
-                    f => CellValueExtractor.GetTextValue(row, f.Field) ?? string.Empty
+                        CellValueExtractor
+                            .GetGuidValue(row, f.Entity, f.Field)
+                            ?.ToString() ?? string.Empty,
+                    f =>
+                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
+                        ?? string.Empty
                 )
             )
         );

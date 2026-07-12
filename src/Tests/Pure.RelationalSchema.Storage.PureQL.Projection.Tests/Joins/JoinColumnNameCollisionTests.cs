@@ -8,16 +8,13 @@ using PureQL.CSharp.Model.Returnings;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
-#pragma warning disable xUnit1004 // skipped: reproduces a known translator bug
-
-// Reproduces issue #77: when the from table and a joined table both carry a
-// column with the same name (here the conventional PK name "id"), any
-// reference to that name on the joined side — in select, groupBy, or the
-// join's own on clause — must resolve to the joined table's value, not be
-// silently shadowed by the base table's same-named column.
+// Regression tests for issue #77: when the from table and a joined table
+// both carry a column with the same name (here the conventional PK name
+// "id"), any reference to that name on the joined side — in select, groupBy,
+// or the join's own on clause — must resolve to the joined table's value,
+// not be silently shadowed by the base table's same-named column.
 [Trait("Clause", "Join")]
 [Trait("Feature", "ColumnNameCollision")]
-[Trait("Status", "KnownGap")]
 public sealed class JoinColumnNameCollisionTests
 {
     private static Join NeedsToSpecialtiesJoin()
@@ -46,10 +43,7 @@ public sealed class JoinColumnNameCollisionTests
         );
     }
 
-    [Fact(
-        Skip = "Issue #77: the join's on clause resolves the joined table's "
-            + "same-named column to the base table's value."
-    )]
+    [Fact]
     public void JoinOnClauseWithSameNamedColumnMatchesJoinedTableValues()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();
@@ -85,10 +79,7 @@ public sealed class JoinColumnNameCollisionTests
         Assert.Equal(expected, result.Count);
     }
 
-    [Fact(
-        Skip = "Issue #77: selecting the joined table's same-named column "
-            + "returns the base table's value instead."
-    )]
+    [Fact]
     public void SelectOfSameNamedColumnFromJoinedTableReturnsItsValues()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();
@@ -132,10 +123,7 @@ public sealed class JoinColumnNameCollisionTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(
-        Skip = "Issue #77: grouping by the joined table's same-named column "
-            + "groups by the base table's value instead."
-    )]
+    [Fact]
     public void GroupByOfSameNamedColumnFromJoinedTableGroupsByItsValues()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();

@@ -58,9 +58,22 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
 
         if (query.Join is not null)
         {
+            IReadOnlyList<IColumn> columns =
+            [
+                .. targetTableDataset.TableSchema.Columns,
+            ];
+
             foreach (Join join in query.Join)
             {
-                queryable = JoinApplicator.Apply(queryable, datasetList, join);
+                JoinedRows joined = JoinApplicator.Apply(
+                    queryable,
+                    columns,
+                    datasetList,
+                    join
+                );
+
+                queryable = joined.Rows;
+                columns = joined.Columns;
             }
         }
 
@@ -119,7 +132,11 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
                     new Collections.Generic.Dictionary<ProjectionItem, IColumn, ICell>(
                         plan,
                         item => item.Column,
-                        item => CellValueExtractor.GetRequiredCell(row, item.FieldName),
+                        item => CellValueExtractor.GetRequiredCell(
+                            row,
+                            item.FieldEntity,
+                            item.FieldName
+                        ),
                         column => new ColumnHash(column)
                     )
                 )
@@ -135,9 +152,14 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
             )
             : new ProjectionItem(
                 SelectColumns.OutputColumn(expression),
+                SelectColumns.FieldEntity(array),
                 SelectColumns.FieldName(array)
             );
     }
 
-    private sealed record ProjectionItem(IColumn Column, string FieldName);
+    private sealed record ProjectionItem(
+        IColumn Column,
+        string FieldEntity,
+        string FieldName
+    );
 }
