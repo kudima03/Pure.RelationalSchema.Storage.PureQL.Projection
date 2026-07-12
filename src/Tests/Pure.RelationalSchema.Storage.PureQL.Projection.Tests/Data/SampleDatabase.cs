@@ -16,9 +16,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 //   - Ground-truth record lists (UserRows, OrderRows, ...) so tests compute
 //     expected results independently.
 //
-// Every column name is globally unique because the translator resolves fields
-// by bare column name across merged (joined) rows; unique names keep joins and
-// projections unambiguous. Column types match the field kind used to select
+// Every column name is globally unique so tests stay unambiguous regardless
+// of entity qualification (CollidingNameDatabase covers same-named columns
+// across joined tables). Column types match the field kind used to select
 // them (uuid/string/double/bool/date/datetime/time).
 internal sealed class SampleDatabase
 {

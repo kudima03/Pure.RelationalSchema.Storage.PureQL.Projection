@@ -30,13 +30,14 @@ All translation work is done by internal classes:
 
 - **`TableFromQuery`** — derives the virtual `ITable` schema from the query's SELECT expressions
 - **`RowsFromDatasets`** — orchestrates the full query pipeline: locates the source table dataset by `schema.table` path, then applies each clause in order
-- **`JoinApplicator`** — materializes joined datasets into lists and applies join conditions (supports INNER, LEFT, RIGHT, FULL)
+- **`JoinApplicator`** — materializes joined datasets into lists and applies join conditions (supports INNER, LEFT, RIGHT, FULL). Tags the joined table's columns with their entity path (`QualifiedColumn`) so same-named columns from both sides stay distinct in merged rows, and pads unmatched outer-join rows with empty cells for the missing side
+- **`QualifiedColumn`** — an `IColumn` wrapper carrying the "schema.table" entity a joined column came from; deliberately a class (not a record) because the wrapped column types' `Equals`/`GetHashCode` throw by design
 - **`WhereExpressionBuilder`** — compiles a `BooleanReturning` *or* per-row `BooleanArrayReturning` AST node from `PureQL.CSharp.Model` into a `Func<IRow, bool>` LINQ predicate (entry point: `BuildPredicate(OneOf<BooleanReturning, BooleanArrayReturning>)`). Implements the per-row `each*` family — `EachEquality`, `EachComparison`, `EachAnd`/`EachOr`/`EachNot`, plus per-row arithmetic (`EachArithmetic`, `EachDateAddDays`/`EachDateDiffDays`, `EachTimeAddSeconds`/`EachTimeDiffSeconds`, `EachDateTimeAddSeconds`/`EachDateTimeDiffSeconds`)
 - **`OrderByApplicator`** — applies `IEnumerable<OrderByItem>` ordering, honouring per-item `SortDirection` (`Asc`/`Desc`)
 - **`GroupByApplicator`** — groups rows by the GROUP BY fields (or the whole set when only aggregates are selected), filters groups with HAVING, and emits one projected row per group (aggregate select expressions fold the group; field select expressions take the group key value)
 - **`AggregateEvaluator`** — evaluates single-value expressions over a group of rows: `Count`, `NumberAggregate` (sum/min/max/avg), `StringAggregate` (min/max, ordinal), `Date`/`DateTime`/`TimeAggregate` (min/max), plus HAVING boolean composites (equality/comparison/and/or/not over constants and aggregates)
 - **`DistinctApplicator`** — deduplicates the *projected* row set when `Query.Distinct == true` (SQL `SELECT DISTINCT` semantics)
-- **`CellValueExtractor`** — extracts typed .NET values from `ICell` for the seven supported column types: bool, date, datetime, double, string, time, uuid
+- **`CellValueExtractor`** — resolves a field reference (entity + field name) against a row and extracts typed .NET values from `ICell` for the seven supported column types: bool, date, datetime, double, string, time, uuid. Resolution prefers a `QualifiedColumn` matching the reference's entity, then the base table's (untagged) same-named column, then any same-named column
 - **`SelectColumns`** — the single source of truth for output columns: one per `SelectExpression`, named by the alias (falling back to the field name) and typed by the value type; used by both the schema and the row projection
 - **`ValueText`** — formats computed (aggregate) values as canonical invariant cell text that `CellValueExtractor` round-trips
 

@@ -62,6 +62,19 @@ internal sealed record SelectColumns : IEnumerable<IColumn>
         );
     }
 
+    internal static string FieldEntity(ArrayReturning returning)
+    {
+        return returning.Match(
+            b => b.AsT1.Entity,
+            d => d.AsT1.Entity,
+            dt => dt.AsT1.Entity,
+            n => n.AsT1.Entity,
+            s => s.AsT1.Entity,
+            t => t.AsT1.Entity,
+            u => u.AsT1.Entity
+        );
+    }
+
     private static IColumnType SingleValueType(SingleValueReturning returning)
     {
         return returning.Match<IColumnType>(

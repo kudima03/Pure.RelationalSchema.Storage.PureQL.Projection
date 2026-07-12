@@ -33,26 +33,26 @@ internal static class OrderByApplicator
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Field)
+                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Field)
+                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Field)
+                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Field)
+                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Field)
+                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Field)
+                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
                     ),
             _ =>
                 descending
@@ -61,34 +61,34 @@ internal static class OrderByApplicator
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Field)
+                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Field)
+                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Field)
+                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Field)
+                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Field)
+                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Field)
+                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetTextValue(row, f.Field)
+                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
                     )
                     : source.OrderBy(row =>
-                        CellValueExtractor.GetTextValue(row, f.Field)
+                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
                     )
         );
     }
@@ -104,26 +104,26 @@ internal static class OrderByApplicator
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Field)
+                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Field)
+                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Field)
+                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Field)
+                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Field)
+                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Field)
+                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
                     ),
             _ =>
                 descending
@@ -132,34 +132,34 @@ internal static class OrderByApplicator
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Field)
+                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Field)
+                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Field)
+                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Field)
+                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Field)
+                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Field)
+                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
                     ),
             f =>
                 descending
                     ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetTextValue(row, f.Field)
+                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
                     )
                     : source.ThenBy(row =>
-                        CellValueExtractor.GetTextValue(row, f.Field)
+                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
                     )
         );
     }

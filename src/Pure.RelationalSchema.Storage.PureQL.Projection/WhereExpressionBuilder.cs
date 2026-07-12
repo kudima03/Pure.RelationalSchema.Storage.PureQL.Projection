@@ -159,6 +159,21 @@ internal static class WhereExpressionBuilder
         return Expression.Lambda<Func<IRow, T>>(typedBody, rowParam).Compile();
     }
 
+    private static Expression FieldValue(
+        MethodInfo getCellValueMethod,
+        ParameterExpression row,
+        string entity,
+        string field
+    )
+    {
+        return Expression.Call(
+            getCellValueMethod,
+            row,
+            Expression.Constant(entity),
+            Expression.Constant(field)
+        );
+    }
+
     private static Expression BuildBoolean(
         BooleanReturning returning,
         ParameterExpression row
@@ -237,11 +252,13 @@ internal static class WhereExpressionBuilder
             eq =>
                 BuildContainmentEquality(
                     left: eq.Left.IsT1,
+                    leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
                     leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
                     leftScalar: eq.Left.IsT2
                         ? (IEnumerable<DateOnly>?)eq.Left.AsT2.Value
                         : null,
                     right: eq.Right.IsT1,
+                    rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
                     rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
                     rightScalar: eq.Right.IsT2
                         ? (IEnumerable<DateOnly>?)eq.Right.AsT2.Value
@@ -252,11 +269,13 @@ internal static class WhereExpressionBuilder
             eq =>
                 BuildContainmentEquality(
                     left: eq.Left.IsT1,
+                    leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
                     leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
                     leftScalar: eq.Left.IsT2
                         ? (IEnumerable<DateTime>?)eq.Left.AsT2.Value
                         : null,
                     right: eq.Right.IsT1,
+                    rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
                     rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
                     rightScalar: eq.Right.IsT2
                         ? (IEnumerable<DateTime>?)eq.Right.AsT2.Value
@@ -267,11 +286,13 @@ internal static class WhereExpressionBuilder
             eq =>
                 BuildContainmentEquality(
                     left: eq.Left.IsT1,
+                    leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
                     leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
                     leftScalar: eq.Left.IsT2
                         ? (IEnumerable<double>?)eq.Left.AsT2.Value
                         : null,
                     right: eq.Right.IsT1,
+                    rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
                     rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
                     rightScalar: eq.Right.IsT2
                         ? (IEnumerable<double>?)eq.Right.AsT2.Value
@@ -283,11 +304,13 @@ internal static class WhereExpressionBuilder
             eq =>
                 BuildContainmentEquality(
                     left: eq.Left.IsT1,
+                    leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
                     leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
                     leftScalar: eq.Left.IsT2
                         ? (IEnumerable<TimeOnly>?)eq.Left.AsT2.Value
                         : null,
                     right: eq.Right.IsT1,
+                    rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
                     rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
                     rightScalar: eq.Right.IsT2
                         ? (IEnumerable<TimeOnly>?)eq.Right.AsT2.Value
@@ -298,11 +321,13 @@ internal static class WhereExpressionBuilder
             eq =>
                 BuildContainmentEquality(
                     left: eq.Left.IsT1,
+                    leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
                     leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
                     leftScalar: eq.Left.IsT2
                         ? (IEnumerable<Guid>?)eq.Left.AsT2.Value
                         : null,
                     right: eq.Right.IsT1,
+                    rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
                     rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
                     rightScalar: eq.Right.IsT2
                         ? (IEnumerable<Guid>?)eq.Right.AsT2.Value
@@ -320,9 +345,11 @@ internal static class WhereExpressionBuilder
     {
         return BuildContainmentEquality(
             left: eq.Left.IsT1,
+            leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
             leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
             leftScalar: eq.Left.IsT0 ? (IEnumerable<bool>?)eq.Left.AsT0.Value : null,
             right: eq.Right.IsT1,
+            rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
             rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
             rightScalar: eq.Right.IsT0 ? (IEnumerable<bool>?)eq.Right.AsT0.Value : null,
             row,
@@ -337,9 +364,11 @@ internal static class WhereExpressionBuilder
     {
         return BuildContainmentEquality(
             left: eq.Left.IsT1,
+            leftEntity: eq.Left.IsT1 ? eq.Left.AsT1.Entity : null,
             leftField: eq.Left.IsT1 ? eq.Left.AsT1.Field : null,
             leftScalar: eq.Left.IsT2 ? (IEnumerable<string>?)eq.Left.AsT2.Value : null,
             right: eq.Right.IsT1,
+            rightEntity: eq.Right.IsT1 ? eq.Right.AsT1.Entity : null,
             rightField: eq.Right.IsT1 ? eq.Right.AsT1.Field : null,
             rightScalar: eq.Right.IsT2 ? (IEnumerable<string>?)eq.Right.AsT2.Value : null,
             row,
@@ -349,9 +378,11 @@ internal static class WhereExpressionBuilder
 
     private static Expression BuildContainmentEquality<T>(
         bool left,
+        string? leftEntity,
         string? leftField,
         IEnumerable<T>? leftScalar,
         bool right,
+        string? rightEntity,
         string? rightField,
         IEnumerable<T>? rightScalar,
         ParameterExpression row,
@@ -367,10 +398,11 @@ internal static class WhereExpressionBuilder
 
         if (left && rightScalar is not null)
         {
-            Expression fieldExpr = Expression.Call(
+            Expression fieldExpr = FieldValue(
                 getCellValueMethod,
                 row,
-                Expression.Constant(leftField)
+                leftEntity!,
+                leftField!
             );
             Expression scalarExpr = Expression.Constant(
                 rightScalar.ToArray(),
@@ -381,10 +413,11 @@ internal static class WhereExpressionBuilder
 
         if (right && leftScalar is not null)
         {
-            Expression fieldExpr = Expression.Call(
+            Expression fieldExpr = FieldValue(
                 getCellValueMethod,
                 row,
-                Expression.Constant(rightField)
+                rightEntity!,
+                rightField!
             );
             Expression scalarExpr = Expression.Constant(
                 leftScalar.ToArray(),
@@ -395,15 +428,17 @@ internal static class WhereExpressionBuilder
 
         if (left && right)
         {
-            Expression left1 = Expression.Call(
+            Expression left1 = FieldValue(
                 getCellValueMethod,
                 row,
-                Expression.Constant(leftField)
+                leftEntity!,
+                leftField!
             );
-            Expression right1 = Expression.Call(
+            Expression right1 = FieldValue(
                 getCellValueMethod,
                 row,
-                Expression.Constant(rightField)
+                rightEntity!,
+                rightField!
             );
             return Expression.Equal(left1, right1);
         }
@@ -467,11 +502,7 @@ internal static class WhereExpressionBuilder
             scalar => Expression.Constant(scalar.Value.All(v => v)),
             field =>
                 Expression.Equal(
-                    Expression.Call(
-                        GetBoolValueMethod,
-                        row,
-                        Expression.Constant(field.Field)
-                    ),
+                    FieldValue(GetBoolValueMethod, row, field.Entity, field.Field),
                     Expression.Constant((bool?)true, typeof(bool?))
                 ),
             _ => throw new NotSupportedException(ParameterNotSupported),
@@ -668,17 +699,13 @@ internal static class WhereExpressionBuilder
         ParameterExpression row
     )
     {
-        return returning.Match<Expression>(
+        return returning.Match(
             scalar => Expression.Constant(
                 (bool?)scalar.Value.FirstOrDefault(),
                 typeof(bool?)
             ),
             field =>
-                Expression.Call(
-                    GetBoolValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetBoolValueMethod, row, field.Entity, field.Field),
             _ => throw new NotSupportedException(ParameterNotSupported),
             _ => throw new NotSupportedException(
                 "Nested each-comparison as a boolean value is not supported."
@@ -706,11 +733,7 @@ internal static class WhereExpressionBuilder
         return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             field =>
-                Expression.Call(
-                    GetDoubleValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetDoubleValueMethod, row, field.Entity, field.Field),
             scalar => Expression.Constant(
                 (double?)scalar.Value.FirstOrDefault(),
                 typeof(double?)
@@ -727,14 +750,10 @@ internal static class WhereExpressionBuilder
         ParameterExpression row
     )
     {
-        return returning.Match<Expression>(
+        return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             field =>
-                Expression.Call(
-                    GetTextValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetTextValueMethod, row, field.Entity, field.Field),
             scalar => Expression.Constant(
                 scalar.Value.FirstOrDefault(),
                 typeof(string)
@@ -750,11 +769,7 @@ internal static class WhereExpressionBuilder
         return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             field =>
-                Expression.Call(
-                    GetDateOnlyValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetDateOnlyValueMethod, row, field.Entity, field.Field),
             scalar => Expression.Constant(
                 (DateOnly?)scalar.Value.FirstOrDefault(),
                 typeof(DateOnly?)
@@ -771,11 +786,7 @@ internal static class WhereExpressionBuilder
         return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             field =>
-                Expression.Call(
-                    GetTimeOnlyValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetTimeOnlyValueMethod, row, field.Entity, field.Field),
             scalar => Expression.Constant(
                 (TimeOnly?)scalar.Value.FirstOrDefault(),
                 typeof(TimeOnly?)
@@ -792,11 +803,7 @@ internal static class WhereExpressionBuilder
         return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             field =>
-                Expression.Call(
-                    GetDateTimeValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetDateTimeValueMethod, row, field.Entity, field.Field),
             scalar => Expression.Constant(
                 (DateTime?)scalar.Value.FirstOrDefault(),
                 typeof(DateTime?)
@@ -810,14 +817,10 @@ internal static class WhereExpressionBuilder
         ParameterExpression row
     )
     {
-        return returning.Match<Expression>(
+        return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             field =>
-                Expression.Call(
-                    GetGuidValueMethod,
-                    row,
-                    Expression.Constant(field.Field)
-                ),
+                FieldValue(GetGuidValueMethod, row, field.Entity, field.Field),
             scalar => Expression.Constant(
                 (Guid?)scalar.Value.FirstOrDefault(),
                 typeof(Guid?)

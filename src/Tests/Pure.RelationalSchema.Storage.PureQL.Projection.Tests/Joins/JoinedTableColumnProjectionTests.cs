@@ -8,20 +8,19 @@ using PureQL.CSharp.Model.Returnings;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
-#pragma warning disable xUnit1004 // skipped: reproduces a known translator bug
-
-// Reproduces issue #78: a select item that references a joined-table column
-// whose name does NOT collide with any base-table column must still see that
-// column after the join — plainly projected, aggregated over the whole set,
-// or used as a groupBy key. The joining tables share the PK name "id" (the
-// shape of the reported schema), but the referenced columns themselves
-// ("actual_hours", "estimate_status") are unique to the joined table.
+// Regression tests for issue #78: a select item that references a
+// joined-table column whose name does NOT collide with any base-table column
+// must still see that column after the join — plainly projected, aggregated
+// over the whole set, or used as a groupBy key. The joining tables share the
+// PK name "id" (the shape of the reported schema), but the referenced
+// columns themselves ("actual_hours", "estimate_status") are unique to the
+// joined table.
 //
 // The inner-join tests transcribe the issue's repro steps directly. The
-// left-join tests pin the one in-library path that produces the reported
-// symptoms (KeyNotFoundException from projection / silently empty
-// aggregates): unmatched outer-join rows pass through unmerged, without the
-// joined table's columns, instead of carrying null cells for them.
+// left-join tests pin the path that produced the reported symptoms
+// (KeyNotFoundException from projection / silently empty aggregates):
+// unmatched outer-join rows must carry the joined table's columns as empty
+// (null-semantics) cells rather than passing through without them.
 [Trait("Clause", "Join")]
 [Trait("Feature", "JoinedColumnProjection")]
 public sealed class JoinedTableColumnProjectionTests
@@ -209,12 +208,7 @@ public sealed class JoinedTableColumnProjectionTests
         Assert.Equal(expected, actual);
     }
 
-    [Fact(
-        Skip = "Issue #78: unmatched outer-join rows lack the joined table's "
-            + "columns entirely, so projecting one throws KeyNotFoundException "
-            + "instead of yielding null cells."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void LeftJoinUnmatchedRowsExposeJoinedColumnsAsNullCells()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();
@@ -277,12 +271,7 @@ public sealed class JoinedTableColumnProjectionTests
         Assert.Equal(unmatched, cells.Count(hours => hours is null));
     }
 
-    [Fact(
-        Skip = "Issue #78: grouping by a joined column crashes with "
-            + "KeyNotFoundException when a group's rows come from the "
-            + "unmatched outer-join fallback."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void LeftJoinGroupByJoinedColumnPutsUnmatchedRowsInNullGroup()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();
