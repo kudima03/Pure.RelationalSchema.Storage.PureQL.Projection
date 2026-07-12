@@ -214,6 +214,7 @@ public sealed class JoinedTableColumnProjectionTests
             + "columns entirely, so projecting one throws KeyNotFoundException "
             + "instead of yielding null cells."
     )]
+    [Trait("Status", "KnownGap")]
     public void LeftJoinUnmatchedRowsExposeJoinedColumnsAsNullCells()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();
@@ -281,6 +282,7 @@ public sealed class JoinedTableColumnProjectionTests
             + "KeyNotFoundException when a group's rows come from the "
             + "unmatched outer-join fallback."
     )]
+    [Trait("Status", "KnownGap")]
     public void LeftJoinGroupByJoinedColumnPutsUnmatchedRowsInNullGroup()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();

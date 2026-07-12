@@ -17,6 +17,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 // silently shadowed by the base table's same-named column.
 [Trait("Clause", "Join")]
 [Trait("Feature", "ColumnNameCollision")]
+[Trait("Status", "KnownGap")]
 public sealed class JoinColumnNameCollisionTests
 {
     private static Join NeedsToSpecialtiesJoin()
