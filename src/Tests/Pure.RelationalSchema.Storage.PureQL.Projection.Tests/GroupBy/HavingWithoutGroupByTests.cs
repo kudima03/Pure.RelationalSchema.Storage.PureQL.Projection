@@ -9,8 +9,6 @@ using PureQL.CSharp.Model.Scalars;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
-#pragma warning disable xUnit1004 // skipped: reproduces a known translator bug
-
 // HAVING with no groupBy is schema-valid (SQL-style implicit whole-set
 // group). It is honoured today only when the select list contains an
 // aggregate (which engages group mode); with plain field selects the clause
@@ -67,12 +65,7 @@ public sealed class HavingWithoutGroupByTests
         );
     }
 
-    [Fact(
-        Skip = "Issue #83: with no groupBy and no aggregate select the query "
-            + "never enters group mode, so HAVING is silently dropped and a "
-            + "constant-false condition still returns every row."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void HavingWithoutGroupByFiltersTheImplicitWholeSetGroup()
     {
         SampleDatabase db = new SampleDatabase();

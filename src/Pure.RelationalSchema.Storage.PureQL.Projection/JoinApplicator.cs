@@ -32,7 +32,8 @@ internal static class JoinApplicator
         string schemaName = reversedPath.Skip(1).First();
 
         KeyValuePair<ITable, IStoredTableDataSet> rightDataset = datasets
-            .First(x => x.Schema.Name.TextValue == schemaName)
+            .Where(x => x.Schema.Name.TextValue == schemaName)
+            .SelectMany(x => x)
             .First(x => x.Key.Name.TextValue == tableName);
 
         List<IColumn> rightColumns =
