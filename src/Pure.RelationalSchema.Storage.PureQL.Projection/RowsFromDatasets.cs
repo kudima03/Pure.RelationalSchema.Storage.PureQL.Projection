@@ -39,6 +39,8 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
         Query query
     )
     {
+        EntityReferenceValidator.Validate(query);
+
         List<IStoredSchemaDataSet> datasetList = [.. datasets];
 
         IEnumerable<string> reversedPath = query
@@ -50,7 +52,8 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
         string schemaName = reversedPath.Skip(1).First();
 
         IStoredTableDataSet targetTableDataset = datasetList
-            .First(x => x.Schema.Name.TextValue == schemaName)
+            .Where(x => x.Schema.Name.TextValue == schemaName)
+            .SelectMany(x => x)
             .First(x => x.Key.Name.TextValue == tableName)
             .Value;
 
@@ -89,8 +92,11 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
             queryable = OrderByApplicator.Apply(queryable, query.OrderBy);
         }
 
+        // HAVING with no groupBy still filters the implicit whole-set group,
+        // so it engages group mode on its own.
         bool groupMode =
             query.GroupBy is not null
+            || query.Having is not null
             || query.SelectExpressions.Any(expression =>
                 expression.TryPickT0(out SingleValueReturning singleValue, out _)
                 && AggregateEvaluator.IsAggregate(singleValue)
@@ -112,8 +118,14 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
 
         if (query.Pagination is not null)
         {
-            queryable = queryable.Skip((int)query.Pagination.Skip);
-            queryable = queryable.Take((int)query.Pagination.Take);
+            // Skip/take are Int64 on the wire; clamp instead of letting the
+            // narrowing cast wrap into negative (no-op / empty) LINQ calls.
+            queryable = queryable.Skip(
+                (int)Math.Clamp(query.Pagination.Skip, 0, int.MaxValue)
+            );
+            queryable = queryable.Take(
+                (int)Math.Clamp(query.Pagination.Take, 0, int.MaxValue)
+            );
         }
 
         return queryable;

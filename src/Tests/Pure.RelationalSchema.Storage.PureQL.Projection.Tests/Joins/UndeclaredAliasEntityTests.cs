@@ -6,8 +6,6 @@ using PureQL.CSharp.Model.Fields;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
-#pragma warning disable xUnit1004 // skipped: reproduces a known translator bug
-
 // The spec gives joinItem no alias: joined tables must be referenced by
 // their full "schema.table" entity string, and only the root from supports
 // an alias. A field reference whose entity matches neither the from
@@ -44,13 +42,7 @@ public sealed class UndeclaredAliasEntityTests
         );
     }
 
-    [Fact(
-        Skip = "Issue #82: a join-on field reference via an undeclared join "
-            + "alias silently binds to the base table's same-named column, "
-            + "so the equi-join key never matches and the join returns an "
-            + "empty result instead of failing fast."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void JoinOnConditionViaUndeclaredAliasFailsFast()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();
@@ -105,12 +97,7 @@ public sealed class UndeclaredAliasEntityTests
         ));
     }
 
-    [Fact(
-        Skip = "Issue #82: selecting a colliding column via an undeclared "
-            + "join alias silently returns the base table's values instead "
-            + "of failing fast."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void SelectOfCollidingColumnViaUndeclaredAliasFailsFast()
     {
         CollidingNameDatabase db = new CollidingNameDatabase();

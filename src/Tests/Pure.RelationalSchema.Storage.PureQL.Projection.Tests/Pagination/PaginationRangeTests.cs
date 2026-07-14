@@ -6,8 +6,6 @@ using ModelPagination = PureQL.CSharp.Model.Pagination;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Pagination;
 
-#pragma warning disable xUnit1004 // skipped: reproduces a known translator bug
-
 // Pagination carries skip/take as Int64, but they are applied through an
 // unchecked cast to Int32, so values beyond int.MaxValue wrap and silently
 // produce the wrong window (issue #85).
@@ -40,12 +38,7 @@ public sealed class PaginationRangeTests
         );
     }
 
-    [Fact(
-        Skip = "Issue #85: take = long.MaxValue wraps to -1 through the "
-            + "unchecked int cast, so a query asking for everything returns "
-            + "an empty result."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void TakeBeyondIntMaxReturnsEveryRow()
     {
         SampleDatabase db = new SampleDatabase();
@@ -60,12 +53,7 @@ public sealed class PaginationRangeTests
         Assert.Equal(db.UserRows.Count, result.Count);
     }
 
-    [Fact(
-        Skip = "Issue #85: skip = long.MaxValue wraps to -1 through the "
-            + "unchecked int cast, making the skip a no-op, so rows that "
-            + "should all be skipped are returned."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void SkipBeyondIntMaxReturnsNoRows()
     {
         SampleDatabase db = new SampleDatabase();

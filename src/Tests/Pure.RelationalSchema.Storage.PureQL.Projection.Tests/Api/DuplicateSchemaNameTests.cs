@@ -14,8 +14,6 @@ using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
-#pragma warning disable xUnit1004 // skipped: reproduces a known translator bug
-
 // PureQLProjection accepts an open IEnumerable<IStoredSchemaDataSet>, and
 // nothing forbids two datasets from sharing a schema name (a host that
 // concatenates datasets from several sources produces exactly this shape).
@@ -69,13 +67,7 @@ public sealed class DuplicateSchemaNameTests
         return new StoredSchemaDataset(schema, datasetsByTable);
     }
 
-    [Fact(
-        Skip = "Issue #84: entity resolution consults only the first schema "
-            + "dataset with a matching name, so a from table that lives in a "
-            + "later same-named dataset throws InvalidOperationException "
-            + "instead of resolving."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void FromTableInALaterSameNamedSchemaDatasetResolves()
     {
         IStoredSchemaDataSet first = SingleTableDataset(
@@ -110,13 +102,7 @@ public sealed class DuplicateSchemaNameTests
         Assert.Equal(BetaValue, result.Row(0)["beta_name"]);
     }
 
-    [Fact(
-        Skip = "Issue #84: join resolution consults only the first schema "
-            + "dataset with a matching name, so a join table that lives in a "
-            + "later same-named dataset throws InvalidOperationException "
-            + "instead of resolving."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void JoinTableInALaterSameNamedSchemaDatasetResolves()
     {
         IStoredSchemaDataSet first = SingleTableDataset(
