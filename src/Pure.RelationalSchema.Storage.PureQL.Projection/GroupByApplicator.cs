@@ -63,11 +63,19 @@ internal static class GroupByApplicator
             )
         )
         {
+            if (ScalarCell.IsScalar(singleValue))
+            {
+                ICell constant = ScalarCell.From(singleValue);
+
+                return new ProjectionItem(column, _ => constant);
+            }
+
             if (!AggregateEvaluator.IsAggregate(singleValue))
             {
                 throw new NotSupportedException(
-                    "SingleValueReturning (scalar/parameter) cannot be projected "
-                        + "as a column field."
+                    "Only scalar and aggregate SingleValueReturning expressions "
+                        + "can be projected per group; parameters and "
+                        + "single-value composites are not supported."
                 );
             }
 

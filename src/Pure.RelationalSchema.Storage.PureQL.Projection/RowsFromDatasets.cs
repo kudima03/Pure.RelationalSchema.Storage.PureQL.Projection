@@ -144,11 +144,7 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
                     new Collections.Generic.Dictionary<ProjectionItem, IColumn, ICell>(
                         plan,
                         item => item.Column,
-                        item => CellValueExtractor.GetRequiredCell(
-                            row,
-                            item.FieldEntity,
-                            item.FieldName
-                        ),
+                        item => item.Cell(row),
                         column => new ColumnHash(column)
                     )
                 )
@@ -157,21 +153,40 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
 
     private static ProjectionItem ProjectionItemOf(SelectExpression expression)
     {
-        return expression.TryPickT0(out SingleValueReturning _, out ArrayReturning array)
-            ? throw new NotSupportedException(
-                "SingleValueReturning (scalar/parameter) cannot be projected "
-                    + "as a column field."
+        IColumn column = SelectColumns.OutputColumn(expression);
+
+        if (
+            expression.TryPickT0(
+                out SingleValueReturning singleValue,
+                out ArrayReturning array
             )
-            : new ProjectionItem(
-                SelectColumns.OutputColumn(expression),
-                SelectColumns.FieldEntity(array),
-                SelectColumns.FieldName(array)
-            );
+        )
+        {
+            if (!ScalarCell.IsScalar(singleValue))
+            {
+                throw new NotSupportedException(
+                    "Only scalar SingleValueReturning expressions can be "
+                        + "projected per row; parameters and single-value "
+                        + "composites are not supported."
+                );
+            }
+
+            ICell cell = ScalarCell.From(singleValue);
+
+            return new ProjectionItem(column, _ => cell);
+        }
+
+        string fieldEntity = SelectColumns.FieldEntity(array);
+        string fieldName = SelectColumns.FieldName(array);
+
+        return new ProjectionItem(
+            column,
+            row => CellValueExtractor.GetRequiredCell(row, fieldEntity, fieldName)
+        );
     }
 
     private sealed record ProjectionItem(
         IColumn Column,
-        string FieldEntity,
-        string FieldName
+        Func<IRow, ICell> Cell
     );
 }
