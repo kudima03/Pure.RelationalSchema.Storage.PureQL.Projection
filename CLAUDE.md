@@ -34,7 +34,8 @@ All translation work is done by internal classes:
 - **`QualifiedColumn`** — an `IColumn` wrapper carrying the "schema.table" entity a joined column came from; deliberately a class (not a record) because the wrapped column types' `Equals`/`GetHashCode` throw by design
 - **`WhereExpressionBuilder`** — compiles a `BooleanReturning` *or* per-row `BooleanArrayReturning` AST node from `PureQL.CSharp.Model` into a `Func<IRow, bool>` LINQ predicate (entry point: `BuildPredicate(OneOf<BooleanReturning, BooleanArrayReturning>)`). Implements the per-row `each*` family — `EachEquality`, `EachComparison`, `EachAnd`/`EachOr`/`EachNot`, plus per-row arithmetic (`EachArithmetic`, `EachDateAddDays`/`EachDateDiffDays`, `EachTimeAddSeconds`/`EachTimeDiffSeconds`, `EachDateTimeAddSeconds`/`EachDateTimeDiffSeconds`)
 - **`OrderByApplicator`** — applies `IEnumerable<OrderByItem>` ordering, honouring per-item `SortDirection` (`Asc`/`Desc`)
-- **`GroupByApplicator`** — groups rows by the GROUP BY fields (or the whole set when only aggregates are selected), filters groups with HAVING, and emits one projected row per group (aggregate select expressions fold the group; field select expressions take the group key value)
+- **`GroupByApplicator`** — groups rows by the GROUP BY fields (or the whole set when only aggregates are selected), filters groups with HAVING, and emits one projected row per group (aggregate select expressions fold the group; field select expressions take the group key value; scalar select expressions repeat their constant)
+- **`ScalarCell`** — builds the constant output cell of a scalar select expression (`SELECT 5 AS version`), repeated on every output row in both the per-row and group projection paths; text formatted via `ValueText` so it round-trips through `CellValueExtractor`
 - **`AggregateEvaluator`** — evaluates single-value expressions over a group of rows: `Count`, `NumberAggregate` (sum/min/max/avg), `StringAggregate` (min/max, ordinal), `Date`/`DateTime`/`TimeAggregate` (min/max), plus HAVING boolean composites (equality/comparison/and/or/not over constants and aggregates)
 - **`DistinctApplicator`** — deduplicates the *projected* row set when `Query.Distinct == true` (SQL `SELECT DISTINCT` semantics)
 - **`CellValueExtractor`** — resolves a field reference (entity + field name) against a row and extracts typed .NET values from `ICell` for the seven supported column types: bool, date, datetime, double, string, time, uuid. Resolution prefers a `QualifiedColumn` matching the reference's entity, then the base table's (untagged) same-named column, then any same-named column
@@ -53,7 +54,7 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`) because the qu
 
 **CI thresholds:** code coverage warning at 99%, failure below 52%; mutation score failure below 32%.
 
-**Known execution gaps:** parameter binding (no public binding API), computed/scalar `select` columns, single-value `Arithmetic`, temporal `Average` aggregates (undefined rounding semantics), and aggregates inside WHERE are not implemented. These constructs raise `NotSupportedException` rather than silently producing wrong results.
+**Known execution gaps:** parameter binding (no public binding API), computed `select` columns, single-value `Arithmetic`, temporal `Average` aggregates (undefined rounding semantics), and aggregates inside WHERE are not implemented. These constructs raise `NotSupportedException` rather than silently producing wrong results.
 
 ## Code Style
 

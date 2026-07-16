@@ -6,9 +6,19 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // CellValueExtractor, so computed cells round-trip like stored ones.
 internal static class ValueText
 {
+    internal static string From(bool value)
+    {
+        return value ? bool.TrueString : bool.FalseString;
+    }
+
     internal static string From(double value)
     {
         return value.ToString(CultureInfo.InvariantCulture);
+    }
+
+    internal static string From(Guid value)
+    {
+        return value.ToString("D");
     }
 
     internal static string From(DateOnly value)
