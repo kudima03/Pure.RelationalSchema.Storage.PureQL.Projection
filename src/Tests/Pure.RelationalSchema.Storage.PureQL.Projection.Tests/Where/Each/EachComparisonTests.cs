@@ -63,6 +63,56 @@ public sealed class EachComparisonTests
     }
 
     [Fact]
+    public void EachNumberGreaterThanZeroKeepsEveryPositiveRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new NumberArrayReturning(
+                            new NumberField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Total
+                            )
+                        )
+                    ),
+                    "hours"
+                ),
+            ],
+            new BooleanArrayReturning(
+                new EachComparison(
+                    new EachNumberComparison(
+                        EachComparisonOperator.EachGreaterThan,
+                        new NumberArrayReturning(
+                            new NumberField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Total
+                            )
+                        ),
+                        new NumberReturning(new NumberScalar(0))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        // Every sample total is positive, so nothing may be filtered out
+        // (issue #90's live symptom was zero rows for exactly this shape).
+        Assert.Equal(db.OrderRows.Count, result.Count);
+    }
+
+    [Fact]
     public void EachNumberGreaterThanOrEqualIncludesThreshold()
     {
         SampleDatabase db = new SampleDatabase();
