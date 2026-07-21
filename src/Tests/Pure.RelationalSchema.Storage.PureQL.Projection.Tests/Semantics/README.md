@@ -9,16 +9,27 @@ a category (or promote an existing `KnownGap` test) accordingly.
 
 | Area | Why it is excluded | Spec ref |
 | --- | --- | --- |
-| Outer-join null extension | On the unmatched side of a LEFT/RIGHT/FULL join, the columns of the other table are absent. Whether they should read as `null`, exclude the row from later `each*`/aggregate evaluation, or error is undefined. `OuterJoinTests` assert only row counts and preserved-side values, never a null-extended column. | P-1 |
-| Empty-group / empty-set aggregates | `count` over no rows is presumably 0, but `sum`/`min`/`max`/`average` over an empty group has no defined result (error vs null vs zero). | U-3 |
-| `eachDivide` by zero | Division by zero in per-row arithmetic is undefined. Arithmetic tests use non-zero divisors only. | P-1 |
-| Zip-length mismatch | An array literal/parameter is not guaranteed to align with the row count `N`; `eachEqual(field, [a, b])` over `N != 2` rows is schema-valid but semantically undefined. Each* tests broadcast a single scalar instead. | P-7 |
-| `count` over a boolean vector | Ambiguous between "length of the vector" and "count of `true`s". | P-12 |
-| String collation | Ordering/`>`/`min`/`max` on strings has no defined locale rule. String comparison tests use lowercase ASCII values whose ordinal order is collation-independent. | U-6 |
-| Temporal averages / rounding | `average_time` around midnight and `average_date`/`average_datetime` rounding are undefined. | U-4 |
-| Cross-type temporal comparison | There is no cast between `date`/`datetime`/`time`; comparing across them is undefined. Tests keep each temporal comparison within one type. | U-5 |
-| `and`/`or` over a bare boolean vector | The schema permits a `booleanArrayReturning` directly inside a single-value `and`/`or`, but whether this means an ALL/ANY fold is undocumented. | P-2 |
-| Self-joins | `joinItem` has no per-join alias, so joining an entity to itself is field-reference-ambiguous. | P-5 |
+| String collation | Ordering/`>`/`min`/`max` on strings has no defined locale rule; the translator consistently uses ordinal comparison, which is an implementation choice, not a spec-mandated one. String comparison tests use lowercase ASCII values whose ordinal order is collation-independent. | U-6 |
+| Cross-type temporal comparison | `PureQL.CSharp.Model.Comparisons` defines separate `DateComparison`/`DateTimeComparison`/`TimeComparison` types, each pairing same-typed operands — the model has no shape that allows comparing across `date`/`datetime`/`time` at all, so this is structurally impossible rather than merely undefined. Tests keep each temporal comparison within one type. | U-5 |
+| Self-joins | `joinItem` has no per-join alias. `EntityReferenceValidator` does not reject `join.Entity == query.From.Entity`, and `CellValueExtractor.GetCell` always prefers the `QualifiedColumn` matching the entity string — since both join sides share the same entity string, every field reference on *either* side resolves to the same (joined) cell. Empirically (self-join `shop.users` to itself on `id == id`, 6 rows) this makes the ON condition tautological and silently returns the full cross product (36 rows), not an error. **This is a translator correctness bug, not just an ambiguity** — tracked separately as a defect, see the Join expansion issue. | P-5 |
+
+## Previously listed here, now confirmed as defined, deterministic behaviour
+
+An earlier version of this README listed the six items below as spec-ambiguous.
+Reading the current translator source (and, for the self-join case above,
+empirical confirmation) shows each has settled on a concrete, deterministic
+rule. They are no longer "excluded" — they are testable behaviour and should
+get real assertions (tracked in the relevant #72 sub-issues) rather than being
+documented as gaps:
+
+| Area | Actual behaviour | Source |
+| --- | --- | --- |
+| Outer-join null extension | Unmatched side is padded with a fixed empty cell (`JoinApplicator.Pad`). Reading it back: string columns extract as `""`; every other typed column (`double`/`uuid`/`date`/`datetime`/`time`/`bool`) fails to parse and extracts as `null`. Deterministic, never throws. | `JoinApplicator.cs` (`Pad`), `CellValueExtractor.cs` |
+| Empty-group / empty-set aggregates | `count` over an empty group is `0` (`Count(hasValue)` over zero rows). `sum`/`min`/`max`/`average` over an empty group fold to `null`. A whole-set aggregate (no GROUP BY) over zero matching rows still emits exactly one row: count 0, other aggregates null. | `AggregateEvaluator.cs` (`Fold`/`FoldString`/`BuildCount`), `GroupByApplicator.cs` (`WholeSetGroup`) |
+| `eachDivide` by zero | Returns `null` for that row; never throws `DivideByZeroException`. | `WhereExpressionBuilder.cs` (`DivideDoubles`) |
+| Literal-array each* operand vs. row count | Not actually a "zip mismatch" risk: a literal array operand is never zipped by index at all — every per-row evaluation uses only its first element (`.FirstOrDefault()`), broadcast to every row regardless of the literal's declared length or the table's row count. | `WhereExpressionBuilder.cs` (each `Build*ArrayValuePerRow` literal arm) |
+| `count` over a boolean vector | Counts non-null values in the vector (standard SQL `COUNT(column)` semantics) — not vector length, not count-of-`true`s. | `AggregateEvaluator.cs` (`HasValueSelector`/`BuildCount`) |
+| `and`/`or` over a bare boolean vector | Fully implemented: a literal `booleanArrayReturning` operand folds with `.All(v => v)`; a field-reference operand does a per-row `field == true` comparison. No ambiguity in practice since predicates are always evaluated per row. | `WhereExpressionBuilder.cs` (`BuildBooleanOperator`, `BuildBoolArrayPerRow`) |
 
 ## Separately: remaining translator gaps (fail fast, no tests to enable)
 
@@ -29,6 +40,11 @@ a spec decision first):
 
 - Parameter binding (`Parameters/ParameterTests` pins the fail-fast contract;
   the public API exposes no way to supply values).
-- Computed/scalar `select` columns and single-value `Arithmetic`.
-- Temporal `average` aggregates (rounding undefined, see U-4 above).
-- Aggregates inside `where`.
+- Computed/expression `select` columns (single-value `Arithmetic`). Note:
+  scalar *constants* (`SELECT 5 AS x`) are implemented and covered by
+  `Select/ScalarProjectionTests.cs` — only arithmetic/computed expressions in
+  `select` still fail fast (`Select/ScalarUnsupportedTests.cs`,
+  `Select/SelectExpansionTests.cs:AliasRenamesComputedArithmeticColumn`).
+- Temporal `average` aggregates (rounding undefined; still throws
+  `NotSupportedException` in `AggregateEvaluator.cs`).
+- Aggregates inside `where` (`WhereExpressionBuilder.AggregateNotSupported`).
