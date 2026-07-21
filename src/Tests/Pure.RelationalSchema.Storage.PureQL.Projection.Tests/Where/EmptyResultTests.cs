@@ -1,6 +1,8 @@
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
+using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
+using PureQL.CSharp.Model.Comparisons;
 using PureQL.CSharp.Model.EachEqualities;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Returnings;
@@ -200,6 +202,136 @@ public sealed class EmptyResultTests
             having: null,
             orderBy: null,
             new global::PureQL.CSharp.Model.Pagination(0, 5)
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(0, result.Count);
+    }
+
+    [Fact]
+    public void WhereMatchingNothingWithGroupByReturnsNoGroups()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new UuidArrayReturning(
+                            new UuidField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.UserId
+                            )
+                        )
+                    )
+                ),
+                new SelectExpression(
+                    new SingleValueReturning(
+                        new NumberReturning(
+                            new Count(
+                                new ArrayReturning(
+                                    new UuidArrayReturning(
+                                        new UuidField(
+                                            SampleDatabase.Orders.Entity,
+                                            SampleDatabase.Orders.Id
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    "orderCount"
+                ),
+            ],
+            new BooleanArrayReturning(
+                new EachEquality(
+                    new EachStringEquality(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        ),
+                        new StringReturning(new StringScalar("no-such-status"))
+                    )
+                )
+            ),
+            join: null,
+            [
+                new Field(
+                    new UuidField(
+                        SampleDatabase.Orders.Entity,
+                        SampleDatabase.Orders.UserId
+                    )
+                ),
+            ],
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(0, result.Count);
+    }
+
+    [Fact]
+    public void HavingFilteringEveryGroupReturnsEmpty()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new UuidArrayReturning(
+                            new UuidField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.UserId
+                            )
+                        )
+                    )
+                ),
+            ],
+            where: null,
+            join: null,
+            [
+                new Field(
+                    new UuidField(
+                        SampleDatabase.Orders.Entity,
+                        SampleDatabase.Orders.UserId
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new NumberComparison(
+                        ComparisonOperator.GreaterThan,
+                        new NumberReturning(
+                            new Count(
+                                new ArrayReturning(
+                                    new UuidArrayReturning(
+                                        new UuidField(
+                                            SampleDatabase.Orders.Entity,
+                                            SampleDatabase.Orders.Id
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                        new NumberReturning(new NumberScalar(999))
+                    )
+                )
+            ),
+            orderBy: null,
+            pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
