@@ -39,6 +39,18 @@ internal static class EntityReferenceValidator
         {
             foreach (Join join in query.Join)
             {
+                if (known.Comparer.Equals(join.Entity, query.From.Entity))
+                {
+                    throw new NotSupportedException(
+                        $"Join entity '{join.Entity}' equals the from "
+                            + $"entity '{query.From.Entity}'. Self-joins "
+                            + "are not supported: joins have no per-join "
+                            + "alias, so both sides would resolve to the "
+                            + "same column and any ON condition would "
+                            + "become tautological."
+                    );
+                }
+
                 _ = known.Add(join.Entity);
             }
         }
