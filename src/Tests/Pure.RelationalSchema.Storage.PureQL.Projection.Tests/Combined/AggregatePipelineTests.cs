@@ -617,12 +617,12 @@ public sealed class AggregatePipelineTests
             {
                 if (cell.Key.Name.TextValue == SampleDatabase.Orders.UserId)
                 {
-                    userId = Guid.Parse(cell.Value.Value.TextValue!);
+                    userId = Guid.Parse(cell.Value.Value.TextValue);
                 }
                 else if (cell.Key.Name.TextValue == "userTotal")
                 {
                     total = double.Parse(
-                        cell.Value.Value.TextValue!,
+                        cell.Value.Value.TextValue,
                         CultureInfo.InvariantCulture
                     );
                 }
