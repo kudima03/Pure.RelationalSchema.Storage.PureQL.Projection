@@ -270,4 +270,258 @@ public sealed class ScalarComparisonTests
 
         Assert.Equal(db.OrderRows.Count, result.Count);
     }
+
+    [Fact]
+    public void ScalarNumberLessThanOrEqualTrueConstantKeepsEveryRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        )
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new NumberComparison(
+                        ComparisonOperator.LessThanOrEqual,
+                        new NumberReturning(new NumberScalar(1)),
+                        new NumberReturning(new NumberScalar(2))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(db.OrderRows.Count, result.Count);
+    }
+
+    [Fact]
+    public void ScalarNumberGreaterThanOrEqualFalseConstantRemovesEveryRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        )
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new NumberComparison(
+                        ComparisonOperator.GreaterThanOrEqual,
+                        new NumberReturning(new NumberScalar(1)),
+                        new NumberReturning(new NumberScalar(2))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(0, result.Count);
+    }
+
+    [Fact]
+    public void ScalarDateLessThanTrueConstantKeepsEveryRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        )
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new DateComparison(
+                        ComparisonOperator.LessThan,
+                        new DateReturning(new DateScalar(new DateOnly(2024, 1, 1))),
+                        new DateReturning(new DateScalar(new DateOnly(2024, 1, 2)))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(db.OrderRows.Count, result.Count);
+    }
+
+    [Fact]
+    public void ScalarTimeLessThanOrEqualTrueConstantKeepsEveryRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+        TimeOnly value = new TimeOnly(9, 0, 0);
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        )
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new TimeComparison(
+                        ComparisonOperator.LessThanOrEqual,
+                        new TimeReturning(new TimeScalar(value)),
+                        new TimeReturning(new TimeScalar(value))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(db.OrderRows.Count, result.Count);
+    }
+
+    [Fact]
+    public void ScalarDateTimeGreaterThanOrEqualTrueConstantKeepsEveryRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+        DateTime value = new DateTime(2024, 1, 1, 12, 0, 0);
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        )
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new DateTimeComparison(
+                        ComparisonOperator.GreaterThanOrEqual,
+                        new DateTimeReturning(new DateTimeScalar(value)),
+                        new DateTimeReturning(new DateTimeScalar(value))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(db.OrderRows.Count, result.Count);
+    }
+
+    [Fact]
+    public void ScalarStringLessThanFalseConstantRemovesEveryRow()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Status
+                            )
+                        )
+                    )
+                ),
+            ],
+            new BooleanReturning(
+                new Comparison(
+                    new global::PureQL.CSharp.Model.Comparisons.StringComparison(
+                        ComparisonOperator.LessThan,
+                        new StringReturning(new StringScalar("b")),
+                        new StringReturning(new StringScalar("a"))
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        Assert.Equal(0, result.Count);
+    }
 }
