@@ -254,6 +254,17 @@ internal sealed class SampleDatabase
             new DateTime(2024, 6, 4, 7, 5, 0),
             new TimeOnly(8, 0, 0)
         ),
+        // Shares SignupDate, LastLogin and ShiftStart with Ann, so those
+        // columns are discriminating for DISTINCT tests over each type.
+        new(
+            Id(6),
+            "Fay",
+            28,
+            true,
+            new DateOnly(2020, 1, 15),
+            new DateTime(2024, 6, 1, 8, 30, 0),
+            new TimeOnly(9, 0, 0)
+        ),
     ];
 
     public IReadOnlyList<OrderRow> OrderRows { get; } = [
