@@ -13,14 +13,19 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 // single-value predicate: it evaluates once for the whole query rather than
 // per row, exactly like the scalar `and`/`or`/`not` family in
 // Where/Scalar/NestedBooleanTests. Reading WhereExpressionBuilder.cs
-// (BuildContainmentEquality) confirms two distinct, already-implemented
-// paths depending on operand shape:
+// (BuildContainmentEquality) confirms two distinct operand shapes:
 //   - literal array vs. literal array -> true SequenceEqual (order-sensitive,
-//     evaluated once).
-//   - field vs. literal array -> per-row Enumerable.Contains membership
-//     (order-insensitive "IN"), which is the genuine #98/#72 KnownGap: SQL
-//     result-set semantics say "column-as-a-whole-array equal literal-array"
-//     should also be an order-sensitive sequence comparison, not membership.
+//     evaluated once) - implemented and correct.
+//   - field vs. literal array -> per SQL result-set semantics this should
+//     also be a single order-sensitive sequence comparison of the column's
+//     values (in row order) against the literal, evaluated once for the
+//     whole query. Implementing that requires the full materialized row
+//     sequence before the row-scoped predicate is built, which is out of
+//     scope for issue #114's fix. Rather than silently returning wrong
+//     results via per-row Enumerable.Contains ("IN") membership (the
+//     original bug), the translator now fails fast with
+//     NotSupportedException for this operand shape - see
+//     WholeArrayEqualityOfFieldAgainstLiteralFailsFast below.
 [Trait("Clause", "Where")]
 [Trait("Feature", "ArrayEqualitySequence")]
 public sealed class ArrayEqualitySequenceTests
@@ -112,23 +117,15 @@ public sealed class ArrayEqualitySequenceTests
         Assert.Equal(0, result.Count);
     }
 
-    // KnownGap: `order_total equal [reverse of the six order totals]` is,
-    // per SQL result-set/sequence-equality semantics, a single whole-array
-    // comparison - the column's values in row order do not equal the
-    // reversed literal, so the (once-evaluated) predicate should be false
-    // and the whole result set empty. The translator instead evaluates this
-    // shape as a per-row membership check (`order_total IN (...)`): since
-    // reversing doesn't change set membership, every row's own total is
-    // still present somewhere in the literal, so all six rows are kept.
-    [Fact(
-        Skip = "KnownGap: whole-array `equal` between a field and a literal "
-            + "array evaluates as per-row membership (Enumerable.Contains) "
-            + "instead of a single order-sensitive sequence-equality "
-            + "comparison across the whole column; see "
-            + "Semantics/README.md and epic #72 decision 7."
-    )]
-    [Trait("Status", "KnownGap")]
-    public void WholeArrayEqualityOfFieldAgainstReversedLiteralRemovesEveryRow()
+    // Field vs. literal-array whole-array `equal` (either operand order) is
+    // not implemented as true sequence equality (see the header comment and
+    // issue #114) - the translator fails fast with NotSupportedException
+    // instead of silently falling back to per-row Enumerable.Contains ("IN")
+    // membership, which would give a wrong answer here: reversing the
+    // literal doesn't change set membership, so a membership-based
+    // implementation would wrongly keep every row.
+    [Fact]
+    public void WholeArrayEqualityOfFieldAgainstLiteralFailsFast()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -164,13 +161,53 @@ public sealed class ArrayEqualitySequenceTests
             pagination: null
         );
 
-        ProjectionResult result = new ProjectionResult(
+        _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(db.Datasets, query)
+        ));
+    }
+
+    // Mirrors the test above with the operand order swapped (literal array
+    // on the left, field on the right) to cover the other arm of
+    // BuildContainmentEquality's field-vs-literal handling.
+    [Fact]
+    public void WholeArrayEqualityOfLiteralAgainstFieldFailsFast()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        double[] reversedTotals =
+        [
+            .. db.OrderRows.Select(order => order.OrderTotal).Reverse(),
+        ];
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Orders.Entity),
+            [OrderIdSelect()],
+            new BooleanReturning(
+                new Equality(
+                    new ArrayEquality(
+                        new NumberArrayEquality(
+                            new NumberArrayReturning(
+                                new NumberArrayScalar(reversedTotals)
+                            ),
+                            new NumberArrayReturning(
+                                new NumberField(
+                                    SampleDatabase.Orders.Entity,
+                                    SampleDatabase.Orders.Total
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            join: null,
+            groupBy: null,
+            having: null,
+            orderBy: null,
+            pagination: null
         );
 
-        // Spec-correct (sequence equality): the column's total values, in
-        // row order, are not equal to the reversed literal, so the
-        // whole-query predicate is false and nothing is kept.
-        Assert.Equal(0, result.Count);
+        _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        ));
     }
 }

@@ -24,6 +24,11 @@ internal static class WhereExpressionBuilder
         "Parameter binding is not supported in expression tree translation.";
     private const string AggregateNotSupported =
         "Aggregate expressions are not supported outside groupBy projection.";
+    private const string WholeArrayFieldEqualityNotSupported =
+        "Whole-array equal of a field against a literal array requires "
+        + "order-sensitive sequence comparison over the full row set, which is "
+        + "not implemented (see issue #114); per-row containment is not "
+        + "equivalent and would silently produce wrong results.";
 
     private static readonly MethodInfo GetTextValueMethod =
         typeof(CellValueExtractor).GetMethod(
@@ -389,41 +394,24 @@ internal static class WhereExpressionBuilder
         MethodInfo getCellValueMethod
     )
     {
-        MethodInfo containsMethod = typeof(Enumerable)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .First(m =>
-                m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2
-            )
-            .MakeGenericMethod(typeof(T));
-
         if (left && rightScalar is not null)
         {
-            Expression fieldExpr = FieldValue(
-                getCellValueMethod,
-                row,
-                leftEntity!,
-                leftField!
-            );
-            Expression scalarExpr = Expression.Constant(
-                rightScalar.ToArray(),
-                typeof(T[])
-            );
-            return Expression.Call(containsMethod, scalarExpr, fieldExpr);
+            // Whole-array equal of a field against a literal array is a
+            // single order-sensitive sequence comparison over the full row
+            // set (SQL result-set semantics), not a per-row membership test.
+            // Building that requires the full materialized row sequence
+            // before this row-scoped predicate is compiled, which is a
+            // larger restructure than this fix covers — see issue #114.
+            // Fail fast rather than silently degrading to `Contains`
+            // ("IN") membership, which is order-insensitive and wrong.
+            throw new NotSupportedException(WholeArrayFieldEqualityNotSupported);
         }
 
         if (right && leftScalar is not null)
         {
-            Expression fieldExpr = FieldValue(
-                getCellValueMethod,
-                row,
-                rightEntity!,
-                rightField!
-            );
-            Expression scalarExpr = Expression.Constant(
-                leftScalar.ToArray(),
-                typeof(T[])
-            );
-            return Expression.Call(containsMethod, scalarExpr, fieldExpr);
+            // See the comment above: same reasoning for the mirrored
+            // literal-vs-field operand order.
+            throw new NotSupportedException(WholeArrayFieldEqualityNotSupported);
         }
 
         if (left && right)
