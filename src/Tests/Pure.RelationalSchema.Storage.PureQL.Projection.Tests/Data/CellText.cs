@@ -19,6 +19,15 @@ internal static class CellText
         return value.ToString(CultureInfo.InvariantCulture);
     }
 
+    // A NULL cell is stored as empty text (the same convention
+    // JoinApplicator's EmptyCell uses for unmatched outer-join padding);
+    // CellValueExtractor's TryParse-based getters all fail on "" and yield
+    // null, so this round-trips through the whole pipeline as a real NULL.
+    internal static string From(double? value)
+    {
+        return value.HasValue ? From(value.Value) : string.Empty;
+    }
+
     internal static string From(string value)
     {
         return value;

@@ -36,6 +36,13 @@ internal sealed class SampleDatabase
         public const string SignupDate = "signup_date";
         public const string LastLogin = "last_login";
         public const string ShiftStart = "shift_start";
+
+        // NULL-semantics fixture columns (issue #103): see SampleRecords.cs.
+        public const string Score = "user_score";
+        public const string PrecisionValue = "user_precision_value";
+        public const string EdgeDate = "user_edge_date";
+        public const string EdgeDateTime = "user_edge_datetime";
+        public const string EdgeTime = "user_edge_time";
     }
 
     public static class Orders
@@ -89,6 +96,11 @@ internal sealed class SampleDatabase
         new Column.Column(new String(Users.SignupDate), new DateColumnType()),
         new Column.Column(new String(Users.LastLogin), new DateTimeColumnType()),
         new Column.Column(new String(Users.ShiftStart), new TimeColumnType()),
+        new Column.Column(new String(Users.Score), new DoubleColumnType()),
+        new Column.Column(new String(Users.PrecisionValue), new DoubleColumnType()),
+        new Column.Column(new String(Users.EdgeDate), new DateColumnType()),
+        new Column.Column(new String(Users.EdgeDateTime), new DateTimeColumnType()),
+        new Column.Column(new String(Users.EdgeTime), new TimeColumnType()),
     ];
 
     private static readonly IReadOnlyList<IColumn> OrderColumns =
@@ -209,6 +221,10 @@ internal sealed class SampleDatabase
     public IEnumerable<IStoredSchemaDataSet> Datasets => _datasets;
 
     public IReadOnlyList<UserRow> UserRows { get; } = [
+        // Score is NULL for Bob and Dan (issue #103 NULL-semantics fixture):
+        // Ann/Cara/Fay's Score equals their own Age (so "age = score" is a
+        // real match), Eve's does not (a real mismatch, not NULL-caused), and
+        // Bob/Dan's NULL always drops out of equality/aggregate/group/sort.
         new(
             Id(1),
             "Ann",
@@ -216,7 +232,12 @@ internal sealed class SampleDatabase
             true,
             new DateOnly(2020, 1, 15),
             new DateTime(2024, 6, 1, 8, 30, 0),
-            new TimeOnly(9, 0, 0)
+            new TimeOnly(9, 0, 0),
+            30,
+            double.MaxValue,
+            new DateOnly(2024, 2, 29),
+            new DateTime(2024, 2, 29, 0, 0, 0),
+            new TimeOnly(0, 0, 0)
         ),
         new(
             Id(2),
@@ -225,7 +246,12 @@ internal sealed class SampleDatabase
             false,
             new DateOnly(2021, 3, 20),
             new DateTime(2024, 6, 2, 9, 15, 0),
-            new TimeOnly(10, 0, 0)
+            new TimeOnly(10, 0, 0),
+            null,
+            double.MinValue,
+            new DateOnly(2024, 12, 31),
+            new DateTime(2024, 12, 31, 23, 59, 59),
+            new TimeOnly(23, 59, 59)
         ),
         new(
             Id(3),
@@ -234,7 +260,12 @@ internal sealed class SampleDatabase
             true,
             new DateOnly(2019, 7, 10),
             new DateTime(2024, 5, 30, 14, 0, 0),
-            new TimeOnly(9, 0, 0)
+            new TimeOnly(9, 0, 0),
+            30,
+            double.Epsilon,
+            new DateOnly(2024, 3, 10),
+            new DateTime(2024, 3, 10, 2, 30, 0),
+            new TimeOnly(2, 30, 0)
         ),
         new(
             Id(4),
@@ -243,7 +274,12 @@ internal sealed class SampleDatabase
             true,
             new DateOnly(2022, 11, 5),
             new DateTime(2024, 6, 3, 18, 45, 0),
-            new TimeOnly(11, 30, 0)
+            new TimeOnly(11, 30, 0),
+            null,
+            -double.Epsilon,
+            new DateOnly(2024, 11, 3),
+            new DateTime(2024, 11, 3, 1, 30, 0),
+            new TimeOnly(1, 30, 0)
         ),
         new(
             Id(5),
@@ -252,7 +288,12 @@ internal sealed class SampleDatabase
             false,
             new DateOnly(2023, 2, 28),
             new DateTime(2024, 6, 4, 7, 5, 0),
-            new TimeOnly(8, 0, 0)
+            new TimeOnly(8, 0, 0),
+            10,
+            1e308,
+            new DateOnly(1, 1, 1),
+            new DateTime(1, 1, 1, 0, 0, 0),
+            new TimeOnly(0, 0, 0)
         ),
         // Shares SignupDate, LastLogin and ShiftStart with Ann, so those
         // columns are discriminating for DISTINCT tests over each type.
@@ -263,7 +304,12 @@ internal sealed class SampleDatabase
             true,
             new DateOnly(2020, 1, 15),
             new DateTime(2024, 6, 1, 8, 30, 0),
-            new TimeOnly(9, 0, 0)
+            new TimeOnly(9, 0, 0),
+            28,
+            123456789.123456,
+            new DateOnly(9999, 12, 31),
+            new DateTime(9999, 12, 31, 23, 59, 59),
+            new TimeOnly(23, 59, 59)
         ),
     ];
 
@@ -362,6 +408,11 @@ internal sealed class SampleDatabase
                         [Users.SignupDate] = CellText.From(user.SignupDate),
                         [Users.LastLogin] = CellText.From(user.LastLogin),
                         [Users.ShiftStart] = CellText.From(user.ShiftStart),
+                        [Users.Score] = CellText.From(user.Score),
+                        [Users.PrecisionValue] = CellText.From(user.PrecisionValue),
+                        [Users.EdgeDate] = CellText.From(user.EdgeDate),
+                        [Users.EdgeDateTime] = CellText.From(user.EdgeDateTime),
+                        [Users.EdgeTime] = CellText.From(user.EdgeTime),
                     }
                 )
             ),

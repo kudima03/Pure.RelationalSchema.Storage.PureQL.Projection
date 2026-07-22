@@ -11,7 +11,16 @@ internal sealed record UserRow(
     bool UserActive,
     DateOnly SignupDate,
     DateTime LastLogin,
-    TimeOnly ShiftStart
+    TimeOnly ShiftStart,
+    // NULL-semantics fixture columns (issue #103): Score is NULL for two
+    // users (Bob, Dan) to exercise three-valued WHERE/GROUP BY/aggregate/
+    // DISTINCT/ORDER BY behavior; PrecisionValue and the Edge* triple hold
+    // numeric-extreme and calendar-edge values for round-trip coverage.
+    double? Score,
+    double PrecisionValue,
+    DateOnly EdgeDate,
+    DateTime EdgeDateTime,
+    TimeOnly EdgeTime
 );
 
 internal sealed record OrderRow(
