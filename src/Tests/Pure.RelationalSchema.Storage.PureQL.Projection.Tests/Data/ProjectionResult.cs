@@ -12,6 +12,16 @@ internal sealed class ProjectionResult
 {
     public ProjectionResult(IStoredTableDataSet projection)
     {
+        // TableSchema.Columns is the ordered, authoritative source of output
+        // column order (see RowsFromDatasets/SelectColumns). row.Cells is a
+        // Pure.Collections.Generic.Dictionary that lazily materializes a
+        // FrozenDictionary for enumeration, whose key order is unspecified,
+        // so column order must be captured here rather than derived from it.
+        IReadOnlyList<string> columnOrder =
+        [
+            .. projection.TableSchema.Columns.Select(column => column.Name.TextValue),
+        ];
+
         List<ResultRow> rows = [];
 
         foreach (IRow row in projection)
@@ -23,7 +33,7 @@ internal sealed class ProjectionResult
                 cells[cell.Key.Name.TextValue] = cell.Value.Value.TextValue;
             }
 
-            rows.Add(new ResultRow(cells));
+            rows.Add(new ResultRow(cells, columnOrder));
         }
 
         Rows = rows;
@@ -47,11 +57,19 @@ internal sealed class ProjectionResult
     }
 }
 
-internal sealed class ResultRow(IReadOnlyDictionary<string, string?> cells)
+internal sealed class ResultRow(
+    IReadOnlyDictionary<string, string?> cells,
+    IReadOnlyList<string> columnOrder
+)
 {
     private readonly IReadOnlyDictionary<string, string?> _cells = cells;
 
-    public IEnumerable<string> ColumnNames => _cells.Keys;
+    private readonly IReadOnlyList<string> _columnOrder = columnOrder;
+
+    // Column order is authoritative from the caller (TableSchema.Columns),
+    // not the cell dictionary's own enumeration order, which is unspecified.
+    public IEnumerable<string> ColumnNames =>
+        _columnOrder.Where(_cells.ContainsKey);
 
     public bool Has(string column)
     {
