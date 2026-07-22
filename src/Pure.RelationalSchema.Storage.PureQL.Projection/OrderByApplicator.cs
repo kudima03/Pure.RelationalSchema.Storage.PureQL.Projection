@@ -23,6 +23,65 @@ internal static class OrderByApplicator
         return ordered ?? source;
     }
 
+    // CellValueExtractor.GetRequiredCell throws a bare KeyNotFoundException
+    // naming only the field when no column matches. For orderBy specifically
+    // that's a frequent trial-and-error trap, because which name is expected
+    // depends on query mode (RowsFromDatasets.Build): without groupBy, the
+    // sort runs on raw pre-projection rows and needs the source column name;
+    // with groupBy/aggregates, it runs on the projected, post-alias rows and
+    // needs the select alias instead. Re-throwing with that rule spelled out
+    // turns a silent trap into an actionable message, without changing which
+    // name resolves in which mode.
+    private static TValue? ResolveOrThrow<TValue>(
+        Func<TValue?> resolve,
+        string entity,
+        string fieldName
+    )
+        where TValue : struct
+    {
+        try
+        {
+            return resolve();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw OrderByFieldNotFound(entity, fieldName, ex);
+        }
+    }
+
+    private static string? ResolveOrThrow(
+        Func<string?> resolve,
+        string entity,
+        string fieldName
+    )
+    {
+        try
+        {
+            return resolve();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            throw OrderByFieldNotFound(entity, fieldName, ex);
+        }
+    }
+
+    private static KeyNotFoundException OrderByFieldNotFound(
+        string entity,
+        string fieldName,
+        Exception inner
+    )
+    {
+        return new KeyNotFoundException(
+            $"orderBy field '{fieldName}' on entity '{entity}' has no "
+                + "matching column in the rows being sorted. Without "
+                + "groupBy, orderBy fields must name the original source "
+                + "column (as it appears before projection); with groupBy "
+                + "or aggregates, they must name the select alias of the "
+                + "projected column instead.",
+            inner
+        );
+    }
+
     private static IOrderedQueryable<IRow> OrderByNullsLast<TValue>(
         IQueryable<IRow> source,
         Expression<Func<IRow, TValue?>> selector,
@@ -104,19 +163,34 @@ internal static class OrderByApplicator
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetBoolValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetBoolValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             _ =>
@@ -126,25 +200,45 @@ internal static class OrderByApplicator
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetGuidValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetGuidValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 OrderByNullsLast(
                     source,
-                    row => CellValueExtractor.GetTextValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetTextValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 )
         );
@@ -161,19 +255,34 @@ internal static class OrderByApplicator
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetBoolValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetBoolValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             _ =>
@@ -183,25 +292,45 @@ internal static class OrderByApplicator
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetGuidValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetGuidValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 ),
             f =>
                 ThenByNullsLast(
                     source,
-                    row => CellValueExtractor.GetTextValue(row, f.Entity, f.Field),
+                    row =>
+                        ResolveOrThrow(
+                            () => CellValueExtractor.GetTextValue(row, f.Entity, f.Field),
+                            f.Entity,
+                            f.Field
+                        ),
                     descending
                 )
         );
