@@ -17,9 +17,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 // array operand is never zipped by row index - every per-row evaluation
 // uses only the literal's first element (`.FirstOrDefault()`), broadcast to
 // every row regardless of the literal's declared length; and eachDivide by
-// zero returns null for that row rather than throwing. Also covers mixing a
-// scalar-broadcast operand with a per-row array-aligned operand within the
-// same predicate.
+// zero raises DivideByZeroException (see issue #104's follow-up fix) rather
+// than silently yielding null. Also covers mixing a scalar-broadcast operand
+// with a per-row array-aligned operand within the same predicate.
 [Trait("Clause", "Where")]
 [Trait("Feature", "EachBroadcastAndLiteral")]
 public sealed class EachBroadcastAndLiteralTests
@@ -197,12 +197,12 @@ public sealed class EachBroadcastAndLiteralTests
         );
     }
 
-    // eachDivide by zero yields null for that row (DivideDoubles), and null
-    // never compares equal to a finite literal - it does not throw, and the
-    // equality check is false for every row (no exception propagates out of
-    // PureQLProjection construction or enumeration).
+    // eachDivide by zero raises DivideByZeroException (matching SQL
+    // division-by-zero semantics) as soon as any row's division is
+    // evaluated - it does not silently yield null, whether the divide
+    // result feeds an equality check, ...
     [Fact]
-    public void EachDivideByZeroYieldsNullNeverEqualToAFiniteLiteral()
+    public void EachDivideByZeroFailsFastEvenUnderEqualityComparison()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -238,18 +238,14 @@ public sealed class EachBroadcastAndLiteralTests
             pagination: null
         );
 
-        ProjectionResult result = new ProjectionResult(
+        _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
             new PureQLProjection(db.Datasets, query)
-        );
-
-        Assert.Equal(0, result.Count);
+        ));
     }
 
-    // Same eachDivide-by-zero result compared with a per-row comparison
-    // instead of equality: a lifted-nullable GreaterThan against null is
-    // false, never a thrown DivideByZeroException.
+    // ... a per-row comparison, ...
     [Fact]
-    public void EachDivideByZeroYieldsNullNeverGreaterThanZero()
+    public void EachDivideByZeroFailsFastEvenUnderComparison()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -286,20 +282,14 @@ public sealed class EachBroadcastAndLiteralTests
             pagination: null
         );
 
-        ProjectionResult result = new ProjectionResult(
+        _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
             new PureQLProjection(db.Datasets, query)
-        );
-
-        Assert.Equal(0, result.Count);
+        ));
     }
 
-    // eachDivide by zero, wrapped in eachNot(eachEquality(x, x)): null == null
-    // is true under lifted nullable equality (mirroring plain C# `(double?)
-    // null == (double?)null`), so negating it removes every row - the clearest
-    // possible signal that the division result is a deterministic null, not
-    // an exception and not some other sentinel value.
+    // ... or the divide-by-zero result compared against itself.
     [Fact]
-    public void EachDivideByZeroResultEqualsItselfUnderLiftedNullEquality()
+    public void EachDivideByZeroFailsFastEvenComparedAgainstItself()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -338,10 +328,8 @@ public sealed class EachBroadcastAndLiteralTests
             pagination: null
         );
 
-        ProjectionResult result = new ProjectionResult(
+        _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
             new PureQLProjection(db.Datasets, query)
-        );
-
-        Assert.Equal(0, result.Count);
+        ));
     }
 }

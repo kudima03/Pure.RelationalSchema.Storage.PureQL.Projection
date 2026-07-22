@@ -20,12 +20,11 @@ using String = Pure.Primitives.String.String;
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 
 // Part of the #72 roadmap (issue #104): dedicated negative-path coverage.
-// Every construct below is a defined failure or a documented KnownGap, never
-// a silent wrong answer, per the epic's stated principle. Tests that pin
-// today's actual (correct) fail-fast behaviour run normally; tests that
-// would need to fail fast but currently produce a silently wrong result
-// instead are skipped with [Fact(Skip = "KnownGap: ...")], pinning the
-// exception that *should* be thrown once the gap is closed.
+// Every construct below is a defined failure, never a silent wrong answer,
+// per the epic's stated principle (see issue #104's follow-up fix: the
+// CellValueExtractor getters and WhereExpressionBuilder.DivideDoubles now
+// throw on an unresolved field, a type-mismatched/malformed cell text, or a
+// zero divisor, instead of silently returning null).
 [Trait("Feature", "Negative")]
 public sealed class NegativePathTests
 {
@@ -285,24 +284,16 @@ public sealed class NegativePathTests
         _ = Assert.Throws<NotSupportedException>(() => new PureQLProjection(db.Datasets, query));
     }
 
-    // ===== KnownGap: missing column outside SELECT is silently absorbed =====
+    // ===== Missing column outside SELECT fails fast =====
 
-    // Unlike the required SELECT path (CellValueExtractor.GetRequiredCell),
-    // WHERE field resolution goes through CellValueExtractor.GetCell, which
-    // returns null when no column matches instead of throwing. A nonexistent
-    // column referenced in WHERE therefore silently compares as "no match"
-    // for every row (0 results) instead of failing fast the way the same
-    // typo would in SELECT. Pinning the SELECT path's KeyNotFoundException as
-    // the spec-correct expectation.
-    [Fact(
-        Skip = "KnownGap: CellValueExtractor.GetCell returns null for an "
-            + "unresolved column instead of throwing, so a nonexistent "
-            + "column in WHERE silently excludes every row rather than "
-            + "failing fast the way the same typo does in SELECT."
-    )]
-    [Trait("Status", "KnownGap")]
+    // WHERE field resolution goes through CellValueExtractor.GetTextValue,
+    // which now requires the cell (GetRequiredCell) the same way the SELECT
+    // path always did, so a nonexistent column referenced in WHERE throws
+    // the same KeyNotFoundException a typo would in SELECT instead of
+    // silently excluding every row.
+    [Fact]
     [Trait("Clause", "Where")]
-    public void WhereFieldNotOnResolvedTableSilentlyExcludesRowsInsteadOfFailing()
+    public void WhereFieldNotOnResolvedTableFailsFast()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -345,26 +336,18 @@ public sealed class NegativePathTests
         ));
     }
 
-    // ===== KnownGap: type mismatch is silently absorbed, not rejected =====
+    // ===== Type mismatch fails fast =====
 
     // A NumberField pointing at order_status (a StringColumnType column) is
     // legal to construct - Field references are untyped strings, not checked
     // against the schema's declared column type. CellValueExtractor.
-    // GetDoubleValue parses the cell's text with double.TryParse; for a
-    // string column's text ("shipped", ...) that always fails and yields
-    // null, so every per-row numeric comparison against it is silently
-    // false instead of failing. Pinning FormatException (what a non-Try
-    // double.Parse on the same malformed text would throw) as the
-    // spec-correct expectation.
-    [Fact(
-        Skip = "KnownGap: CellValueExtractor.GetDoubleValue silently returns "
-            + "null for text that cannot parse as a number (e.g. a "
-            + "NumberField pointing at a string column), so the mismatched "
-            + "comparison silently excludes every row instead of failing."
-    )]
-    [Trait("Status", "KnownGap")]
+    // GetDoubleValue now throws FormatException for non-empty text that
+    // cannot parse as a number (e.g. a string column's "shipped"), instead
+    // of silently returning null and excluding every row from the
+    // comparison.
+    [Fact]
     [Trait("Clause", "Where")]
-    public void TypeMismatchNumberFieldAgainstStringColumnSilentlyExcludesRows()
+    public void TypeMismatchNumberFieldAgainstStringColumnFailsFast()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -408,23 +391,16 @@ public sealed class NegativePathTests
         ));
     }
 
-    // ===== KnownGap: malformed cell text is silently absorbed =====
+    // ===== Malformed cell text fails fast =====
 
     // A stored uuid cell whose text is not a valid Guid (corrupted/foreign
     // data, as opposed to a schema/reference type mismatch) is parsed by
-    // CellValueExtractor.GetGuidValue via Guid.TryParse, which likewise
-    // yields null on failure instead of surfacing the malformed text.
-    // Pinning FormatException (what Guid.Parse would throw on the same
-    // text) as the spec-correct expectation.
-    [Fact(
-        Skip = "KnownGap: CellValueExtractor.GetGuidValue silently returns "
-            + "null for a cell whose stored text is not a valid uuid, so a "
-            + "malformed cell is treated as an absent value instead of "
-            + "failing fast."
-    )]
-    [Trait("Status", "KnownGap")]
+    // CellValueExtractor.GetGuidValue via Guid.TryParse; non-empty text that
+    // fails to parse now throws FormatException instead of being treated as
+    // an absent value.
+    [Fact]
     [Trait("Clause", "Where")]
-    public void MalformedUuidCellTextSilentlyTreatedAsAbsentValue()
+    public void MalformedUuidCellTextFailsFast()
     {
         ITable table = new Table.Table(
             new String("widgets"),
@@ -492,22 +468,15 @@ public sealed class NegativePathTests
         ));
     }
 
-    // ===== KnownGap: eachDivide by zero is silently absorbed =====
+    // ===== eachDivide by zero fails fast =====
 
-    // WhereExpressionBuilder.DivideDoubles returns null when the divisor is
-    // zero instead of raising, so a row whose divisor is zero silently drops
-    // out of the predicate (never matches) instead of the query failing the
-    // way SQL division-by-zero does. Pinning DivideByZeroException as the
-    // spec-correct expectation.
-    [Fact(
-        Skip = "KnownGap: WhereExpressionBuilder.DivideDoubles returns null "
-            + "for a zero divisor instead of raising, so eachDivide by zero "
-            + "silently excludes the row instead of failing the way SQL "
-            + "division-by-zero does."
-    )]
-    [Trait("Status", "KnownGap")]
+    // WhereExpressionBuilder.DivideDoubles now raises DivideByZeroException
+    // for a zero divisor instead of returning null, so eachDivide by zero
+    // fails the query the way SQL division-by-zero does instead of silently
+    // excluding the row.
+    [Fact]
     [Trait("Clause", "Where")]
-    public void EachDivideByZeroSilentlyExcludesRowInsteadOfFailing()
+    public void EachDivideByZeroFailsFast()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -560,22 +529,15 @@ public sealed class NegativePathTests
         ));
     }
 
-    // ===== KnownGap: missing column in ORDER BY is silently absorbed =====
+    // ===== Missing column in ORDER BY fails fast =====
 
-    // OrderByApplicator sorts by CellValueExtractor.GetTextValue directly (no
-    // GetRequiredCell), so a nonexistent ORDER BY field silently sorts every
-    // row as null (a stable no-op order) instead of failing fast the way the
-    // same typo does in SELECT.
-    [Fact(
-        Skip = "KnownGap: OrderByApplicator resolves fields via "
-            + "CellValueExtractor's null-returning getters, so a "
-            + "nonexistent ORDER BY column silently orders every row as "
-            + "null instead of failing fast the way the same typo does in "
-            + "SELECT."
-    )]
-    [Trait("Status", "KnownGap")]
+    // OrderByApplicator resolves fields via CellValueExtractor's getters,
+    // which now require the cell to exist, so a nonexistent ORDER BY column
+    // throws the same KeyNotFoundException a typo would in SELECT instead
+    // of silently sorting every row as null.
+    [Fact]
     [Trait("Clause", "OrderBy")]
-    public void OrderByFieldNotOnResolvedTableSilentlyOrdersAsNull()
+    public void OrderByFieldNotOnResolvedTableFailsFast()
     {
         SampleDatabase db = new SampleDatabase();
 
