@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model;
 
@@ -22,6 +23,76 @@ internal static class OrderByApplicator
         return ordered ?? source;
     }
 
+    private static IOrderedQueryable<IRow> OrderByNullsLast<TValue>(
+        IQueryable<IRow> source,
+        Expression<Func<IRow, TValue?>> selector,
+        bool descending
+    )
+        where TValue : struct
+    {
+        Func<IRow, TValue?> compiled = selector.Compile();
+
+        IOrderedQueryable<IRow> byNullRank = source.OrderBy(row =>
+            compiled(row).HasValue ? 0 : 1
+        );
+
+        return descending
+            ? byNullRank.ThenByDescending(selector)
+            : byNullRank.ThenBy(selector);
+    }
+
+    private static IOrderedQueryable<IRow> OrderByNullsLast(
+        IQueryable<IRow> source,
+        Expression<Func<IRow, string?>> selector,
+        bool descending
+    )
+    {
+        Func<IRow, string?> compiled = selector.Compile();
+
+        IOrderedQueryable<IRow> byNullRank = source.OrderBy(row =>
+            compiled(row) == null ? 1 : 0
+        );
+
+        return descending
+            ? byNullRank.ThenByDescending(selector)
+            : byNullRank.ThenBy(selector);
+    }
+
+    private static IOrderedQueryable<IRow> ThenByNullsLast<TValue>(
+        IOrderedQueryable<IRow> source,
+        Expression<Func<IRow, TValue?>> selector,
+        bool descending
+    )
+        where TValue : struct
+    {
+        Func<IRow, TValue?> compiled = selector.Compile();
+
+        IOrderedQueryable<IRow> byNullRank = source.ThenBy(row =>
+            compiled(row).HasValue ? 0 : 1
+        );
+
+        return descending
+            ? byNullRank.ThenByDescending(selector)
+            : byNullRank.ThenBy(selector);
+    }
+
+    private static IOrderedQueryable<IRow> ThenByNullsLast(
+        IOrderedQueryable<IRow> source,
+        Expression<Func<IRow, string?>> selector,
+        bool descending
+    )
+    {
+        Func<IRow, string?> compiled = selector.Compile();
+
+        IOrderedQueryable<IRow> byNullRank = source.ThenBy(row =>
+            compiled(row) == null ? 1 : 0
+        );
+
+        return descending
+            ? byNullRank.ThenByDescending(selector)
+            : byNullRank.ThenBy(selector);
+    }
+
     private static IOrderedQueryable<IRow> ApplyFirstOrderBy(
         IQueryable<IRow> source,
         OrderByItem item
@@ -31,65 +102,51 @@ internal static class OrderByApplicator
 
         return item.Field.Match(
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
-                    ),
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetBoolValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
-                    ),
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
-                    ),
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field),
+                    descending
+                ),
             _ =>
                 descending
                     ? source.OrderByDescending(_ => (string?)null)
                     : source.OrderBy(_ => (string?)null),
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
-                    ),
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
-                    ),
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
-                    ),
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetGuidValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.OrderByDescending(row =>
-                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
-                    )
-                    : source.OrderBy(row =>
-                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
-                    )
+                OrderByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetTextValue(row, f.Entity, f.Field),
+                    descending
+                )
         );
     }
 
@@ -102,65 +159,51 @@ internal static class OrderByApplicator
 
         return item.Field.Match(
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetBoolValue(row, f.Entity, f.Field)
-                    ),
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetBoolValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field)
-                    ),
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetDateOnlyValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field)
-                    ),
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetDateTimeValue(row, f.Entity, f.Field),
+                    descending
+                ),
             _ =>
                 descending
                     ? source.ThenByDescending(_ => (string?)null)
                     : source.ThenBy(_ => (string?)null),
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field)
-                    ),
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetDoubleValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field)
-                    ),
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetTimeOnlyValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetGuidValue(row, f.Entity, f.Field)
-                    ),
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetGuidValue(row, f.Entity, f.Field),
+                    descending
+                ),
             f =>
-                descending
-                    ? source.ThenByDescending(row =>
-                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
-                    )
-                    : source.ThenBy(row =>
-                        CellValueExtractor.GetTextValue(row, f.Entity, f.Field)
-                    )
+                ThenByNullsLast(
+                    source,
+                    row => CellValueExtractor.GetTextValue(row, f.Entity, f.Field),
+                    descending
+                )
         );
     }
 }
