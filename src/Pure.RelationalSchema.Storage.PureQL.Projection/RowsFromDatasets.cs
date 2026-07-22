@@ -87,11 +87,6 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
             );
         }
 
-        if (query.OrderBy is not null)
-        {
-            queryable = OrderByApplicator.Apply(queryable, query.OrderBy);
-        }
-
         // HAVING with no groupBy still filters the implicit whole-set group,
         // so it engages group mode on its own.
         bool groupMode =
@@ -102,14 +97,35 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
                 && AggregateEvaluator.IsAggregate(singleValue)
             );
 
-        queryable = groupMode
-            ? GroupByApplicator.Apply(
+        if (groupMode)
+        {
+            queryable = GroupByApplicator.Apply(
                 queryable,
                 query.GroupBy,
                 query.Having,
                 query.SelectExpressions
-            )
-            : ApplyRowProjection(queryable, query.SelectExpressions);
+            );
+
+            // ORDER BY must see the post-aggregation, post-alias result when
+            // GROUP BY (or an implicit whole-set group) is present, so an
+            // aggregate alias like SUM(total) AS totalSum can be ordered by.
+            if (query.OrderBy is not null)
+            {
+                queryable = OrderByApplicator.Apply(queryable, query.OrderBy);
+            }
+        }
+        else
+        {
+            // Non-group queries may ORDER BY a column that isn't even in
+            // the SELECT list, so ORDER BY must run on the raw joined/
+            // filtered rows, before projection narrows the columns.
+            if (query.OrderBy is not null)
+            {
+                queryable = OrderByApplicator.Apply(queryable, query.OrderBy);
+            }
+
+            queryable = ApplyRowProjection(queryable, query.SelectExpressions);
+        }
 
         if (query.Distinct)
         {

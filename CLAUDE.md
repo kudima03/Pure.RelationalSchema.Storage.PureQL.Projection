@@ -42,7 +42,12 @@ All translation work is done by internal classes:
 - **`SelectColumns`** — the single source of truth for output columns: one per `SelectExpression`, named by the alias (falling back to the field name) and typed by the value type; used by both the schema and the row projection
 - **`ValueText`** — formats computed (aggregate) values as canonical invariant cell text that `CellValueExtractor` round-trips
 
-The pipeline order in `RowsFromDatasets.Build` is: locate table → JOIN → WHERE → ORDER BY → (GROUP BY + HAVING + projection | per-row projection) → DISTINCT → pagination.
+The pipeline order in `RowsFromDatasets.Build` is: locate table → JOIN → WHERE →
+(GROUP BY + HAVING + projection → ORDER BY | ORDER BY → per-row projection) →
+DISTINCT → pagination. ORDER BY runs after GROUP BY/HAVING/projection when the
+query is in group mode (so it can order by an aggregate alias against the
+post-aggregation row), and before projection otherwise (so it can order by a
+column that isn't in the SELECT list, against the raw joined/filtered rows).
 
 The library is **not AOT-compatible** (`IsAotCompatible = false`) because the query translation relies on LINQ expression trees and reflection-based `IQueryable` composition.
 
