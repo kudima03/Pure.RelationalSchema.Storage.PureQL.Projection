@@ -1161,20 +1161,13 @@ public sealed class NestedBooleanTests
         Assert.Equal(0, result.Count);
     }
 
-    // KnownGap: single-value Arithmetic outside a per-row (each*) context has
-    // no defined result through the scalar WHERE-predicate entry point either
-    // - distinct from the Select-path gap pinned in
-    // Select/ScalarUnsupportedTests.SingleValueArithmeticInSelectFailsFast.
-    // WhereExpressionBuilder.BuildNumberReturningAsExpr throws
-    // NotSupportedException for the Arithmetic arm, so a predicate like
-    // `where (1 + 2) > total` fails fast rather than silently comparing
-    // against the wrong value.
-    [Fact(
-        Skip = "KnownGap: single-value Arithmetic in a scalar WHERE predicate "
-            + "fails fast (NotSupportedException), see #97"
-    )]
-    [Trait("Status", "KnownGap")]
-    public void ScalarArithmeticInComparisonPredicateFailsFast()
+    // A single-value Arithmetic whose operands are all literal constants now
+    // evaluates once, outside a per-row (each*) context, through the scalar
+    // WHERE-predicate entry point - distinct from the per-row EachArithmetic
+    // path exercised elsewhere in this suite. `where (1 + 2) > 0` folds to
+    // `3 > 0`, a constant-true predicate matching every row.
+    [Fact]
+    public void ScalarArithmeticInComparisonPredicateMatchesEveryRow()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -1217,10 +1210,10 @@ public sealed class NestedBooleanTests
             pagination: null
         );
 
-        NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
         );
 
-        Assert.NotNull(exception);
+        Assert.Equal(db.OrderRows.Count, result.Count);
     }
 }

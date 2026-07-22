@@ -16,7 +16,8 @@ internal static class ScalarCell
             boolean => boolean.IsT1,
             date => date.IsT1,
             dateTime => dateTime.IsT1,
-            number => number.IsT1,
+            number => number.IsT1
+                || LiteralArithmeticEvaluator.TryEvaluate(number, out double _),
             text => text.IsT1,
             time => time.IsT1,
             uuid => uuid.IsT1
@@ -34,10 +35,17 @@ internal static class ScalarCell
             boolean => ValueText.From(boolean.AsT1.Value),
             date => ValueText.From(date.AsT1.Value),
             dateTime => ValueText.From(dateTime.AsT1.Value),
-            number => ValueText.From(number.AsT1.Value),
+            number => ValueText.From(NumberValue(number)),
             text => text.AsT1.Value,
             time => ValueText.From(time.AsT1.Value),
             uuid => ValueText.From(uuid.AsT1.Value)
         );
+    }
+
+    private static double NumberValue(NumberReturning number)
+    {
+        return LiteralArithmeticEvaluator.TryEvaluate(number, out double value)
+            ? value
+            : number.AsT1.Value;
     }
 }

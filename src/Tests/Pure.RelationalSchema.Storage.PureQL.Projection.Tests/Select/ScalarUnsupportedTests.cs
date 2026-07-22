@@ -11,12 +11,13 @@ using PureQL.CSharp.Model.Scalars;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
-// Scalar constants are the only supported non-aggregate SingleValueReturning
-// select projections. Parameters (no binding API), single-value arithmetic
-// and boolean composites still have no defined result through this entry
-// point, so the translator fails fast with NotSupportedException instead of
-// silently producing wrong cells. These tests pin that explicit-failure
-// contract.
+// Scalar constants, and single-value Arithmetic whose operands are all
+// literal constants, are the only supported non-aggregate
+// SingleValueReturning select projections. Parameters (no binding API),
+// Arithmetic containing a parameter or aggregate operand, and boolean
+// composites still have no defined result through this entry point, so the
+// translator fails fast with NotSupportedException instead of silently
+// producing wrong cells. These tests pin that explicit-failure contract.
 [Trait("Clause", "Select")]
 [Trait("Feature", "ScalarProjection")]
 public sealed class ScalarUnsupportedTests
@@ -44,7 +45,7 @@ public sealed class ScalarUnsupportedTests
     }
 
     [Fact]
-    public void SingleValueArithmeticInSelectFailsFast()
+    public void SingleValueArithmeticWithParameterOperandInSelectFailsFast()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -58,7 +59,9 @@ public sealed class ScalarUnsupportedTests
                                 new Add(
                                     [
                                         new NumberReturning(new NumberScalar(1)),
-                                        new NumberReturning(new NumberScalar(2)),
+                                        new NumberReturning(
+                                            new NumberParameter("bonus")
+                                        ),
                                     ]
                                 )
                             )
