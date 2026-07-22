@@ -521,22 +521,14 @@ public sealed class OrderByExpansionTests
         Assert.Equal(expected, actual);
     }
 
-    // KnownGap: the pipeline applies ORDER BY before GROUP BY (see
-    // RowsFromDatasets.Build), so an OrderByItem is evaluated against raw,
-    // pre-aggregation rows. An aggregate result (e.g. SUM(total) AS
-    // totalSum) only exists on the projected, post-group row - there is no
-    // raw column named "totalSum" for CellValueExtractor to resolve - so
-    // ordering by it is a silent no-op today instead of ordering the
-    // emitted groups by their aggregate value, as SQL's ORDER BY-after-
-    // GROUP BY semantics require.
-    [Fact(
-        Skip = "KnownGap: ORDER BY runs before GROUP BY in the pipeline, so "
-            + "an OrderByItem referencing an aggregate's alias resolves "
-            + "against pre-aggregation rows (no such column exists there) "
-            + "and silently no-ops instead of ordering the emitted groups "
-            + "by their aggregate result."
-    )]
-    [Trait("Status", "KnownGap")]
+    // In group mode, the pipeline applies ORDER BY after GROUP BY + HAVING +
+    // projection (see RowsFromDatasets.Build), so an OrderByItem is
+    // evaluated against the projected, post-group rows. An aggregate
+    // result (e.g. SUM(total) AS totalSum) exists as a column on that
+    // projected row, so ordering by its alias orders the emitted groups by
+    // their aggregate value, matching SQL's ORDER BY-after-GROUP BY
+    // semantics.
+    [Fact]
     public void OrderByAggregateResultOrdersEmittedGroupsByItsValue()
     {
         SampleDatabase db = new SampleDatabase();
