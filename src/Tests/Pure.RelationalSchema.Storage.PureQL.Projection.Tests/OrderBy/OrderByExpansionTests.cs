@@ -318,21 +318,15 @@ public sealed class OrderByExpansionTests
         Assert.Equal(expected, actual);
     }
 
-    // KnownGap: rows produced by an unmatched LEFT JOIN side carry an empty
-    // (NULL-equivalent) cell for the joined column. SQL engines commonly
-    // default ascending ORDER BY to NULLS LAST (e.g. PostgreSQL), but
-    // OrderByApplicator sorts via C#'s Nullable<T> comparison, where null
-    // compares less than every value, so unmatched rows land first instead.
-    // The query language has no NULLS FIRST/LAST clause to override this, so
-    // NULL placement is undefined/unspecified by the library today.
-    [Fact(
-        Skip = "KnownGap: ascending ORDER BY over a nullable (unmatched "
-            + "LEFT JOIN) column places NULLs first, following C#'s "
-            + "Nullable<T> comparer, instead of NULLS LAST as many SQL "
-            + "engines default; the query model has no NULLS FIRST/LAST "
-            + "control to pin the intended behavior either way."
-    )]
-    [Trait("Status", "KnownGap")]
+    // Rows produced by an unmatched LEFT JOIN side carry an empty
+    // (NULL-equivalent) cell for the joined column. OrderByApplicator now
+    // implements an intentional NULLS LAST contract regardless of sort
+    // direction (matching PostgreSQL/Oracle/SQL Server's default): every
+    // order-by item keys first by "is this cell NULL" (always ascending),
+    // then by the real value in the requested direction. This test pins
+    // ascending; see OrderByDescendingWithUnmatchedLeftJoinRowsPlacesNullsLast
+    // below for the descending companion.
+    [Fact]
     public void OrderByAscendingWithUnmatchedLeftJoinRowsPlacesNullsLast()
     {
         SampleDatabase db = new SampleDatabase();
@@ -417,6 +411,107 @@ public sealed class OrderByExpansionTests
             "Dan",
             "Bob",
             "Cara",
+            "Eve",
+            "Fay",
+        ];
+
+        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+
+        Assert.Equal(expected, actual);
+    }
+
+    // Companion to the ascending test above: pins that NULLS LAST also
+    // holds under a descending sort (previously the only direction where
+    // the old default Nullable<T> comparer already happened to place
+    // NULLs last), proving the "regardless of direction" half of the
+    // contract, not just the ascending half.
+    [Fact]
+    public void OrderByDescendingWithUnmatchedLeftJoinRowsPlacesNullsLast()
+    {
+        SampleDatabase db = new SampleDatabase();
+
+        Join usersToOrders = new Join(
+            JoinType.Left,
+            SampleDatabase.Orders.Entity,
+            new BooleanArrayReturning(
+                new EachEquality(
+                    new EachUuidEquality(
+                        new UuidArrayReturning(
+                            new UuidField(
+                                SampleDatabase.Users.Entity,
+                                SampleDatabase.Users.Id
+                            )
+                        ),
+                        new UuidArrayReturning(
+                            new UuidField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.UserId
+                            )
+                        )
+                    )
+                )
+            )
+        );
+
+        Query query = new Query(
+            new FromExpression(SampleDatabase.Users.Entity),
+            [
+                new SelectExpression(
+                    new ArrayReturning(
+                        new StringArrayReturning(
+                            new StringField(
+                                SampleDatabase.Users.Entity,
+                                SampleDatabase.Users.Name
+                            )
+                        )
+                    )
+                ),
+                new SelectExpression(
+                    new ArrayReturning(
+                        new NumberArrayReturning(
+                            new NumberField(
+                                SampleDatabase.Orders.Entity,
+                                SampleDatabase.Orders.Total
+                            )
+                        )
+                    )
+                ),
+            ],
+            where: null,
+            [usersToOrders],
+            groupBy: null,
+            having: null,
+            [
+                new OrderByItem(
+                    new Field(
+                        new NumberField(
+                            SampleDatabase.Orders.Entity,
+                            SampleDatabase.Orders.Total
+                        )
+                    ),
+                    SortDirection.Desc
+                ),
+            ],
+            pagination: null
+        );
+
+        ProjectionResult result = new ProjectionResult(
+            new PureQLProjection(db.Datasets, query)
+        );
+
+        // Eve and Fay place no orders, so their joined Total is NULL.
+        // NULLS LAST holds here too: matched rows sorted descending first,
+        // then the unmatched users trailing in their original relative
+        // order (Ann/Dan tie at 100.50; a stable sort keeps Ann, whose
+        // order row precedes Dan's, ahead of Dan for that tie).
+        string[] expected =
+        [
+            "Cara",
+            "Bob",
+            "Ann",
+            "Dan",
+            "Cara",
+            "Ann",
             "Eve",
             "Fay",
         ];

@@ -365,17 +365,18 @@ public sealed class NullSemanticsTests
         );
     }
 
-    // ORDER BY user_score ASC/DESC: pins today's actual behavior rather than
-    // asserting a SQL-standard NULLS FIRST/LAST rule (the spec leaves the
-    // ordering of NULLs relative to values engine-defined, and this library
-    // simply delegates to .NET's default nullable comparer via
-    // IQueryable.OrderBy/OrderByDescending on double?, where null sorts as
-    // the smallest possible value). The expected sequence below is produced
-    // by the identical LINQ ordering over the ground-truth records, so a
-    // change to this behavior will show up here rather than only in
-    // production.
+    // ORDER BY user_score ASC/DESC: OrderByApplicator implements an
+    // intentional NULLS LAST contract, regardless of sort direction
+    // (matching PostgreSQL/Oracle/SQL Server's default) - see issue #125.
+    // Bob and Dan's NULL Score cells must always sort after every non-NULL
+    // Score, whether ascending or descending. The expected sequence below
+    // is built explicitly as non-NULL rows (sorted by score in the
+    // requested direction) followed by NULL rows in their original
+    // relative order, mirroring that contract rather than relying on
+    // .NET's default Nullable<T> comparer (which would place NULLs first
+    // for ascending).
     [Fact]
-    public void OrderByAscendingPlacesNullScoreCellsFirst()
+    public void OrderByAscendingPlacesNullScoreCellsLast()
     {
         SampleDatabase db = new SampleDatabase();
 
@@ -417,13 +418,24 @@ public sealed class NullSemanticsTests
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.Score).Select(user => user.UserName),
+            .. db.UserRows
+                .Where(user => user.Score.HasValue)
+                .OrderBy(user => user.Score)
+                .Select(user => user.UserName),
+            .. db.UserRows
+                .Where(user => !user.Score.HasValue)
+                .Select(user => user.UserName),
         ];
 
-        Assert.Equal(["Bob", "Dan"], expected[..2]);
+        Assert.Equal(["Bob", "Dan"], expected[^2..]);
         Assert.Equal(expected, result.Column(SampleDatabase.Users.Name).ToArray());
     }
 
+    // Descending companion: proves NULLS LAST holds in the direction where
+    // the old default Nullable<T> comparer already happened to agree, so
+    // this test alone cannot distinguish the old and new behavior - it is
+    // the ascending test above (now renamed to ...PlacesNullsLast) that
+    // pins the actual behavior change.
     [Fact]
     public void OrderByDescendingPlacesNullScoreCellsLast()
     {
@@ -465,6 +477,11 @@ public sealed class NullSemanticsTests
             new PureQLProjection(db.Datasets, query)
         );
 
+        // For a descending sort, NULLS LAST happens to coincide with what
+        // .NET's default Nullable<T> comparer already produces (null
+        // compares as the smallest value, so it sorts last when
+        // descending), so a plain OrderByDescending over the ground-truth
+        // records still reflects the intentional contract here.
         string[] expected =
         [
             .. db.UserRows
