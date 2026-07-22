@@ -884,7 +884,14 @@ internal static class WhereExpressionBuilder
 
     internal static double? DivideDoubles(double? a, double? b)
     {
-        return a.HasValue && b.HasValue && b.Value != 0 ? a.Value / b.Value : null;
+        return !a.HasValue || !b.HasValue
+            ? null
+            : b.Value == 0
+            ? throw new DivideByZeroException(
+                "eachDivide by zero: division by zero is a defined failure, "
+                    + "matching SQL division-by-zero semantics."
+            )
+            : a.Value / b.Value;
     }
 
     private static Expression NullableDoubleAdd(Expression a, Expression b)

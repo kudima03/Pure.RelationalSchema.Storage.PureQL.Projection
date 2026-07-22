@@ -47,32 +47,46 @@ internal static class CellValueExtractor
             );
     }
 
+    // Field resolution (a nonexistent column) and cell-text parsing (a
+    // malformed or type-mismatched value) are different failure modes and
+    // must not be conflated: an unresolved field always fails fast via
+    // GetRequiredCell below, while an empty cell text is the sentinel for
+    // SQL NULL and stays a silent null - only genuinely unparseable,
+    // non-empty text throws.
     internal static string? GetTextValue(IRow row, string entity, string fieldName)
     {
-        return GetCell(row, entity, fieldName)?.Value.TextValue;
+        return GetRequiredCell(row, entity, fieldName).Value.TextValue;
     }
 
     internal static double? GetDoubleValue(IRow row, string entity, string fieldName)
     {
         string? text = GetTextValue(row, entity, fieldName);
 
-        return
-            text is not null
-            && double.TryParse(
+        return text is null || text.Length == 0
+            ? null
+            : double.TryParse(
                 text,
                 NumberStyles.Any,
                 CultureInfo.InvariantCulture,
                 out double v
             )
             ? v
-            : null;
+            : throw new FormatException(
+            $"Cell text '{text}' for field '{fieldName}' is not a valid number."
+        );
     }
 
     internal static bool? GetBoolValue(IRow row, string entity, string fieldName)
     {
         string? text = GetTextValue(row, entity, fieldName);
 
-        return text is not null && bool.TryParse(text, out bool v) ? v : null;
+        return text is null || text.Length == 0
+            ? null
+            : bool.TryParse(text, out bool v)
+            ? v
+            : throw new FormatException(
+            $"Cell text '{text}' for field '{fieldName}' is not a valid boolean."
+        );
     }
 
     internal static DateOnly? GetDateOnlyValue(
@@ -83,7 +97,13 @@ internal static class CellValueExtractor
     {
         string? text = GetTextValue(row, entity, fieldName);
 
-        return text is not null && DateOnly.TryParse(text, out DateOnly v) ? v : null;
+        return text is null || text.Length == 0
+            ? null
+            : DateOnly.TryParse(text, out DateOnly v)
+            ? (DateOnly?)v
+            : throw new FormatException(
+            $"Cell text '{text}' for field '{fieldName}' is not a valid date."
+        );
     }
 
     internal static DateTime? GetDateTimeValue(
@@ -94,16 +114,18 @@ internal static class CellValueExtractor
     {
         string? text = GetTextValue(row, entity, fieldName);
 
-        return
-            text is not null
-            && DateTime.TryParse(
+        return text is null || text.Length == 0
+            ? null
+            : DateTime.TryParse(
                 text,
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
                 out DateTime v
             )
-            ? v
-            : null;
+            ? (DateTime?)v
+            : throw new FormatException(
+            $"Cell text '{text}' for field '{fieldName}' is not a valid datetime."
+        );
     }
 
     internal static TimeOnly? GetTimeOnlyValue(
@@ -114,13 +136,25 @@ internal static class CellValueExtractor
     {
         string? text = GetTextValue(row, entity, fieldName);
 
-        return text is not null && TimeOnly.TryParse(text, out TimeOnly v) ? v : null;
+        return text is null || text.Length == 0
+            ? null
+            : TimeOnly.TryParse(text, out TimeOnly v)
+            ? (TimeOnly?)v
+            : throw new FormatException(
+            $"Cell text '{text}' for field '{fieldName}' is not a valid time."
+        );
     }
 
     internal static Guid? GetGuidValue(IRow row, string entity, string fieldName)
     {
         string? text = GetTextValue(row, entity, fieldName);
 
-        return text is not null && Guid.TryParse(text, out Guid v) ? v : null;
+        return text is null || text.Length == 0
+            ? null
+            : Guid.TryParse(text, out Guid v)
+            ? (Guid?)v
+            : throw new FormatException(
+            $"Cell text '{text}' for field '{fieldName}' is not a valid uuid."
+        );
     }
 }
