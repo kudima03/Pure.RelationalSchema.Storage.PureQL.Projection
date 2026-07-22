@@ -54,8 +54,6 @@ internal static class GroupByApplicator
 
     private static ProjectionItem ProjectionItemOf(SelectExpression expression)
     {
-        IColumn column = SelectColumns.OutputColumn(expression);
-
         if (
             expression.TryPickT0(
                 out SingleValueReturning singleValue,
@@ -63,11 +61,13 @@ internal static class GroupByApplicator
             )
         )
         {
+            IColumn singleValueColumn = SelectColumns.OutputColumn(expression);
+
             if (ScalarCell.IsScalar(singleValue))
             {
                 ICell constant = ScalarCell.From(singleValue);
 
-                return new ProjectionItem(column, _ => constant);
+                return new ProjectionItem(singleValueColumn, _ => constant);
             }
 
             if (!AggregateEvaluator.IsAggregate(singleValue))
@@ -83,11 +83,22 @@ internal static class GroupByApplicator
                 AggregateEvaluator.BuildText(singleValue);
 
             return new ProjectionItem(
-                column,
+                singleValueColumn,
                 rows => new Cell(new String(text(rows) ?? string.Empty))
             );
         }
 
+        if (!SelectColumns.IsField(arrayReturning))
+        {
+            throw new NotSupportedException(
+                "Only bare field references can be projected per group "
+                    + "from an array-returning select expression; each* "
+                    + "expressions have no defined per-group projection "
+                    + "and must be wrapped in an aggregate instead."
+            );
+        }
+
+        IColumn column = SelectColumns.OutputColumn(expression);
         string fieldEntity = SelectColumns.FieldEntity(arrayReturning);
         string fieldName = SelectColumns.FieldName(arrayReturning);
 

@@ -169,8 +169,6 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
 
     private static ProjectionItem ProjectionItemOf(SelectExpression expression)
     {
-        IColumn column = SelectColumns.OutputColumn(expression);
-
         if (
             expression.TryPickT0(
                 out SingleValueReturning singleValue,
@@ -187,11 +185,23 @@ internal sealed record RowsFromDatasets : IQueryable<IRow>
                 );
             }
 
+            IColumn scalarColumn = SelectColumns.OutputColumn(expression);
             ICell cell = ScalarCell.From(singleValue);
 
-            return new ProjectionItem(column, _ => cell);
+            return new ProjectionItem(scalarColumn, _ => cell);
         }
 
+        if (!SelectColumns.IsField(array))
+        {
+            throw new NotSupportedException(
+                "Only bare field references can be projected per row from "
+                    + "an array-returning select expression; each* "
+                    + "expressions have no defined per-row projection and "
+                    + "must be wrapped in an aggregate instead."
+            );
+        }
+
+        IColumn column = SelectColumns.OutputColumn(expression);
         string fieldEntity = SelectColumns.FieldEntity(array);
         string fieldName = SelectColumns.FieldName(array);
 

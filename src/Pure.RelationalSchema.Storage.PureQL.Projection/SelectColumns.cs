@@ -49,6 +49,19 @@ internal sealed record SelectColumns : IEnumerable<IColumn>
             );
     }
 
+    internal static bool IsField(ArrayReturning returning)
+    {
+        return returning.Match(
+            b => b.IsT1,
+            d => d.IsT1,
+            dt => dt.IsT1,
+            n => n.IsT1,
+            s => s.IsT1,
+            t => t.IsT1,
+            u => u.IsT1
+        );
+    }
+
     internal static string FieldName(ArrayReturning returning)
     {
         return returning.Match(
