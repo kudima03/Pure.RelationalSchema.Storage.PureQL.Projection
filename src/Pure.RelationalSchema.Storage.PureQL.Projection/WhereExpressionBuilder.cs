@@ -1180,9 +1180,12 @@ internal static class WhereExpressionBuilder
         return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
             scalar => Expression.Constant((double?)scalar.Value, typeof(double?)),
-            _ => throw new NotSupportedException(
-                "Single-value Arithmetic outside per-row context is not supported."
-            ),
+            _ => LiteralArithmeticEvaluator.TryEvaluate(returning, out double literal)
+                ? Expression.Constant((double?)literal, typeof(double?))
+                : throw new NotSupportedException(
+                    "Single-value Arithmetic outside per-row context is not "
+                        + "supported unless every operand is a literal constant."
+                ),
             _ => throw new NotSupportedException(AggregateNotSupported),
             _ => throw new NotSupportedException(AggregateNotSupported)
         );

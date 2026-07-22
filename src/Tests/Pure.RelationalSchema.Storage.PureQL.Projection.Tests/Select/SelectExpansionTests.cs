@@ -742,18 +742,12 @@ public sealed class SelectExpansionTests
         }
     }
 
-    // KnownGap: alias renames output column for a computed/expression column.
-    // Computed select columns (single-value Arithmetic) currently fail fast
-    // with NotSupportedException (see ScalarUnsupportedTests); once
-    // implemented, per SQL result-set semantics the alias should rename the
-    // computed column exactly as it does for a plain field (SelectAliasTests,
-    // AliasCoverageTests). This pins the spec-correct expectation.
-    [Fact(
-        Skip = "KnownGap: single-value Arithmetic select expressions fail fast "
-            + "with NotSupportedException; alias renaming for computed columns "
-            + "is unimplemented (see Semantics/README.md)."
-    )]
-    [Trait("Status", "KnownGap")]
+    // Alias renames output column for a computed/expression column. A
+    // single-value Arithmetic whose operands are all literal constants now
+    // evaluates once (see ScalarCell/LiteralArithmeticEvaluator), and per SQL
+    // result-set semantics the alias renames the computed column exactly as
+    // it does for a plain field (SelectAliasTests, AliasCoverageTests).
+    [Fact]
     public void AliasRenamesComputedArithmeticColumn()
     {
         SampleDatabase db = new SampleDatabase();
