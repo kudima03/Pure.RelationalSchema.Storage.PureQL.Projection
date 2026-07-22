@@ -17,9 +17,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 // array operand is never zipped by row index - every per-row evaluation
 // uses only the literal's first element (`.FirstOrDefault()`), broadcast to
 // every row regardless of the literal's declared length; and eachDivide by
-// zero returns null for that row rather than throwing. Also covers mixing a
-// scalar-broadcast operand with a per-row array-aligned operand within the
-// same predicate.
+// zero raises DivideByZeroException (see issue #104's follow-up fix) rather
+// than silently yielding null. Also covers mixing a scalar-broadcast operand
+// with a per-row array-aligned operand within the same predicate.
 [Trait("Clause", "Where")]
 [Trait("Feature", "EachBroadcastAndLiteral")]
 public sealed class EachBroadcastAndLiteralTests
