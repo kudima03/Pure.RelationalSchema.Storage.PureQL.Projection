@@ -76,7 +76,10 @@ internal static class WhereExpressionBuilder
     {
         ParameterExpression rowParam = Expression.Parameter(typeof(IRow), "row");
         Expression body = BuildBoolean(returning, rowParam);
-        return Expression.Lambda<Func<IRow, bool>>(body, rowParam);
+        return Expression.Lambda<Func<IRow, bool>>(
+            CoerceUnknownToExcluded(body),
+            rowParam
+        );
     }
 
     internal static Expression<Func<IRow, bool>> BuildPredicate(
@@ -88,7 +91,30 @@ internal static class WhereExpressionBuilder
             single => BuildBoolean(single, rowParam),
             each => BuildBoolArrayPerRow(each, rowParam)
         );
-        return Expression.Lambda<Func<IRow, bool>>(body, rowParam);
+        return Expression.Lambda<Func<IRow, bool>>(
+            CoerceUnknownToExcluded(body),
+            rowParam
+        );
+    }
+
+    // The whole boolean expression tree below is built in bool? so that a
+    // NULL-cell comparison can carry SQL's three-valued "unknown" through
+    // NOT/AND/OR instead of collapsing to a plain C# false too early (see
+    // issue #166 - NOT over a NULL-cell equality was re-admitting NULL
+    // rows because the old plain-bool tree had no way to distinguish a
+    // real false from unknown). A WHERE/each* predicate itself is
+    // two-state (a row is in the result set or it isn't), so only here -
+    // once, at the outermost edge - do we collapse: both "unknown" and
+    // "false" exclude the row, matching SQL's WHERE clause semantics.
+    private static Expression CoerceUnknownToExcluded(Expression body)
+    {
+        Expression nullable = body.Type == typeof(bool?)
+            ? body
+            : Expression.Convert(body, typeof(bool?));
+        return Expression.Equal(
+            nullable,
+            Expression.Constant((bool?)true, typeof(bool?))
+        );
     }
 
     internal static Func<IRow, bool?> BuildBoolSelector(
@@ -186,11 +212,21 @@ internal static class WhereExpressionBuilder
     {
         return returning.Match(
             _ => throw new NotSupportedException(ParameterNotSupported),
-            scalar => Expression.Constant(scalar.Value),
+            scalar => Expression.Constant((bool?)scalar.Value, typeof(bool?)),
             equality => BuildEquality(equality, row),
             op => BuildBooleanOperator(op, row),
             BuildComparison
         );
+    }
+
+    // Every branch below must produce a bool?-typed expression - see the
+    // comment on CoerceUnknownToExcluded for why the whole tree is built
+    // in the nullable type.
+    private static Expression ToNullableBool(Expression expression)
+    {
+        return expression.Type == typeof(bool?)
+            ? expression
+            : Expression.Convert(expression, typeof(bool?));
     }
 
     private static Expression BuildEquality(
@@ -199,7 +235,7 @@ internal static class WhereExpressionBuilder
     )
     {
         return equality.Match(
-            BuildSingleValueEquality,
+            eq => ToNullableBool(BuildSingleValueEquality(eq)),
             array => BuildArrayEquality(array, row)
         );
     }
@@ -428,7 +464,15 @@ internal static class WhereExpressionBuilder
                 rightEntity!,
                 rightField!
             );
-            return Expression.Equal(left1, right1);
+
+            // SQL 3VL: a comparison where either cell is NULL is "unknown",
+            // never a plain false. Nullable value types get that for free
+            // via Expression.Equal's liftToNull; string is a reference
+            // type, so `==` never lifts to null, and needs the explicit
+            // null-checking helper instead (see issue #166).
+            return typeof(T) == typeof(string)
+                ? BuildStringEqual3Vl(left1, right1)
+                : Expression.Equal(left1, right1, liftToNull: true, method: null);
         }
 
         if (leftScalar is not null && rightScalar is not null)
@@ -445,7 +489,7 @@ internal static class WhereExpressionBuilder
                 rightScalar.ToArray(),
                 typeof(T[])
             );
-            return Expression.Call(sequenceEqual, leftConst, rightConst);
+            return ToNullableBool(Expression.Call(sequenceEqual, leftConst, rightConst));
         }
 
         throw new NotSupportedException(ParameterNotSupported);
@@ -487,11 +531,19 @@ internal static class WhereExpressionBuilder
     )
     {
         return returning.Match(
-            scalar => Expression.Constant(scalar.Value.All(v => v)),
+            scalar => Expression.Constant(
+                (bool?)scalar.Value.All(v => v),
+                typeof(bool?)
+            ),
             field =>
+                // liftToNull: a padded/NULL boolean cell must compare as
+                // "unknown", not a plain false, so eachNot over it stays
+                // excluded instead of being flipped back in (issue #166).
                 Expression.Equal(
                     FieldValue(GetBoolValueMethod, row, field.Entity, field.Field),
-                    Expression.Constant((bool?)true, typeof(bool?))
+                    Expression.Constant((bool?)true, typeof(bool?)),
+                    liftToNull: true,
+                    method: null
                 ),
             _ => throw new NotSupportedException(ParameterNotSupported),
             comparison => BuildEachComparisonPerRow(comparison, row),
@@ -513,41 +565,58 @@ internal static class WhereExpressionBuilder
         ParameterExpression row
     )
     {
+        // Every branch compares a per-row (possibly NULL-cell) value
+        // against another per-row or scalar value, so each equality is
+        // built with SQL 3VL: liftToNull for the nullable value types, and
+        // the explicit null-checking helper for string (a reference type,
+        // where liftToNull does not apply) - see issue #166.
         return equality.Match(
             eq =>
                 Expression.Equal(
                     BuildBoolArrayValuePerRow(eq.Left, row),
-                    BuildBoolPerRow(eq.Right, row)
+                    BuildBoolPerRow(eq.Right, row),
+                    liftToNull: true,
+                    method: null
                 ),
             eq =>
                 Expression.Equal(
                     BuildNumberArrayValuePerRow(eq.Left, row),
-                    BuildNumberPerRow(eq.Right, row)
+                    BuildNumberPerRow(eq.Right, row),
+                    liftToNull: true,
+                    method: null
                 ),
             eq =>
-                Expression.Equal(
+                BuildStringEqual3Vl(
                     BuildStringArrayValuePerRow(eq.Left, row),
                     BuildStringPerRow(eq.Right, row)
                 ),
             eq =>
                 Expression.Equal(
                     BuildDateArrayValuePerRow(eq.Left, row),
-                    BuildDatePerRow(eq.Right, row)
+                    BuildDatePerRow(eq.Right, row),
+                    liftToNull: true,
+                    method: null
                 ),
             eq =>
                 Expression.Equal(
                     BuildTimeArrayValuePerRow(eq.Left, row),
-                    BuildTimePerRow(eq.Right, row)
+                    BuildTimePerRow(eq.Right, row),
+                    liftToNull: true,
+                    method: null
                 ),
             eq =>
                 Expression.Equal(
                     BuildDateTimeArrayValuePerRow(eq.Left, row),
-                    BuildDateTimePerRow(eq.Right, row)
+                    BuildDateTimePerRow(eq.Right, row),
+                    liftToNull: true,
+                    method: null
                 ),
             eq =>
                 Expression.Equal(
                     BuildUuidArrayValuePerRow(eq.Left, row),
-                    BuildUuidPerRow(eq.Right, row)
+                    BuildUuidPerRow(eq.Right, row),
+                    liftToNull: true,
+                    method: null
                 )
         );
     }
@@ -1102,11 +1171,41 @@ internal static class WhereExpressionBuilder
         );
     }
 
-    private static readonly MethodInfo StringCompareOrdinalMethod =
-        typeof(string).GetMethod(
-            nameof(string.CompareOrdinal),
-            [typeof(string), typeof(string)]
+    // string.CompareOrdinal treats null as simply "less than" (it returns
+    // -1/1 rather than throwing), which is not SQL 3VL: a comparison
+    // against a NULL cell must be "unknown", not a real (if extreme)
+    // ordering. This wrapper makes that explicit (returns int? null) before
+    // BuildTypedComparison below compares the result against zero.
+    private static readonly MethodInfo CompareOrdinal3VlMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(CompareOrdinal3Vl),
+            BindingFlags.NonPublic | BindingFlags.Static
         )!;
+
+    internal static int? CompareOrdinal3Vl(string? left, string? right)
+    {
+        return left is null || right is null
+            ? null
+            : string.CompareOrdinal(left, right);
+    }
+
+    private static readonly MethodInfo StringEquals3VlMethod =
+        typeof(WhereExpressionBuilder).GetMethod(
+            nameof(StringEquals3Vl),
+            BindingFlags.NonPublic | BindingFlags.Static
+        )!;
+
+    internal static bool? StringEquals3Vl(string? left, string? right)
+    {
+        return left is null || right is null
+            ? null
+            : string.Equals(left, right, System.StringComparison.Ordinal);
+    }
+
+    private static Expression BuildStringEqual3Vl(Expression left, Expression right)
+    {
+        return Expression.Call(StringEquals3VlMethod, left, right);
+    }
 
     private static Expression BuildTypedComparison(
         Expression left,
@@ -1117,25 +1216,36 @@ internal static class WhereExpressionBuilder
         if (left.Type == typeof(string) || right.Type == typeof(string))
         {
             Expression compareExpr = Expression.Call(
-                StringCompareOrdinalMethod,
+                CompareOrdinal3VlMethod,
                 left,
                 right
             );
-            Expression zero = Expression.Constant(0);
+            Expression zero = Expression.Constant((int?)0, typeof(int?));
             return op switch
             {
                 ComparisonOperator.GreaterThan => Expression.GreaterThan(
                     compareExpr,
-                    zero
+                    zero,
+                    liftToNull: true,
+                    method: null
                 ),
                 ComparisonOperator.GreaterThanOrEqual => Expression.GreaterThanOrEqual(
                     compareExpr,
-                    zero
+                    zero,
+                    liftToNull: true,
+                    method: null
                 ),
-                ComparisonOperator.LessThan => Expression.LessThan(compareExpr, zero),
+                ComparisonOperator.LessThan => Expression.LessThan(
+                    compareExpr,
+                    zero,
+                    liftToNull: true,
+                    method: null
+                ),
                 ComparisonOperator.LessThanOrEqual => Expression.LessThanOrEqual(
                     compareExpr,
-                    zero
+                    zero,
+                    liftToNull: true,
+                    method: null
                 ),
                 _ => throw new NotSupportedException(
                     $"Unknown comparison operator: {op}"
@@ -1143,15 +1253,36 @@ internal static class WhereExpressionBuilder
             };
         }
 
+        // Nullable value types (double?, DateOnly?, TimeOnly?, DateTime?)
+        // get SQL 3VL for free from Expression's liftToNull: a NULL operand
+        // makes the comparison "unknown" rather than a plain false, so NOT
+        // over it stays excluded instead of being flipped back in.
         return op switch
         {
-            ComparisonOperator.GreaterThan => Expression.GreaterThan(left, right),
+            ComparisonOperator.GreaterThan => Expression.GreaterThan(
+                left,
+                right,
+                liftToNull: true,
+                method: null
+            ),
             ComparisonOperator.GreaterThanOrEqual => Expression.GreaterThanOrEqual(
                 left,
-                right
+                right,
+                liftToNull: true,
+                method: null
             ),
-            ComparisonOperator.LessThan => Expression.LessThan(left, right),
-            ComparisonOperator.LessThanOrEqual => Expression.LessThanOrEqual(left, right),
+            ComparisonOperator.LessThan => Expression.LessThan(
+                left,
+                right,
+                liftToNull: true,
+                method: null
+            ),
+            ComparisonOperator.LessThanOrEqual => Expression.LessThanOrEqual(
+                left,
+                right,
+                liftToNull: true,
+                method: null
+            ),
             _ => throw new NotSupportedException($"Unknown comparison operator: {op}"),
         };
     }

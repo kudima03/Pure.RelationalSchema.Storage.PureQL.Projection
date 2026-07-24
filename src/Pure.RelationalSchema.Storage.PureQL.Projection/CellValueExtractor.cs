@@ -53,9 +53,22 @@ internal static class CellValueExtractor
     // GetRequiredCell below, while an empty cell text is the sentinel for
     // SQL NULL and stays a silent null - only genuinely unparseable,
     // non-empty text throws.
+    //
+    // Empty text maps to null here for the same reason every other typed
+    // getter below maps it to null: it is this storage layer's sole NULL
+    // sentinel (there is no separate representation for a real, stored
+    // empty string), and JoinApplicator.Pad writes exactly this empty
+    // sentinel for an outer join's unmatched side. Returning the raw ""
+    // instead (as this used to) made a padded string cell read back as a
+    // present, non-null value while every other column type already read
+    // padding as null - so string min/count wrongly folded in padded rows
+    // (issue #167). Aligning this getter with the others makes padded
+    // strings NULL for aggregates, count, DISTINCT, ordering and equality
+    // alike, since all of those resolve field values through this class.
     internal static string? GetTextValue(IRow row, string entity, string fieldName)
     {
-        return GetRequiredCell(row, entity, fieldName).Value.TextValue;
+        string? text = GetRequiredCell(row, entity, fieldName).Value.TextValue;
+        return text is null || text.Length == 0 ? null : text;
     }
 
     internal static double? GetDoubleValue(IRow row, string entity, string fieldName)

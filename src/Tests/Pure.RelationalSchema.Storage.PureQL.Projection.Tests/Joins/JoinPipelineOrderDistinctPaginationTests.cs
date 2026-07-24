@@ -445,6 +445,15 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     // a missing string cell with "" (Semantics/README.md), so the distinct
     // value set for orders.status through a LEFT JOIN gains an extra ""
     // entry on top of the three real statuses, for the two unmatched users.
+    // Unaffected by issue #167 (padded strings now reading as NULL through
+    // CellValueExtractor): DistinctApplicator computes its dedup key from
+    // the projected row's raw ICell.TextValue directly, not through
+    // CellValueExtractor, so the padded cell still surfaces here as a
+    // literal "" - the same display convention every other NULL group/
+    // dedup key already uses (see Semantics/README.md's "Outer-join null
+    // extension" row). #167 changed the *computational* reading of a
+    // padded string (aggregates, count, WHERE, ORDER BY, GROUP BY key),
+    // not this display-layer text.
     [Fact]
     public void LeftJoinDistinctOnJoinedStatusIncludesEmptyStringForPaddedRows()
     {

@@ -24,16 +24,16 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Types;
 // each-arithmetic dropping NULL rows, negation of a NULL-cell equality,
 // HAVING over a group whose members mix NULL and non-NULL Score, and
 // string/temporal aggregate NULL-ignoring sourced from LEFT JOIN padding
-// (JoinApplicator.Pad pads the unmatched side: string columns read back as
-// "", every other typed column reads back as null - see
-// CellValueExtractor and Semantics/README.md "Outer-join null extension").
-// Every expectation below is computed independently from the ground-truth
-// record lists under SQL semantics: a predicate comparison against NULL is
-// unknown (row excluded); arithmetic with a NULL operand is NULL (excluded);
-// aggregates ignore NULL inputs. Where the translator's actual behavior
-// diverges from that oracle, the test is written to the SQL-correct
-// expectation and disabled with a KnownGap skip rather than asserting the
-// divergence as correct.
+// (JoinApplicator.Pad pads the unmatched side with an empty cell; every
+// typed column - string included, as of issue #167 - reads that back as
+// null via CellValueExtractor; see Semantics/README.md "Outer-join null
+// extension"). Every expectation below is computed independently from the
+// ground-truth record lists under SQL semantics: a predicate comparison
+// against NULL is unknown (row excluded); NOT(unknown) stays unknown
+// (issue #166); arithmetic with a NULL operand is NULL (excluded);
+// aggregates ignore NULL inputs. This file originally shipped four of
+// these as KnownGap-skipped, SQL-correct-but-then-unimplemented
+// expectations (issues #166/#167); all four now pass unskipped.
 [Trait("Clause", "Types")]
 [Trait("Feature", "NullThreeValuedLogic")]
 public sealed class NullThreeValuedLogicTests
@@ -632,15 +632,7 @@ public sealed class NullThreeValuedLogicTests
     // operand, so `Expression.Not` flips that `false` to `true` and Bob/Dan
     // incorrectly reappear in the negated result. KnownGap: candidate bug -
     // NOT() over a NULL-cell scalar equality does not preserve SQL 3VL.
-    [Fact(
-        Skip = "KnownGap: NOT() over a NULL-cell field equality flips "
-            + "SQL's unknown to true instead of keeping it excluded - the "
-            + "translator lifts null-cell equality to a plain C# false "
-            + "(not 3VL unknown), so negating it wrongly re-admits the "
-            + "NULL rows (Bob, Dan) that a correct NOT(unknown) would "
-            + "still exclude."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void NotOfScalarFieldEqualityStillExcludesNullRows()
     {
         SampleDatabase db = new SampleDatabase();
@@ -721,13 +713,7 @@ public sealed class NullThreeValuedLogicTests
     // mismatches (10 != 30, 28 != 30) should flip from false to true.
     // Empirically the translator's eachNot re-admits Bob/Dan the same way
     // NotOperator does for the scalar family. KnownGap: candidate bug.
-    [Fact(
-        Skip = "KnownGap: eachNot() over a per-row NULL-cell eachEqual "
-            + "flips SQL's unknown to true instead of keeping it excluded, "
-            + "the same divergence as NotOfScalarFieldEqualityStillExcludes"
-            + "NullRows but in the each* family - Bob/Dan wrongly reappear."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void EachNotOfEachEqualityStillExcludesNullScoreRows()
     {
         SampleDatabase db = new SampleDatabase();
@@ -986,12 +972,13 @@ public sealed class NullThreeValuedLogicTests
     }
 
     // SELECT max(order_status) after users LEFT JOIN orders: string columns
-    // pad to "" (empty text), not a true null (CellValueExtractor.GetText
-    // Value returns the raw stored text directly, unlike the other typed
-    // getters which map empty text to null). "" ordinally precedes every
-    // real status, so it never wins a MAX fold - the padded rows are
-    // harmless here even though they are not truly excluded, so max already
-    // matches the SQL-correct answer.
+    // pad to null (CellValueExtractor.GetTextValue maps the pad's empty
+    // text to null, same as every other typed getter - issue #167), so the
+    // padded rows are excluded from the fold outright. Before that fix the
+    // pad read back as a real, non-null "" - which still never won a MAX
+    // fold (it ordinally precedes every real status) - so this direction
+    // already matched the SQL-correct answer even under the old, wrong
+    // extraction; MIN below is the direction that only the fix corrects.
     [Fact]
     public void LeftJoinMaxStatusIgnoresPaddedRows()
     {
@@ -1045,15 +1032,7 @@ public sealed class NullThreeValuedLogicTests
     // padded "" is a real (non-null) empty string, so it wrongly survives
     // and wins the fold. KnownGap: candidate bug - the empty-string pad
     // participates in string MIN instead of being ignored like a NULL.
-    [Fact(
-        Skip = "KnownGap: string MIN over a LEFT JOIN's padded unmatched "
-            + "rows wrongly folds in the padded \"\" (JoinApplicator.Pad's "
-            + "empty cell reads back as a real, non-null empty string via "
-            + "CellValueExtractor.GetTextValue, not null), so \"\" - which "
-            + "ordinally precedes every real status - always wins MIN "
-            + "instead of being ignored the way a NULL must be."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void LeftJoinMinStatusIgnoresPaddedNullRows()
     {
         SampleDatabase db = new SampleDatabase();
@@ -1152,15 +1131,7 @@ public sealed class NullThreeValuedLogicTests
     // a real (non-null) "", so both padded rows are wrongly counted as
     // present. KnownGap: candidate bug, the same root cause (empty-string
     // pad vs. true null) as the string MIN divergence above.
-    [Fact(
-        Skip = "KnownGap: count() over a LEFT JOIN's padded string column "
-            + "wrongly counts the padded \"\" rows as present - Aggregate"
-            + "Evaluator.HasValueSelector's string branch treats any "
-            + "non-null string (including the padded empty string, which "
-            + "is not a C# null) as a counted value, so count(order_status)"
-            + " returns 8 instead of the SQL-correct 6 matched rows."
-    )]
-    [Trait("Status", "KnownGap")]
+    [Fact]
     public void LeftJoinCountOfStringColumnIgnoresPaddedNullRows()
     {
         SampleDatabase db = new SampleDatabase();
