@@ -15,6 +15,8 @@ dotnet test --no-build --verbosity normal      # run xUnit tests
 dotnet pack --configuration Release -p:Version=<version> --output .
 ```
 
+CI additionally passes `-p:AssemblyVersion` (pinned to the major) and `-p:FileVersion`; see `.github/workflows/publish-nuget.yml`.
+
 Mutation testing (run by CI, slow locally):
 
 ```bash
