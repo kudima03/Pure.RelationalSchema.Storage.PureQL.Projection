@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Pure.RelationalSchema.Storage.PureQL.Projection.Tests/Pure.RelationalSchema.Storage.PureQL.Projection.Tests.csproj" />
+  </Folder>
+  <Project Path="Pure.RelationalSchema.Storage.PureQL.Projection/Pure.RelationalSchema.Storage.PureQL.Projection.csproj" />
+</Solution>
