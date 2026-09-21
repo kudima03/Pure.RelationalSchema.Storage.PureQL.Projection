@@ -14,6 +14,7 @@
     <AssemblyName>Pure.RelationalSchema.Storage.PureQL.Projection</AssemblyName>
     <Authors>Dmitry Kurochkin</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
@@ -24,5 +25,8 @@
     <PackageReference Include="PureQL.CSharp.Model" Version="0.1.0-preview.11.0.1" />
     <PackageReference Include="System.Linq.Async" Version="7.0.1" />
     <PackageReference Include="Pure.Collections.Generic" Version="0.1.0-preview.3.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>
