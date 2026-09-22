@@ -1,9 +1,14 @@
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
+using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
@@ -18,23 +23,49 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 [Trait("Feature", "EmptySource")]
 public sealed class EmptySourceTableTests
 {
-    private const string Entity = "schema_without_foreign_keys.table_without_indexes";
-    private const string IdField = "id";
-    private const string NameField = "name";
-
     private static Query TwoColumnQuery()
     {
         return new Query(
-            new FromExpression(Entity),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [
+                        new RelationalSchemaWithoutForeignKeys().Name,
+                        new TableWithoutIndexes().Name,
+                    ]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
-                        new UuidArrayReturning(new UuidField(Entity, IdField))
+                        new UuidArrayReturning(
+                            new UuidField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithoutForeignKeys().Name,
+                                        new TableWithoutIndexes().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
+                            )
+                        )
                     )
                 ),
                 new SelectExpression(
                     new ArrayReturning(
-                        new StringArrayReturning(new StringField(Entity, NameField))
+                        new StringArrayReturning(
+                            new StringField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithoutForeignKeys().Name,
+                                        new TableWithoutIndexes().Name,
+                                    ]
+                                ).TextValue,
+                                new NameColumn().Name.TextValue
+                            )
+                        )
                     )
                 ),
             ]
@@ -64,7 +95,7 @@ public sealed class EmptySourceTableTests
         );
 
         Assert.Equal(
-            [IdField, NameField],
+            [new IdColumn().Name.TextValue, new NameColumn().Name.TextValue],
             projection.TableSchema.Columns.Select(column => column.Name.TextValue)
         );
     }

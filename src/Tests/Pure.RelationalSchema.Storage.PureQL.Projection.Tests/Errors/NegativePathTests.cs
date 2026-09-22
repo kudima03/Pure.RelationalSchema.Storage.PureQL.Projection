@@ -1,8 +1,12 @@
+using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.Schema;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Cells;
@@ -31,15 +35,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 [Trait("Feature", "Negative")]
 public sealed class NegativePathTests
 {
-    // Names from the centralized Pure.RelationalSchema.Storage.Samples
-    // catalogue: SingleTableSchemaDataSet exposes the schema
-    // "single_table_schema" holding the table "single_column_table", whose
-    // single column "id" is a uuid.
-    private const string MissingTableSchema = "single_table_schema";
-    private const string MissingTableBaseEntity =
-        $"{MissingTableSchema}.single_column_table";
-    private const string MissingTableIdField = "id";
-
     // ===== Table/entity not present in the supplied datasets =====
 
     // EntityReferenceValidator only checks that every referenced entity
@@ -60,13 +55,24 @@ public sealed class NegativePathTests
         IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
         Query query = new Query(
-            new FromExpression($"{MissingTableSchema}.nonexistent_table"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new SingleTableRelationalSchema().Name, new String("nonexistent_table")]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                $"{MissingTableSchema}.nonexistent_table",
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new SingleTableRelationalSchema().Name,
+                                        new String("nonexistent_table"),
+                                    ]
+                                ).TextValue,
                                 "whatever"
                             )
                         )
@@ -97,14 +103,25 @@ public sealed class NegativePathTests
         IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
         Query query = new Query(
-            new FromExpression(MissingTableBaseEntity),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new SingleTableRelationalSchema().Name, new SingleColumnTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                MissingTableBaseEntity,
-                                MissingTableIdField
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new SingleTableRelationalSchema().Name,
+                                        new SingleColumnTable().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
                             )
                         )
                     )
@@ -114,19 +131,37 @@ public sealed class NegativePathTests
             [
                 new Join(
                     JoinType.Inner,
-                    $"{MissingTableSchema}.nonexistent_join_table",
+                    new JoinedString(
+                        new String("."),
+                        [
+                            new SingleTableRelationalSchema().Name,
+                            new String("nonexistent_join_table"),
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        MissingTableBaseEntity,
-                                        MissingTableIdField
+                                        new JoinedString(
+                                            new String("."),
+                                            [
+                                                new SingleTableRelationalSchema().Name,
+                                                new SingleColumnTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new IdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        $"{MissingTableSchema}.nonexistent_join_table",
+                                        new JoinedString(
+                                            new String("."),
+                                            [
+                                                new SingleTableRelationalSchema().Name,
+                                                new String("nonexistent_join_table"),
+                                            ]
+                                        ).TextValue,
                                         "whatever_id"
                                     )
                                 )
@@ -157,7 +192,8 @@ public sealed class NegativePathTests
     // The per-row projection path (RowsFromDatasets.ApplyRowProjection) uses
     // CellValueExtractor.GetRequiredCell, which throws KeyNotFoundException
     // when no column on the row matches the requested field name. The table
-    // itself resolves fine here (shop.users); only the field name is bad.
+    // itself resolves fine here (schema_with_foreign_keys.users); only the
+    // field name is bad.
     [Trait("Clause", "Select")]
     [Fact]
     public void SelectFieldNotOnResolvedTableThrowsKeyNotFoundException()
@@ -166,13 +202,24 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
                                 "user_nickname"
                             )
                         )
@@ -200,14 +247,25 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -217,7 +275,13 @@ public sealed class NegativePathTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
                                 "order_notes"
                             )
                         )
@@ -231,8 +295,14 @@ public sealed class NegativePathTests
             [
                 new Field(
                     new StringField(
-                        "schema_with_foreign_keys.orders",
-                        "order_status"
+                        new JoinedString(
+                            new String("."),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],
@@ -263,14 +333,25 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -285,8 +366,14 @@ public sealed class NegativePathTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_id"
+                                            new JoinedString(
+                                                new String("."),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -323,14 +410,25 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -341,7 +439,13 @@ public sealed class NegativePathTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
                                 "order_notes"
                             )
                         ),
@@ -378,14 +482,25 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -397,8 +512,14 @@ public sealed class NegativePathTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(0))
@@ -423,7 +544,8 @@ public sealed class NegativePathTests
     // data, as opposed to a schema/reference type mismatch) is parsed by
     // CellValueExtractor.GetGuidValue via Guid.TryParse; non-empty text that
     // fails to parse now throws FormatException instead of being treated as
-    // an absent value.
+    // an absent value. This table is deliberately hand-built (not from the
+    // package) so its uuid cell can hold malformed text.
     [Fact]
     [Trait("Clause", "Where")]
     public void MalformedUuidCellTextFailsFast()
@@ -497,14 +619,25 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -520,8 +653,15 @@ public sealed class NegativePathTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.orders",
-                                                "order_total"
+                                                new JoinedString(
+                                                    new String("."),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys()
+                                                            .Name,
+                                                        new OrdersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(0)),
@@ -559,14 +699,25 @@ public sealed class NegativePathTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -581,7 +732,13 @@ public sealed class NegativePathTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            "schema_with_foreign_keys.users",
+                            new JoinedString(
+                                new String("."),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
                             "user_nickname"
                         )
                     ),

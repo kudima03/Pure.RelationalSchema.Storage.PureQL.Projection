@@ -1,3 +1,7 @@
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -6,6 +10,7 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
 using PureQL.CSharp.Model.Fields;
+using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -27,25 +32,40 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 [Trait("Feature", "AliasResolution")]
 public sealed class UndeclaredAliasEntityTests
 {
-    private const string NeedsEntity = "schema_with_indexes.table_with_indexes";
-    private const string SpecialtiesEntity =
-        "schema_with_indexes.table_with_single_index";
-    private const string IdField = "id";
-    private const string SpecialtyIdField = "tenant_id";
-
     private static Join NeedsToSpecialtiesJoin()
     {
         return new Join(
             JoinType.Inner,
-            SpecialtiesEntity,
+            new JoinedString(
+                new String("."),
+                [new RelationalSchemaWithIndexes().Name, new TableWithSingleIndex().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField(NeedsEntity, SpecialtyIdField)
+                            new UuidField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithIndexes().Name,
+                                        new TableWithIndexes().Name,
+                                    ]
+                                ).TextValue,
+                                new TenantIdColumn().Name.TextValue
+                            )
                         ),
                         new UuidArrayReturning(
-                            new UuidField(SpecialtiesEntity, IdField)
+                            new UuidField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithIndexes().Name,
+                                        new TableWithSingleIndex().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
+                            )
                         )
                     )
                 )
@@ -59,11 +79,28 @@ public sealed class UndeclaredAliasEntityTests
         IStoredSchemaDataSet dataset = new SchemaDataSetWithAmbiguousIds();
 
         Query query = new Query(
-            new FromExpression(NeedsEntity, "need"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
+                ).TextValue,
+                "need"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
-                        new UuidArrayReturning(new UuidField(NeedsEntity, IdField))
+                        new UuidArrayReturning(
+                            new UuidField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithIndexes().Name,
+                                        new TableWithIndexes().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
+                            )
+                        )
                     )
                 ),
             ],
@@ -71,15 +108,30 @@ public sealed class UndeclaredAliasEntityTests
             [
                 new Join(
                     JoinType.Inner,
-                    SpecialtiesEntity,
+                    new JoinedString(
+                        new String("."),
+                        [
+                            new RelationalSchemaWithIndexes().Name,
+                            new TableWithSingleIndex().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
-                                    new UuidField(NeedsEntity, SpecialtyIdField)
+                                    new UuidField(
+                                        new JoinedString(
+                                            new String("."),
+                                            [
+                                                new RelationalSchemaWithIndexes().Name,
+                                                new TableWithIndexes().Name,
+                                            ]
+                                        ).TextValue,
+                                        new TenantIdColumn().Name.TextValue
+                                    )
                                 ),
                                 new UuidArrayReturning(
-                                    new UuidField("sp", IdField)
+                                    new UuidField("sp", new IdColumn().Name.TextValue)
                                 )
                             )
                         )
@@ -103,11 +155,19 @@ public sealed class UndeclaredAliasEntityTests
         IStoredSchemaDataSet dataset = new SchemaDataSetWithAmbiguousIds();
 
         Query query = new Query(
-            new FromExpression(NeedsEntity, "need"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
+                ).TextValue,
+                "need"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
-                        new UuidArrayReturning(new UuidField("sp", IdField))
+                        new UuidArrayReturning(
+                            new UuidField("sp", new IdColumn().Name.TextValue)
+                        )
                     ),
                     "specId"
                 ),
@@ -133,11 +193,19 @@ public sealed class UndeclaredAliasEntityTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users", "u"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                "u"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
-                        new StringArrayReturning(new StringField("u", "user_name"))
+                        new StringArrayReturning(
+                            new StringField("u", new UserNameColumn().Name.TextValue)
+                        )
                     )
                 ),
             ]
@@ -154,7 +222,9 @@ public sealed class UndeclaredAliasEntityTests
 
         Assert.Equal(
             expected,
-            result.Column("user_name").OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue)
+                .OrderBy(name => name)
+                .ToArray()
         );
     }
 
@@ -165,11 +235,19 @@ public sealed class UndeclaredAliasEntityTests
         IReadOnlyList<AmbiguousIdRecord> needRows = [.. new AmbiguousIdRecords()];
 
         Query query = new Query(
-            new FromExpression(NeedsEntity, "need"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
+                ).TextValue,
+                "need"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
-                        new UuidArrayReturning(new UuidField("need", IdField))
+                        new UuidArrayReturning(
+                            new UuidField("need", new IdColumn().Name.TextValue)
+                        )
                     ),
                     "ownId"
                 ),

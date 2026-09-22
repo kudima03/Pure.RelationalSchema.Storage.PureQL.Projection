@@ -1,3 +1,7 @@
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -6,6 +10,7 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
 using PureQL.CSharp.Model.Fields;
+using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
@@ -26,12 +31,26 @@ public sealed class PackageFixtureRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.users", "user_id")
+                            new UuidField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
+                            )
                         )
                     )
                 ),
@@ -39,8 +58,14 @@ public sealed class PackageFixtureRoundTripTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -49,8 +74,14 @@ public sealed class PackageFixtureRoundTripTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -59,8 +90,14 @@ public sealed class PackageFixtureRoundTripTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -74,12 +111,12 @@ public sealed class PackageFixtureRoundTripTests
 
         foreach (ResultRow row in result.Rows)
         {
-            Guid userId = row.Uuid("user_id")!.Value;
+            Guid userId = row.Uuid(new UserIdColumn().Name.TextValue)!.Value;
             UserRecord expected = userRows.Single(user => user.UserId == userId);
 
-            Assert.Equal(expected.SignupDate, row.Date("signup_date"));
-            Assert.Equal(expected.LastLogin, row.DateTime("last_login"));
-            Assert.Equal(expected.ShiftStart, row.Time("shift_start"));
+            Assert.Equal(expected.SignupDate, row.Date(new SignupDateColumn().Name.TextValue));
+            Assert.Equal(expected.LastLogin, row.DateTime(new LastLoginColumn().Name.TextValue));
+            Assert.Equal(expected.ShiftStart, row.Time(new ShiftStartColumn().Name.TextValue));
         }
     }
 
@@ -91,12 +128,26 @@ public sealed class PackageFixtureRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.users", "user_id")
+                            new UuidField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
+                            )
                         )
                     )
                 ),
@@ -104,8 +155,14 @@ public sealed class PackageFixtureRoundTripTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         )
                     )
@@ -122,8 +179,8 @@ public sealed class PackageFixtureRoundTripTests
         Guid[] actualNullIds =
         [
             .. result.Rows
-                .Where(row => row.Double("user_score") is null)
-                .Select(row => row.Uuid("user_id")!.Value),
+                .Where(row => row.Double(new UserScoreColumn().Name.TextValue) is null)
+                .Select(row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(2, expectedNullIds.Length);
@@ -138,12 +195,26 @@ public sealed class PackageFixtureRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
-                            new NumberField("schema_with_foreign_keys.users", "user_age")
+                            new NumberField(
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
+                            )
                         )
                     )
                 ),
@@ -152,7 +223,16 @@ public sealed class PackageFixtureRoundTripTests
             join: null,
             [
                 new Field(
-                    new NumberField("schema_with_foreign_keys.users", "user_age")
+                    new NumberField(
+                        new JoinedString(
+                            new String("."),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue,
+                        new UserAgeColumn().Name.TextValue
+                    )
                 ),
             ],
             having: null,
@@ -171,7 +251,9 @@ public sealed class PackageFixtureRoundTripTests
         Assert.Equal(expectedAges.Length, result.Count);
         Assert.Equal(
             expectedAges,
-            result.Column("user_age").Select(age => double.Parse(age!)).OrderBy(age => age)
+            result.Column(new UserAgeColumn().Name.TextValue)
+                .Select(age => double.Parse(age!))
+                .OrderBy(age => age)
         );
     }
 
@@ -184,14 +266,25 @@ public sealed class PackageFixtureRoundTripTests
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new String("."),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new String("."),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -201,18 +294,36 @@ public sealed class PackageFixtureRoundTripTests
             [
                 new Join(
                     JoinType.Inner,
-                    "audit.logins",
+                    new JoinedString(
+                        new String("."),
+                        [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                                            new String("."),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
-                                    new UuidField("audit.logins", "login_user_id")
+                                    new UuidField(
+                                        new JoinedString(
+                                            new String("."),
+                                            [
+                                                new AuditRelationalSchema().Name,
+                                                new LoginsTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new LoginUserIdColumn().Name.TextValue
+                                    )
                                 )
                             )
                         )
@@ -238,6 +349,9 @@ public sealed class PackageFixtureRoundTripTests
 
         Assert.Equal(4, loginRows.Count);
         Assert.Equal(expected.Length, result.Count);
-        Assert.Equal(expected, result.Column("user_name").OrderBy(name => name).ToArray());
+        Assert.Equal(
+            expected,
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
+        );
     }
 }
