@@ -1,4 +1,5 @@
-using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Arithmetics;
@@ -25,10 +26,11 @@ public sealed class ScalarUnsupportedTests
     [Fact]
     public void NumberParameterInSelectFailsFastWithoutBinding()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -40,17 +42,18 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 
     [Fact]
     public void SingleValueArithmeticWithParameterOperandInSelectFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -73,17 +76,18 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 
     [Fact]
     public void BooleanCompositeInSelectFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -103,17 +107,18 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 
     [Fact]
     public void ParameterAlongsideAggregateFailsFastInGroupMode()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -128,8 +133,8 @@ public sealed class ScalarUnsupportedTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -142,7 +147,7 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 }

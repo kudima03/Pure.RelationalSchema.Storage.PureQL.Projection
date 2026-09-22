@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -17,17 +20,19 @@ public sealed class EachArrayOperandTemporalTests
     [Fact]
     public void EachDateEqualityOfADateFieldWithItselfKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -38,14 +43,14 @@ public sealed class EachArrayOperandTemporalTests
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         )
                     )
@@ -59,26 +64,27 @@ public sealed class EachArrayOperandTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     [Fact]
     public void EachDateGreaterThanOfADateFieldWithItselfRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -90,14 +96,14 @@ public sealed class EachArrayOperandTemporalTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         )
                     )
@@ -111,7 +117,7 @@ public sealed class EachArrayOperandTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -120,17 +126,19 @@ public sealed class EachArrayOperandTemporalTests
     [Fact]
     public void EachDateTimeEqualityOfADateTimeFieldWithItselfKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -141,14 +149,14 @@ public sealed class EachArrayOperandTemporalTests
                     new EachDateTimeEquality(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         ),
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         )
                     )
@@ -162,26 +170,28 @@ public sealed class EachArrayOperandTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     [Fact]
     public void EachTimeEqualityOfATimeFieldWithItselfKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -192,14 +202,14 @@ public sealed class EachArrayOperandTemporalTests
                     new EachTimeEquality(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         )
                     )
@@ -213,26 +223,28 @@ public sealed class EachArrayOperandTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
     }
 
     [Fact]
     public void EachStringEqualityOfAStringFieldWithItselfKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -243,14 +255,14 @@ public sealed class EachArrayOperandTemporalTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -264,26 +276,28 @@ public sealed class EachArrayOperandTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     [Fact]
     public void EachBooleanEqualityOfABoolFieldWithItselfKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -294,14 +308,14 @@ public sealed class EachArrayOperandTemporalTests
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         ),
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -315,9 +329,9 @@ public sealed class EachArrayOperandTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
     }
 }

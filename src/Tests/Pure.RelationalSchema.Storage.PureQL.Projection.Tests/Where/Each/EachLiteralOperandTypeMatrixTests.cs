@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.ArrayScalars;
@@ -28,7 +31,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField(SampleDatabase.Products.Entity, SampleDatabase.Products.Name)
+                    new StringField("schema_with_foreign_keys.products", "product_name")
                 )
             )
         );
@@ -39,7 +42,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         return new SelectExpression(
             new ArrayReturning(
                 new NumberArrayReturning(
-                    new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+                    new NumberField("schema_with_foreign_keys.orders", "order_total")
                 )
             )
         );
@@ -50,7 +53,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField(SampleDatabase.Users.Entity, SampleDatabase.Users.Name)
+                    new StringField("schema_with_foreign_keys.users", "user_name")
                 )
             )
         );
@@ -62,18 +65,20 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualBooleanLiteralArrayKeepsRowsMatchingTheFirstElement()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Products.Entity),
+            new FromExpression("schema_with_foreign_keys.products"),
             [ProductNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.InStock
+                                "schema_with_foreign_keys.products",
+                                "product_in_stock"
                             )
                         ),
                         new BooleanArrayReturning(new BooleanArrayScalar([true]))
@@ -88,11 +93,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.ProductRows.Count(product => product.ProductInStock),
+            productRows.Count(product => product.ProductInStock),
             result.Count
         );
         Assert.Equal(3, result.Count);
@@ -106,18 +111,20 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualBooleanLiteralArrayBroadcastsFirstElementRegardlessOfLength()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Products.Entity),
+            new FromExpression("schema_with_foreign_keys.products"),
             [ProductNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.InStock
+                                "schema_with_foreign_keys.products",
+                                "product_in_stock"
                             )
                         ),
                         new BooleanArrayReturning(
@@ -134,15 +141,15 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.ProductRows.Count(product => !product.ProductInStock),
+            productRows.Count(product => !product.ProductInStock),
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal("Gadget", Assert.Single(result.Column(SampleDatabase.Products.Name)));
+        Assert.Equal("Gadget", Assert.Single(result.Column("product_name")));
     }
 
     // eachNot wraps a literal-operand eachEqual, showing the broadcast first
@@ -151,10 +158,12 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachNotOfBooleanLiteralArrayEqualityKeepsRowsNotMatchingFirstElement()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Products.Entity),
+            new FromExpression("schema_with_foreign_keys.products"),
             [ProductNameSelect()],
             new BooleanArrayReturning(
                 new EachNotOperator(
@@ -163,8 +172,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
                             new EachBooleanEquality(
                                 new BooleanArrayReturning(
                                     new BooleanField(
-                                        SampleDatabase.Products.Entity,
-                                        SampleDatabase.Products.InStock
+                                        "schema_with_foreign_keys.products",
+                                        "product_in_stock"
                                     )
                                 ),
                                 new BooleanArrayReturning(new BooleanArrayScalar([true]))
@@ -181,15 +190,15 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.ProductRows.Count(product => !product.ProductInStock),
+            productRows.Count(product => !product.ProductInStock),
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal("Gadget", Assert.Single(result.Column(SampleDatabase.Products.Name)));
+        Assert.Equal("Gadget", Assert.Single(result.Column("product_name")));
     }
 
     // ===== Uuid: Orders.Id (each order id is distinct) =====
@@ -197,17 +206,19 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualUuidLiteralArrayKeepsOnlyTheMatchingOrder()
     {
-        SampleDatabase db = new SampleDatabase();
-        Guid target = db.OrderRows.Single(order => order.OrderTotal == 200.00).OrderId;
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        Guid target = orderRows.Single(order => order.OrderTotal == 200.00).OrderId;
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                            new UuidField("schema_with_foreign_keys.orders", "order_id")
                         ),
                         new UuidArrayReturning(new UuidArrayScalar([target]))
                     )
@@ -221,15 +232,15 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderId == target),
+            orderRows.Count(order => order.OrderId == target),
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal(200.00, result.Row(0).Double(SampleDatabase.Orders.Total));
+        Assert.Equal(200.00, result.Row(0).Double("order_total"));
     }
 
     // A 3-element literal whose first element is the target order id and
@@ -238,19 +249,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualUuidLiteralArrayBroadcastsFirstElementRegardlessOfLength()
     {
-        SampleDatabase db = new SampleDatabase();
-        Guid target = db.OrderRows.Single(order => order.OrderTotal == 200.00).OrderId;
-        Guid decoyOne = db.OrderRows.Single(order => order.OrderTotal == 50.00).OrderId;
-        Guid decoyTwo = db.OrderRows.Single(order => order.OrderTotal == 75.25).OrderId;
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        Guid target = orderRows.Single(order => order.OrderTotal == 200.00).OrderId;
+        Guid decoyOne = orderRows.Single(order => order.OrderTotal == 50.00).OrderId;
+        Guid decoyTwo = orderRows.Single(order => order.OrderTotal == 75.25).OrderId;
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                            new UuidField("schema_with_foreign_keys.orders", "order_id")
                         ),
                         new UuidArrayReturning(
                             new UuidArrayScalar([target, decoyOne, decoyTwo])
@@ -266,15 +279,15 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderId == target),
+            orderRows.Count(order => order.OrderId == target),
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal(200.00, result.Row(0).Double(SampleDatabase.Orders.Total));
+        Assert.Equal(200.00, result.Row(0).Double("order_total"));
     }
 
     // ===== Date: Orders.PlacedOn (2024-06-01 .. 2024-06-06, one per row) =====
@@ -282,19 +295,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualDateLiteralArrayKeepsOnlyTheMatchingOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly target = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(new DateArrayScalar([target]))
@@ -309,11 +324,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedOn == target),
+            orderRows.Count(order => order.PlacedOn == target),
             result.Count
         );
         Assert.Equal(1, result.Count);
@@ -326,19 +341,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualDateLiteralArrayBroadcastsFirstElementRegardlessOfLength()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly target = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(
@@ -361,11 +378,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedOn == target),
+            orderRows.Count(order => order.PlacedOn == target),
             result.Count
         );
         Assert.Equal(1, result.Count);
@@ -374,11 +391,13 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachGreaterThanDateLiteralArrayFiltersLaterDates()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -386,8 +405,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(new DateArrayScalar([threshold]))
@@ -402,11 +421,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedOn > threshold),
+            orderRows.Count(order => order.PlacedOn > threshold),
             result.Count
         );
         Assert.Equal(3, result.Count);
@@ -420,11 +439,13 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachLessThanDateLiteralArrayBroadcastsFirstElementUnderComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -432,8 +453,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachLessThan,
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(
@@ -450,11 +471,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedOn < threshold),
+            orderRows.Count(order => order.PlacedOn < threshold),
             result.Count
         );
         Assert.Equal(2, result.Count);
@@ -463,19 +484,20 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualDateLiteralArrayWithNoMatchesReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         DateOnly target = new DateOnly(2099, 1, 1);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateArrayReturning(new DateArrayScalar([target]))
@@ -490,7 +512,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -502,19 +524,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualDateTimeLiteralArrayKeepsOnlyTheMatchingOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime target = new DateTime(2024, 6, 1, 10, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateTimeEquality(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         ),
                         new DateTimeArrayReturning(new DateTimeArrayScalar([target]))
@@ -529,11 +553,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedAt == target),
+            orderRows.Count(order => order.PlacedAt == target),
             result.Count
         );
         Assert.Equal(1, result.Count);
@@ -545,19 +569,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualDateTimeLiteralArrayBroadcastsFirstElementRegardlessOfLength()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime target = new DateTime(2024, 6, 1, 10, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateTimeEquality(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         ),
                         new DateTimeArrayReturning(
@@ -576,11 +602,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedAt == target),
+            orderRows.Count(order => order.PlacedAt == target),
             result.Count
         );
         Assert.Equal(1, result.Count);
@@ -589,11 +615,13 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachGreaterThanDateTimeLiteralArrayFiltersLaterInstants()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 3, 12, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -601,8 +629,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         ),
                         new DateTimeArrayReturning(new DateTimeArrayScalar([threshold]))
@@ -617,11 +645,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedAt > threshold),
+            orderRows.Count(order => order.PlacedAt > threshold),
             result.Count
         );
         Assert.Equal(3, result.Count);
@@ -634,19 +662,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualTimeLiteralArrayKeepsRowsMatchingTheFirstElement()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly target = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachTimeEquality(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeArrayReturning(new TimeArrayScalar([target]))
@@ -661,11 +691,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user => user.ShiftStart == target),
+            userRows.Count(user => user.ShiftStart == target),
             result.Count
         );
         Assert.Equal(3, result.Count);
@@ -678,19 +708,21 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachEqualTimeLiteralArrayBroadcastsFirstElementRegardlessOfLength()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly target = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachTimeEquality(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeArrayReturning(
@@ -709,11 +741,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user => user.ShiftStart == target),
+            userRows.Count(user => user.ShiftStart == target),
             result.Count
         );
         Assert.Equal(3, result.Count);
@@ -722,11 +754,13 @@ public sealed class EachLiteralOperandTypeMatrixTests
     [Fact]
     public void EachLessThanTimeLiteralArrayFiltersEarlierTimes()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -734,8 +768,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachLessThan,
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeArrayReturning(new TimeArrayScalar([threshold]))
@@ -750,25 +784,27 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user => user.ShiftStart < threshold),
+            userRows.Count(user => user.ShiftStart < threshold),
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal("Eve", Assert.Single(result.Column(SampleDatabase.Users.Name)));
+        Assert.Equal("Eve", Assert.Single(result.Column("user_name")));
     }
 
     [Fact]
     public void EachGreaterThanOrEqualTimeLiteralArrayIncludesTheThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -776,8 +812,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachGreaterThanOrEqual,
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeArrayReturning(new TimeArrayScalar([threshold]))
@@ -792,11 +828,11 @@ public sealed class EachLiteralOperandTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user => user.ShiftStart >= threshold),
+            userRows.Count(user => user.ShiftStart >= threshold),
             result.Count
         );
         Assert.Equal(5, result.Count);

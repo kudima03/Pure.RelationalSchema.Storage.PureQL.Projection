@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -25,28 +28,28 @@ public sealed class JoinPipelineWhereHavingTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             UsersOrdersCondition()
         );
     }
 
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, SampleDatabase.Orders.Entity, UsersOrdersCondition());
+        return new Join(JoinType.Left, "schema_with_foreign_keys.orders", UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, SampleDatabase.Users.Entity, OrdersUsersCondition());
+        return new Join(JoinType.Full, "schema_with_foreign_keys.users", OrdersUsersCondition());
     }
 
     private static BooleanArrayReturning UsersOrdersCondition()
@@ -55,12 +58,12 @@ public sealed class JoinPipelineWhereHavingTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField("schema_with_foreign_keys.users", "user_id")
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            "schema_with_foreign_keys.orders",
+                            "order_user_id"
                         )
                     )
                 )
@@ -75,12 +78,12 @@ public sealed class JoinPipelineWhereHavingTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            "schema_with_foreign_keys.orders",
+                            "order_user_id"
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField("schema_with_foreign_keys.users", "user_id")
                     )
                 )
             )
@@ -95,8 +98,8 @@ public sealed class JoinPipelineWhereHavingTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     new NumberReturning(new NumberScalar(100))
@@ -110,7 +113,7 @@ public sealed class JoinPipelineWhereHavingTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField(SampleDatabase.Users.Entity, SampleDatabase.Users.Name)
+                    new StringField("schema_with_foreign_keys.users", "user_name")
                 )
             )
         );
@@ -119,14 +122,17 @@ public sealed class JoinPipelineWhereHavingTests
     // Every order with total >= 100, independent of unmatched-row padding:
     // Ann/101, Bob/103, Cara/105, Dan/106 survive; Ann/102 (50) and
     // Cara/104 (75.25) do not.
-    private static string[] ExpectedNamesWithTotalAtLeast100(SampleDatabase db)
+    private static string[] ExpectedNamesWithTotalAtLeast100(
+        IReadOnlyList<UserRecord> userRows,
+        IReadOnlyList<OrderRecord> orderRows
+    )
     {
         return
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(order => order.OrderTotal >= 100)
                 .Select(order =>
-                    db.UserRows.Single(user => user.UserId == order.OrderUserId).UserName
+                    userRows.Single(user => user.UserId == order.OrderUserId).UserName
                 )
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -135,10 +141,13 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void InnerJoinThenEachWhereOnJoinedTotalKeepsOnlyQualifyingOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [UsersToOrdersInnerJoin()],
@@ -149,14 +158,14 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string[] expected = ExpectedNamesWithTotalAtLeast100(db);
+        string[] expected = ExpectedNamesWithTotalAtLeast100(userRows, orderRows);
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -165,10 +174,13 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void LeftJoinThenEachWhereOnJoinedTotalExcludesUnmatchedPaddedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [UsersToOrdersLeftJoin()],
@@ -179,17 +191,17 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // The padded rows for Eve/Fay carry a NULL total; NULL >= 100 is
         // unknown in SQL, so WHERE drops them exactly like every real row
         // that fails the threshold.
-        string[] expected = ExpectedNamesWithTotalAtLeast100(db);
+        string[] expected = ExpectedNamesWithTotalAtLeast100(userRows, orderRows);
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -198,10 +210,13 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void RightJoinThenEachWhereOnJoinedTotalExcludesUnmatchedPaddedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [OrdersToUsersRightJoin()],
@@ -212,14 +227,14 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string[] expected = ExpectedNamesWithTotalAtLeast100(db);
+        string[] expected = ExpectedNamesWithTotalAtLeast100(userRows, orderRows);
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -228,10 +243,13 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void FullJoinThenEachWhereOnJoinedTotalExcludesUnmatchedPaddedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [OrdersToUsersFullJoin()],
@@ -242,14 +260,14 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string[] expected = ExpectedNamesWithTotalAtLeast100(db);
+        string[] expected = ExpectedNamesWithTotalAtLeast100(userRows, orderRows);
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -264,8 +282,8 @@ public sealed class JoinPipelineWhereHavingTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Id
+                                    "schema_with_foreign_keys.orders",
+                                    "order_id"
                                 )
                             )
                         )
@@ -285,8 +303,8 @@ public sealed class JoinPipelineWhereHavingTests
                         new SumNumber(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Total
+                                    "schema_with_foreign_keys.orders",
+                                    "order_total"
                                 )
                             )
                         )
@@ -300,7 +318,7 @@ public sealed class JoinPipelineWhereHavingTests
     private static Field UsersIdField()
     {
         return new Field(
-            new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+            new UuidField("schema_with_foreign_keys.users", "user_id")
         );
     }
 
@@ -311,17 +329,20 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void RightJoinGroupByUserCountsZeroAndSumsNullForUnmatchedUsers()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -338,16 +359,16 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, (double Count, double? Sum)> expected = db.UserRows.ToDictionary(
+        Dictionary<Guid, (double Count, double? Sum)> expected = userRows.ToDictionary(
             user => user.UserId,
             user =>
             {
-                List<OrderRow> matched =
+                List<OrderRecord> matched =
                 [
-                    .. db.OrderRows.Where(order => order.OrderUserId == user.UserId),
+                    .. orderRows.Where(order => order.OrderUserId == user.UserId),
                 ];
                 return (
                     (double)matched.Count,
@@ -359,7 +380,7 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         Dictionary<Guid, (double Count, double? Sum)> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Users.Id)!.Value,
+            row => row.Uuid("user_id")!.Value,
             row => (row.Double("orderCount")!.Value, row.Double("totalSum"))
         );
 
@@ -371,17 +392,20 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void FullJoinGroupByUserCountsZeroAndSumsNullForUnmatchedUsers()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -398,16 +422,16 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, (double Count, double? Sum)> expected = db.UserRows.ToDictionary(
+        Dictionary<Guid, (double Count, double? Sum)> expected = userRows.ToDictionary(
             user => user.UserId,
             user =>
             {
-                List<OrderRow> matched =
+                List<OrderRecord> matched =
                 [
-                    .. db.OrderRows.Where(order => order.OrderUserId == user.UserId),
+                    .. orderRows.Where(order => order.OrderUserId == user.UserId),
                 ];
                 return (
                     (double)matched.Count,
@@ -419,7 +443,7 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         Dictionary<Guid, (double Count, double? Sum)> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Users.Id)!.Value,
+            row => row.Uuid("user_id")!.Value,
             row => (row.Double("orderCount")!.Value, row.Double("totalSum"))
         );
 
@@ -429,14 +453,17 @@ public sealed class JoinPipelineWhereHavingTests
     // GROUP BY + HAVING(sum) on top of the join: Ann/Bob/Cara's sums clear
     // the 150 bar, Dan's (100.50) does not, and unmatched users' NULL sum
     // is unknown against ">= 150" so they are excluded exactly like Dan.
-    private static HashSet<Guid> ExpectedUsersWithTotalAtLeast150(SampleDatabase db)
+    private static HashSet<Guid> ExpectedUsersWithTotalAtLeast150(
+        IReadOnlyList<UserRecord> userRows,
+        IReadOnlyList<OrderRecord> orderRows
+    )
     {
         return
         [
-            .. db.UserRows
+            .. userRows
                 .Where(user =>
-                    db.OrderRows.Any(order => order.OrderUserId == user.UserId)
-                    && db.OrderRows
+                    orderRows.Any(order => order.OrderUserId == user.UserId)
+                    && orderRows
                         .Where(order => order.OrderUserId == user.UserId)
                         .Sum(order => order.OrderTotal)
                         >= 150
@@ -456,8 +483,8 @@ public sealed class JoinPipelineWhereHavingTests
                             new SumNumber(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Total
+                                        "schema_with_foreign_keys.orders",
+                                        "order_total"
                                     )
                                 )
                             )
@@ -478,8 +505,8 @@ public sealed class JoinPipelineWhereHavingTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -498,22 +525,25 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void InnerJoinGroupByHavingSumFiltersGroupsBelowThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersInnerJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(db);
+        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(userRows, orderRows);
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id)!.Value),
+            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -522,22 +552,25 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void LeftJoinGroupByHavingSumExcludesUnmatchedNullGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersLeftJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(db);
+        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(userRows, orderRows);
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id)!.Value),
+            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -546,22 +579,25 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void RightJoinGroupByHavingSumExcludesUnmatchedNullGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersRightJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(db);
+        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(userRows, orderRows);
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id)!.Value),
+            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -570,22 +606,25 @@ public sealed class JoinPipelineWhereHavingTests
     [Fact]
     public void FullJoinGroupByHavingSumExcludesUnmatchedNullGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersFullJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(db);
+        HashSet<Guid> expected = ExpectedUsersWithTotalAtLeast150(userRows, orderRows);
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id)!.Value),
+            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
         ];
 
         Assert.Equal(expected, actual);

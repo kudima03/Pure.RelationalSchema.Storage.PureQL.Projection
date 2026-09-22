@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -18,17 +21,19 @@ public sealed class DistinctPaginationOrderTests
     [Fact]
     public void PaginationWindowsTheSortedDistinctValuesAfterJoinFanOut()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -38,20 +43,20 @@ public sealed class DistinctPaginationOrderTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Orders.Entity,
+                    "schema_with_foreign_keys.orders",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 )
                             )
@@ -65,8 +70,8 @@ public sealed class DistinctPaginationOrderTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -77,12 +82,12 @@ public sealed class DistinctPaginationOrderTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order => order.OrderStatus)
                 .Distinct()
                 .OrderBy(status => status, StringComparer.Ordinal)
@@ -92,7 +97,7 @@ public sealed class DistinctPaginationOrderTests
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Orders.Status).ToArray()
+            result.Column("order_status").ToArray()
         );
     }
 }

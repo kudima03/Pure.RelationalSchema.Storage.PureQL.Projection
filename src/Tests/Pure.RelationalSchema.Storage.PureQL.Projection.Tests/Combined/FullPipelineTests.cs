@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -21,17 +24,20 @@ public sealed class FullPipelineTests
     [Fact]
     public void JoinWhereGroupByHavingOrderByPaginationCompose()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -43,8 +49,8 @@ public sealed class FullPipelineTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -59,8 +65,8 @@ public sealed class FullPipelineTests
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         ),
                         new BooleanReturning(new BooleanScalar(true))
@@ -70,20 +76,20 @@ public sealed class FullPipelineTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -94,8 +100,8 @@ public sealed class FullPipelineTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        "schema_with_foreign_keys.orders",
+                        "order_status"
                     )
                 ),
             ],
@@ -108,8 +114,8 @@ public sealed class FullPipelineTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -123,8 +129,8 @@ public sealed class FullPipelineTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -134,14 +140,14 @@ public sealed class FullPipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string, double)[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(order =>
-                    db.UserRows.Single(user =>
+                    userRows.Single(user =>
                         user.UserId == order.OrderUserId
                     ).UserActive
                 )
@@ -157,7 +163,7 @@ public sealed class FullPipelineTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status]!,
+                    row["order_status"]!,
                     row.Double("orderCount")!.Value
                 )
             ),

@@ -1,4 +1,6 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -22,28 +24,29 @@ public sealed class SelectColumnOrderTests
     {
         string[] expectedOrder =
         [
-            SampleDatabase.Users.ShiftStart,
-            SampleDatabase.Users.Id,
-            SampleDatabase.Users.LastLogin,
-            SampleDatabase.Users.Name,
-            SampleDatabase.Users.SignupDate,
-            SampleDatabase.Users.Active,
-            SampleDatabase.Users.Age,
+            "shift_start",
+            "user_id",
+            "last_login",
+            "user_name",
+            "signup_date",
+            "user_active",
+            "user_age",
         ];
 
         for (int iteration = 0; iteration < 25; iteration++)
         {
-            SampleDatabase db = new SampleDatabase();
+            IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
             Query query = new Query(
-                new FromExpression(SampleDatabase.Users.Entity),
+                new FromExpression("schema_with_foreign_keys.users"),
                 [
                     new SelectExpression(
                         new ArrayReturning(
                             new TimeArrayReturning(
                                 new TimeField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.ShiftStart
+                                    "schema_with_foreign_keys.users",
+                                    "shift_start"
                                 )
                             )
                         )
@@ -52,8 +55,8 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Id
+                                    "schema_with_foreign_keys.users",
+                                    "user_id"
                                 )
                             )
                         )
@@ -62,8 +65,8 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new DateTimeArrayReturning(
                                 new DateTimeField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.LastLogin
+                                    "schema_with_foreign_keys.users",
+                                    "last_login"
                                 )
                             )
                         )
@@ -72,8 +75,8 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new StringArrayReturning(
                                 new StringField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Name
+                                    "schema_with_foreign_keys.users",
+                                    "user_name"
                                 )
                             )
                         )
@@ -82,8 +85,8 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new DateArrayReturning(
                                 new DateField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.SignupDate
+                                    "schema_with_foreign_keys.users",
+                                    "signup_date"
                                 )
                             )
                         )
@@ -92,8 +95,8 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new BooleanArrayReturning(
                                 new BooleanField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Active
+                                    "schema_with_foreign_keys.users",
+                                    "user_active"
                                 )
                             )
                         )
@@ -102,8 +105,8 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Age
+                                    "schema_with_foreign_keys.users",
+                                    "user_age"
                                 )
                             )
                         )
@@ -112,7 +115,7 @@ public sealed class SelectColumnOrderTests
             );
 
             ProjectionResult result = new ProjectionResult(
-                new PureQLProjection(db.Datasets, query)
+                new PureQLProjection(datasets, query)
             );
 
             Assert.Equal(expectedOrder, result.ColumnNames);

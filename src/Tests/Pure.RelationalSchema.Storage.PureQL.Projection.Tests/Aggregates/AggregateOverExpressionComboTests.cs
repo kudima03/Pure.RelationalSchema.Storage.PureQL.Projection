@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -41,20 +44,20 @@ public sealed class AggregateOverExpressionComboTests
         [
             new Join(
                 JoinType.Inner,
-                SampleDatabase.OrderItems.Entity,
+                "schema_with_foreign_keys.order_items",
                 new BooleanArrayReturning(
                     new EachEquality(
                         new EachUuidEquality(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.OrderItems.Entity,
-                                    SampleDatabase.OrderItems.OrderId
+                                    "schema_with_foreign_keys.order_items",
+                                    "item_order_id"
                                 )
                             ),
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Id
+                                    "schema_with_foreign_keys.orders",
+                                    "order_id"
                                 )
                             )
                         )
@@ -63,20 +66,20 @@ public sealed class AggregateOverExpressionComboTests
             ),
             new Join(
                 JoinType.Inner,
-                SampleDatabase.Products.Entity,
+                "schema_with_foreign_keys.products",
                 new BooleanArrayReturning(
                     new EachEquality(
                         new EachUuidEquality(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.OrderItems.Entity,
-                                    SampleDatabase.OrderItems.ProductId
+                                    "schema_with_foreign_keys.order_items",
+                                    "item_product_id"
                                 )
                             ),
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Products.Entity,
-                                    SampleDatabase.Products.Id
+                                    "schema_with_foreign_keys.products",
+                                    "product_id"
                                 )
                             )
                         )
@@ -90,20 +93,20 @@ public sealed class AggregateOverExpressionComboTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -122,14 +125,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.Qty
+                                "schema_with_foreign_keys.order_items",
+                                "item_qty"
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Price
+                                "schema_with_foreign_keys.products",
+                                "product_price"
                             )
                         ),
                     ]
@@ -146,14 +149,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         ),
                     ]
@@ -170,14 +173,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         ),
                     ]
@@ -194,14 +197,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                "schema_with_foreign_keys.users",
+                                "user_score"
                             )
                         ),
                     ]
@@ -220,8 +223,8 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberArrayReturning(
@@ -230,8 +233,8 @@ public sealed class AggregateOverExpressionComboTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(100.50)),
@@ -351,37 +354,41 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void SumOfEachMultiplyGroupedByOrderUserIdComputesRevenuePerUser()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue"),
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<Guid, double> expected = (
-            from item in db.OrderItemRows
-            join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-            join product in db.ProductRows on item.ItemProductId equals product.ProductId
+            from item in orderItemRows
+            join order in orderRows on item.ItemOrderId equals order.OrderId
+            join product in productRows on item.ItemProductId equals product.ProductId
             select new { order.OrderUserId, Value = item.ItemQty * product.ProductPrice }
         )
             .GroupBy(x => x.OrderUserId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("revenue")!.Value
         );
 
@@ -392,12 +399,16 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void AverageOfEachMultiplyGroupedByOrderUserIdComputesMeanLineValue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 AggregateSelect(
                     new NumberAggregate(new AverageNumber(QtyTimesPrice())),
                     "meanLineValue"
@@ -405,27 +416,27 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<Guid, double> expected = (
-            from item in db.OrderItemRows
-            join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-            join product in db.ProductRows on item.ItemProductId equals product.ProductId
+            from item in orderItemRows
+            join order in orderRows on item.ItemOrderId equals order.OrderId
+            join product in productRows on item.ItemProductId equals product.ProductId
             select new { order.OrderUserId, Value = item.ItemQty * product.ProductPrice }
         )
             .GroupBy(x => x.OrderUserId)
             .ToDictionary(g => g.Key, g => g.Average(x => x.Value));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("meanLineValue")!.Value
         );
 
@@ -435,12 +446,16 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void MinAndMaxOfEachMultiplyGroupedByOrderUserIdBoundLineValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 AggregateSelect(
                     new NumberAggregate(new MinNumber(QtyTimesPrice())),
                     "minLineValue"
@@ -452,21 +467,21 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         IReadOnlyList<(Guid UserId, double Value)> lineValues =
         [
-            .. from item in db.OrderItemRows
-            join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-            join product in db.ProductRows on item.ItemProductId equals product.ProductId
+            .. from item in orderItemRows
+            join order in orderRows on item.ItemOrderId equals order.OrderId
+            join product in productRows on item.ItemProductId equals product.ProductId
             select (order.OrderUserId, Value: item.ItemQty * product.ProductPrice),
         ];
 
@@ -479,12 +494,12 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Max(x => x.Value));
 
         Dictionary<Guid, double> actualMin = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("minLineValue")!.Value
         );
 
         Dictionary<Guid, double> actualMax = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("maxLineValue")!.Value
         );
 
@@ -495,37 +510,41 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void CountOfEachMultiplyGroupedByOrderUserIdCountsLineItems()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 CountSelect(QtyTimesPrice(), "lineCount"),
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<Guid, double> expected = (
-            from item in db.OrderItemRows
-            join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-            join product in db.ProductRows on item.ItemProductId equals product.ProductId
+            from item in orderItemRows
+            join order in orderRows on item.ItemOrderId equals order.OrderId
+            join product in productRows on item.ItemProductId equals product.ProductId
             select order.OrderUserId
         )
             .GroupBy(id => id)
             .ToDictionary(g => g.Key, g => (double)g.Count());
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("lineCount")!.Value
         );
 
@@ -535,10 +554,14 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void WholeSetSumOfEachMultiplyComputesTotalRevenue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue")],
             where: null,
             OrdersToItemsToProductsJoin(),
@@ -549,13 +572,13 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double expected = (
-            from item in db.OrderItemRows
-            join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-            join product in db.ProductRows on item.ItemProductId equals product.ProductId
+            from item in orderItemRows
+            join order in orderRows on item.ItemOrderId equals order.OrderId
+            join product in productRows on item.ItemProductId equals product.ProductId
             select item.ItemQty * product.ProductPrice
         ).Sum();
 
@@ -569,12 +592,15 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void SumOfEachAddGroupedByUserActiveComputesTotalPlusAge()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                BoolGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Active),
+                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
                 AggregateSelect(
                     new NumberAggregate(new SumNumber(TotalPlusAge())),
                     "totalPlusAge"
@@ -582,26 +608,26 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)],
+            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<bool, double> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select new { user.UserActive, Value = order.OrderTotal + user.UserAge }
         )
             .GroupBy(x => x.UserActive)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
 
         Dictionary<bool, double> actual = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("totalPlusAge")!.Value
         );
 
@@ -612,12 +638,15 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void AverageOfEachAddGroupedByUserAgeComputesMeanTotalPlusAge()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                NumberGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Age),
+                NumberGroupKeySelect("schema_with_foreign_keys.users", "user_age"),
                 AggregateSelect(
                     new NumberAggregate(new AverageNumber(TotalPlusAge())),
                     "meanTotalPlusAge"
@@ -625,26 +654,26 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [new Field(new NumberField(SampleDatabase.Users.Entity, SampleDatabase.Users.Age))],
+            [new Field(new NumberField("schema_with_foreign_keys.users", "user_age"))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<double, double> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select new { user.UserAge, Value = order.OrderTotal + user.UserAge }
         )
             .GroupBy(x => x.UserAge)
             .ToDictionary(g => g.Key, g => g.Average(x => x.Value));
 
         Dictionary<double, double> actual = result.Rows.ToDictionary(
-            row => row.Double(SampleDatabase.Users.Age)!.Value,
+            row => row.Double("user_age")!.Value,
             row => row.Double("meanTotalPlusAge")!.Value
         );
 
@@ -658,31 +687,34 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void MinAndMaxOfEachSubtractGroupedByUserActiveBoundDifference()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                BoolGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Active),
+                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
                 AggregateSelect(new NumberAggregate(new MinNumber(TotalMinusAge())), "minDiff"),
                 AggregateSelect(new NumberAggregate(new MaxNumber(TotalMinusAge())), "maxDiff"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)],
+            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         IReadOnlyList<(bool Active, double Value)> diffs =
         [
-            .. from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            .. from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select (user.UserActive, Value: order.OrderTotal - user.UserAge),
         ];
 
@@ -695,12 +727,12 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Max(x => x.Value));
 
         Dictionary<bool, double> actualMin = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("minDiff")!.Value
         );
 
         Dictionary<bool, double> actualMax = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("maxDiff")!.Value
         );
 
@@ -711,32 +743,34 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void CountOfEachSubtractGroupedByOrderStatusCountsRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                StringGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status),
+                StringGroupKeySelect("schema_with_foreign_keys.orders", "order_status"),
                 CountSelect(TotalMinusAge(), "diffCount"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [StringGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)],
+            [StringGroupKeyField("schema_with_foreign_keys.orders", "order_status")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<string, double> expected = db.OrderRows
+        Dictionary<string, double> expected = orderRows
             .GroupBy(order => order.OrderStatus)
             .ToDictionary(g => g.Key, g => (double)g.Count());
 
         Dictionary<string, double> actual = result.Rows.ToDictionary(
-            row => row[SampleDatabase.Orders.Status]!,
+            row => row["order_status"]!,
             row => row.Double("diffCount")!.Value
         );
 
@@ -747,10 +781,13 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void WholeSetAverageOfEachSubtractComputesOverallMeanDifference()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [AggregateSelect(new NumberAggregate(new AverageNumber(TotalMinusAge())), "meanDiff")],
             where: null,
             [OrdersToUsersJoin()],
@@ -761,12 +798,12 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select order.OrderTotal - user.UserAge
         ).Average();
 
@@ -780,12 +817,15 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void SumAndCountOfEachDivideGroupedByOrderUserIdExcludeNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 AggregateSelect(
                     new NumberAggregate(new SumNumber(TotalDividedByScore())),
                     "sumRatio"
@@ -794,23 +834,25 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         IReadOnlyList<(Guid UserId, double? Ratio)> ratios =
         [
-            .. from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            .. from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select (
                 order.OrderUserId,
-                Ratio: user.Score.HasValue ? order.OrderTotal / user.Score.Value : (double?)null
+                Ratio: user.UserScore.HasValue
+                    ? order.OrderTotal / user.UserScore.Value
+                    : (double?)null
             ),
         ];
 
@@ -823,12 +865,12 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => SqlCount(g.Select(x => x.Ratio)));
 
         Dictionary<Guid, double?> actualSum = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("sumRatio")
         );
 
         Dictionary<Guid, double> actualCount = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("ratioCount")!.Value
         );
 
@@ -844,10 +886,13 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void MinOfEachDivideWholeSetExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [AggregateSelect(new NumberAggregate(new MinNumber(TotalDividedByScore())), "minRatio")],
             where: null,
             [OrdersToUsersJoin()],
@@ -858,13 +903,15 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         IEnumerable<double?> ratios =
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
-            select user.Score.HasValue ? order.OrderTotal / user.Score.Value : (double?)null;
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
+            select user.UserScore.HasValue
+                ? order.OrderTotal / user.UserScore.Value
+                : (double?)null;
 
         double? expected = SqlMin(ratios);
 
@@ -876,10 +923,13 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void MaxOfEachDivideWholeSetExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [AggregateSelect(new NumberAggregate(new MaxNumber(TotalDividedByScore())), "maxRatio")],
             where: null,
             [OrdersToUsersJoin()],
@@ -890,13 +940,15 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         IEnumerable<double?> ratios =
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
-            select user.Score.HasValue ? order.OrderTotal / user.Score.Value : (double?)null;
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
+            select user.UserScore.HasValue
+                ? order.OrderTotal / user.UserScore.Value
+                : (double?)null;
 
         double? expected = SqlMax(ratios);
 
@@ -908,10 +960,11 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void AggregateOverEachDivideByZeroDenominatorThrowsDivideByZeroException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 AggregateSelect(
                     new NumberAggregate(new SumNumber(TotalDividedByTotalMinusThreshold())),
@@ -921,7 +974,7 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -930,17 +983,21 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void HavingSumOfEachMultiplyGreaterThanKeepsQualifyingOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue"),
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             new BooleanReturning(
                 new Comparison(
                     new NumberComparison(
@@ -955,15 +1012,15 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
             .. (
-                from item in db.OrderItemRows
-                join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-                join product in db.ProductRows
+                from item in orderItemRows
+                join order in orderRows on item.ItemOrderId equals order.OrderId
+                join product in productRows
                     on item.ItemProductId equals product.ProductId
                 select new { order.OrderUserId, Value = item.ItemQty * product.ProductPrice }
             )
@@ -974,7 +1031,7 @@ public sealed class AggregateOverExpressionComboTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Orders.UserId)!.Value),
+            .. result.Rows.Select(row => row.Uuid("order_user_id")!.Value),
         ];
 
         Assert.NotEmpty(expected);
@@ -984,12 +1041,15 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void HavingAverageOfEachSubtractLessThanOrEqualKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                BoolGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Active),
+                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
                 AggregateSelect(
                     new NumberAggregate(new AverageNumber(TotalMinusAge())),
                     "meanDiff"
@@ -997,7 +1057,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)],
+            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
             new BooleanReturning(
                 new Comparison(
                     new NumberComparison(
@@ -1012,14 +1072,14 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<bool> expected =
         [
             .. (
-                from order in db.OrderRows
-                join user in db.UserRows on order.OrderUserId equals user.UserId
+                from order in orderRows
+                join user in userRows on order.OrderUserId equals user.UserId
                 select new { user.UserActive, Value = order.OrderTotal - user.UserAge }
             )
                 .GroupBy(x => x.UserActive)
@@ -1029,7 +1089,7 @@ public sealed class AggregateOverExpressionComboTests
 
         HashSet<bool> actual =
         [
-            .. result.Rows.Select(row => row.Bool(SampleDatabase.Users.Active)!.Value),
+            .. result.Rows.Select(row => row.Bool("user_active")!.Value),
         ];
 
         _ = Assert.Single(expected);
@@ -1039,17 +1099,20 @@ public sealed class AggregateOverExpressionComboTests
     [Fact]
     public void HavingCountOfEachDivideEqualToZeroKeepsOnlyAllNullGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 CountSelect(TotalDividedByScore(), "ratioCount"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             new BooleanReturning(
                 new Equality(
                     new SingleValueEquality(
@@ -1065,18 +1128,18 @@ public sealed class AggregateOverExpressionComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
             .. (
-                from order in db.OrderRows
-                join user in db.UserRows on order.OrderUserId equals user.UserId
+                from order in orderRows
+                join user in userRows on order.OrderUserId equals user.UserId
                 select (
                     order.OrderUserId,
-                    Ratio: user.Score.HasValue
-                        ? order.OrderTotal / user.Score.Value
+                    Ratio: user.UserScore.HasValue
+                        ? order.OrderTotal / user.UserScore.Value
                         : (double?)null
                 )
             )
@@ -1087,7 +1150,7 @@ public sealed class AggregateOverExpressionComboTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Orders.UserId)!.Value),
+            .. result.Rows.Select(row => row.Uuid("order_user_id")!.Value),
         ];
 
         Assert.Equal(2, expected.Count);

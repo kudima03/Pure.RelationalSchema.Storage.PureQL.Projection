@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -13,17 +16,19 @@ public sealed class OrderByMixedDirectionTests
     [Fact]
     public void OrderByStatusAscThenTotalDescOrdersWithinEachStatus()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -32,8 +37,8 @@ public sealed class OrderByMixedDirectionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -47,8 +52,8 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -56,8 +61,8 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Desc
@@ -67,12 +72,12 @@ public sealed class OrderByMixedDirectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, double?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenByDescending(order => order.OrderTotal)
                 .Select(order => ((string?)order.OrderStatus, (double?)order.OrderTotal)),
         ];
@@ -81,8 +86,8 @@ public sealed class OrderByMixedDirectionTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.Double(SampleDatabase.Orders.Total)
+                    row["order_status"],
+                    row.Double("order_total")
                 )
             ),
         ];
@@ -93,17 +98,19 @@ public sealed class OrderByMixedDirectionTests
     [Fact]
     public void OrderByActiveAscThenAgeDescOrdersWithinEachFlag()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -117,8 +124,8 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Asc
@@ -126,8 +133,8 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Desc
@@ -137,17 +144,17 @@ public sealed class OrderByMixedDirectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive)
+            .. userRows.OrderBy(user => user.UserActive)
                 .ThenByDescending(user => user.UserAge)
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }

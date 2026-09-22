@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -14,17 +17,19 @@ public sealed class SelectAllTypesTests
     [Fact]
     public void SelectAllUserColumnsProjectsEveryTypedColumn()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -33,8 +38,8 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -43,8 +48,8 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         )
                     )
@@ -53,8 +58,8 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -63,8 +68,8 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.SignupDate
+                                "schema_with_foreign_keys.users",
+                                "signup_date"
                             )
                         )
                     )
@@ -73,8 +78,8 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                "schema_with_foreign_keys.users",
+                                "last_login"
                             )
                         )
                     )
@@ -83,8 +88,8 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         )
                     )
@@ -93,26 +98,26 @@ public sealed class SelectAllTypesTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
-        Assert.Contains(SampleDatabase.Users.Id, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Users.Name, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Users.Age, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Users.Active, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Users.SignupDate, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Users.LastLogin, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Users.ShiftStart, result.ColumnNames);
+        Assert.Equal(userRows.Count, result.Count);
+        Assert.Contains("user_id", result.ColumnNames);
+        Assert.Contains("user_name", result.ColumnNames);
+        Assert.Contains("user_age", result.ColumnNames);
+        Assert.Contains("user_active", result.ColumnNames);
+        Assert.Contains("signup_date", result.ColumnNames);
+        Assert.Contains("last_login", result.ColumnNames);
+        Assert.Contains("shift_start", result.ColumnNames);
 
-        UserRow first = db.UserRows[0];
+        UserRecord first = userRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.UserId, row.Uuid(SampleDatabase.Users.Id));
-        Assert.Equal(first.UserName, row[SampleDatabase.Users.Name]);
-        Assert.Equal(first.UserAge, row.Double(SampleDatabase.Users.Age));
-        Assert.Equal(first.UserActive, row.Bool(SampleDatabase.Users.Active));
-        Assert.Equal(first.SignupDate, row.Date(SampleDatabase.Users.SignupDate));
-        Assert.Equal(first.LastLogin, row.DateTime(SampleDatabase.Users.LastLogin));
-        Assert.Equal(first.ShiftStart, row.Time(SampleDatabase.Users.ShiftStart));
+        Assert.Equal(first.UserId, row.Uuid("user_id"));
+        Assert.Equal(first.UserName, row["user_name"]);
+        Assert.Equal(first.UserAge, row.Double("user_age"));
+        Assert.Equal(first.UserActive, row.Bool("user_active"));
+        Assert.Equal(first.SignupDate, row.Date("signup_date"));
+        Assert.Equal(first.LastLogin, row.DateTime("last_login"));
+        Assert.Equal(first.ShiftStart, row.Time("shift_start"));
     }
 }

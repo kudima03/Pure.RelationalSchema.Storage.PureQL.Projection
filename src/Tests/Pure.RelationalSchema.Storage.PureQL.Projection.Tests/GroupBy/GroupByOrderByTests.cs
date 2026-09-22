@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -14,17 +17,18 @@ public sealed class GroupByOrderByTests
     [Fact]
     public void GroupByStatusOrderedByStatusAscYieldsKeysInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -32,14 +36,14 @@ public sealed class GroupByOrderByTests
             ],
             where: null,
             join: null,
-            [new Field(new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status))],
+            [new Field(new StringField("schema_with_foreign_keys.orders", "order_status"))],
             having: null,
             [
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -49,15 +53,15 @@ public sealed class GroupByOrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows.Select(order => order.OrderStatus).Distinct().OrderBy(s => s),
+            .. orderRows.Select(order => order.OrderStatus).Distinct().OrderBy(s => s),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Orders.Status)];
+        string?[] actual = [.. result.Column("order_status")];
 
         Assert.Equal(expected.Length, result.Count);
         Assert.Equal(expected, actual);
@@ -66,17 +70,18 @@ public sealed class GroupByOrderByTests
     [Fact]
     public void GroupByAgeOrderedByAgeDescYieldsKeysInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         )
                     )
@@ -84,14 +89,14 @@ public sealed class GroupByOrderByTests
             ],
             where: null,
             join: null,
-            [new Field(new NumberField(SampleDatabase.Users.Entity, SampleDatabase.Users.Age))],
+            [new Field(new NumberField("schema_with_foreign_keys.users", "user_age"))],
             having: null,
             [
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Desc
@@ -101,19 +106,19 @@ public sealed class GroupByOrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows.Select(user => user.UserAge)
+            .. userRows.Select(user => user.UserAge)
                 .Distinct()
                 .OrderByDescending(v => v),
         ];
 
         double[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Users.Age)!.Value),
+            .. result.Rows.Select(row => row.Double("user_age")!.Value),
         ];
 
         Assert.Equal(expected.Length, result.Count);

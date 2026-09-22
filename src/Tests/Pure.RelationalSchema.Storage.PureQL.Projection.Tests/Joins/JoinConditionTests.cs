@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -17,17 +20,19 @@ public sealed class JoinConditionTests
     [Fact]
     public void InnerJoinThenWhereFiltersMergedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -39,8 +44,8 @@ public sealed class JoinConditionTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberReturning(new NumberScalar(100))
@@ -50,20 +55,20 @@ public sealed class JoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -78,11 +83,11 @@ public sealed class JoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderTotal > 100),
+            orderRows.Count(order => order.OrderTotal > 100),
             result.Count
         );
     }

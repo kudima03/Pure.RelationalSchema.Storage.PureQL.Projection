@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -22,20 +25,20 @@ public sealed class JoinedFilterTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -47,14 +50,14 @@ public sealed class JoinedFilterTests
     private static Query OrdersWithUsers(BooleanArrayReturning where)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     )
@@ -69,15 +72,21 @@ public sealed class JoinedFilterTests
         );
     }
 
-    private static UserRow UserOf(SampleDatabase db, OrderRow order)
+    private static UserRecord UserOf(
+        IReadOnlyList<UserRecord> userRows,
+        OrderRecord order
+    )
     {
-        return db.UserRows.Single(user => user.UserId == order.OrderUserId);
+        return userRows.Single(user => user.UserId == order.OrderUserId);
     }
 
     [Fact]
     public void WhereConjunctionAcrossBothTablesFiltersMergedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         const double ageThreshold = 30;
         const double totalThreshold = 100;
@@ -92,8 +101,8 @@ public sealed class JoinedFilterTests
                                     EachComparisonOperator.EachGreaterThanOrEqual,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Age
+                                            "schema_with_foreign_keys.users",
+                                            "user_age"
                                         )
                                     ),
                                     new NumberReturning(
@@ -108,8 +117,8 @@ public sealed class JoinedFilterTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     ),
                                     new NumberReturning(
@@ -124,11 +133,11 @@ public sealed class JoinedFilterTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Count(order =>
-            UserOf(db, order).UserAge >= ageThreshold
+        int expected = orderRows.Count(order =>
+            UserOf(userRows, order).UserAge >= ageThreshold
             && order.OrderTotal > totalThreshold
         );
 
@@ -138,22 +147,25 @@ public sealed class JoinedFilterTests
     [Fact]
     public void WhereOnJoinedBooleanFieldKeepsRowsWhereItIsTrue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = OrdersWithUsers(
             new BooleanArrayReturning(
                 new BooleanField(
-                    SampleDatabase.Users.Entity,
-                    SampleDatabase.Users.Active
+                    "schema_with_foreign_keys.users",
+                    "user_active"
                 )
             )
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Count(order => UserOf(db, order).UserActive);
+        int expected = orderRows.Count(order => UserOf(userRows, order).UserActive);
 
         Assert.Equal(expected, result.Count);
     }
@@ -161,7 +173,10 @@ public sealed class JoinedFilterTests
     [Fact]
     public void WhereNegationOnJoinedColumnExcludesItsRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         const string excludedName = "Ann";
 
@@ -173,8 +188,8 @@ public sealed class JoinedFilterTests
                             new EachStringEquality(
                                 new StringArrayReturning(
                                     new StringField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Name
+                                        "schema_with_foreign_keys.users",
+                                        "user_name"
                                     )
                                 ),
                                 new StringReturning(
@@ -188,11 +203,11 @@ public sealed class JoinedFilterTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Count(order =>
-            UserOf(db, order).UserName != excludedName
+        int expected = orderRows.Count(order =>
+            UserOf(userRows, order).UserName != excludedName
         );
 
         Assert.Equal(expected, result.Count);

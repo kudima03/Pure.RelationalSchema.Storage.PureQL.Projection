@@ -5,6 +5,8 @@ using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
+using Pure.RelationalSchema.Storage.Samples.TableDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -52,19 +54,7 @@ public sealed class DuplicateSchemaNameTests
 
         ISchema schema = new Schema.Schema(new String(SchemaName), [table], []);
 
-        IReadOnlyDictionary<ITable, IStoredTableDataSet> datasetsByTable =
-            new Collections.Generic.Dictionary<
-                IStoredTableDataSet,
-                ITable,
-                IStoredTableDataSet
-            >(
-                [new SampleTableDataset(table, [row])],
-                dataset => dataset.TableSchema,
-                dataset => dataset,
-                t => new TableHash(t)
-            );
-
-        return new StoredSchemaDataset(schema, datasetsByTable);
+        return new StoredSchemaDataSet(schema, [new StoredTableDataSet(table, [row])]);
     }
 
     [Fact]

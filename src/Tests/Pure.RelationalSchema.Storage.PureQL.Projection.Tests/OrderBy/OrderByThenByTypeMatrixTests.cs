@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -33,17 +36,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByStatusAscThenPlacedOnAscOrdersShippedOrdersByDate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -52,8 +57,8 @@ public sealed class OrderByThenByTypeMatrixTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         )
                     )
@@ -67,8 +72,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -76,8 +81,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new DateField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.PlacedOn
+                            "schema_with_foreign_keys.orders",
+                            "placed_on"
                         )
                     ),
                     SortDirection.Asc
@@ -87,12 +92,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, DateOnly?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenBy(order => order.PlacedOn)
                 .Select(order => ((string?)order.OrderStatus, (DateOnly?)order.PlacedOn)),
         ];
@@ -101,8 +106,8 @@ public sealed class OrderByThenByTypeMatrixTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.Date(SampleDatabase.Orders.PlacedOn)
+                    row["order_status"],
+                    row.Date("placed_on")
                 )
             ),
         ];
@@ -115,17 +120,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByStatusAscThenPlacedOnDescOrdersShippedOrdersByDateDescending()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -134,8 +141,8 @@ public sealed class OrderByThenByTypeMatrixTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         )
                     )
@@ -149,8 +156,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -158,8 +165,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new DateField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.PlacedOn
+                            "schema_with_foreign_keys.orders",
+                            "placed_on"
                         )
                     ),
                     SortDirection.Desc
@@ -169,12 +176,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, DateOnly?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenByDescending(order => order.PlacedOn)
                 .Select(order => ((string?)order.OrderStatus, (DateOnly?)order.PlacedOn)),
         ];
@@ -183,8 +190,8 @@ public sealed class OrderByThenByTypeMatrixTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.Date(SampleDatabase.Orders.PlacedOn)
+                    row["order_status"],
+                    row.Date("placed_on")
                 )
             ),
         ];
@@ -195,17 +202,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByStatusAscThenPlacedAtAscOrdersShippedOrdersByDateTime()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -214,8 +223,8 @@ public sealed class OrderByThenByTypeMatrixTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         )
                     )
@@ -229,8 +238,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -238,8 +247,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new DateTimeField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.PlacedAt
+                            "schema_with_foreign_keys.orders",
+                            "placed_at"
                         )
                     ),
                     SortDirection.Asc
@@ -249,12 +258,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, DateTime?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenBy(order => order.PlacedAt)
                 .Select(order => ((string?)order.OrderStatus, (DateTime?)order.PlacedAt)),
         ];
@@ -263,8 +272,8 @@ public sealed class OrderByThenByTypeMatrixTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.DateTime(SampleDatabase.Orders.PlacedAt)
+                    row["order_status"],
+                    row.DateTime("placed_at")
                 )
             ),
         ];
@@ -277,17 +286,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByStatusAscThenPlacedAtDescOrdersShippedOrdersByDateTimeDescending()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -296,8 +307,8 @@ public sealed class OrderByThenByTypeMatrixTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                "schema_with_foreign_keys.orders",
+                                "placed_at"
                             )
                         )
                     )
@@ -311,8 +322,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -320,8 +331,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new DateTimeField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.PlacedAt
+                            "schema_with_foreign_keys.orders",
+                            "placed_at"
                         )
                     ),
                     SortDirection.Desc
@@ -331,12 +342,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, DateTime?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenByDescending(order => order.PlacedAt)
                 .Select(order => ((string?)order.OrderStatus, (DateTime?)order.PlacedAt)),
         ];
@@ -345,8 +356,8 @@ public sealed class OrderByThenByTypeMatrixTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.DateTime(SampleDatabase.Orders.PlacedAt)
+                    row["order_status"],
+                    row.DateTime("placed_at")
                 )
             ),
         ];
@@ -357,17 +368,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByActiveAscThenShiftStartAscOrdersUsersByTime()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -381,8 +394,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Asc
@@ -390,8 +403,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new TimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.ShiftStart
+                            "schema_with_foreign_keys.users",
+                            "shift_start"
                         )
                     ),
                     SortDirection.Asc
@@ -401,7 +414,7 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Active=true group ties on ShiftStart among Ann/Cara/Fay (all
@@ -409,12 +422,12 @@ public sealed class OrderByThenByTypeMatrixTests
         // Ann/Cara/Fay in their original relative order within the tie.
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive)
+            .. userRows.OrderBy(user => user.UserActive)
                 .ThenBy(user => user.ShiftStart)
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -424,17 +437,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByActiveDescThenShiftStartAscOrdersUsersByTimeMixedDirection()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -448,8 +463,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Desc
@@ -457,8 +472,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new TimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.ShiftStart
+                            "schema_with_foreign_keys.users",
+                            "shift_start"
                         )
                     ),
                     SortDirection.Asc
@@ -468,17 +483,17 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderByDescending(user => user.UserActive)
+            .. userRows.OrderByDescending(user => user.UserActive)
                 .ThenBy(user => user.ShiftStart)
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -486,17 +501,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByStatusAscThenIdAscOrdersShippedOrdersByUuidComparer()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -505,8 +522,8 @@ public sealed class OrderByThenByTypeMatrixTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     )
@@ -520,15 +537,15 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
                 ),
                 new OrderByItem(
                     new Field(
-                        new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                        new UuidField("schema_with_foreign_keys.orders", "order_id")
                     ),
                     SortDirection.Asc
                 ),
@@ -537,7 +554,7 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // "shipped" ties across Id101/Id103/Id105; secondary Id ordering
@@ -545,7 +562,7 @@ public sealed class OrderByThenByTypeMatrixTests
         // OrderByUuidAscendingMatchesGuidComparerOrdering).
         (string?, Guid?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenBy(order => order.OrderId)
                 .Select(order => ((string?)order.OrderStatus, (Guid?)order.OrderId)),
         ];
@@ -554,8 +571,8 @@ public sealed class OrderByThenByTypeMatrixTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.Uuid(SampleDatabase.Orders.Id)
+                    row["order_status"],
+                    row.Uuid("order_id")
                 )
             ),
         ];
@@ -568,17 +585,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByStatusAscThenIdDescOrdersShippedOrdersByUuidComparerDescending()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -587,8 +606,8 @@ public sealed class OrderByThenByTypeMatrixTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     )
@@ -602,15 +621,15 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
                 ),
                 new OrderByItem(
                     new Field(
-                        new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                        new UuidField("schema_with_foreign_keys.orders", "order_id")
                     ),
                     SortDirection.Desc
                 ),
@@ -619,12 +638,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, Guid?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenByDescending(order => order.OrderId)
                 .Select(order => ((string?)order.OrderStatus, (Guid?)order.OrderId)),
         ];
@@ -633,8 +652,8 @@ public sealed class OrderByThenByTypeMatrixTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.Uuid(SampleDatabase.Orders.Id)
+                    row["order_status"],
+                    row.Uuid("order_id")
                 )
             ),
         ];
@@ -649,17 +668,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByNullFieldAscendingPreservesInputOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -673,8 +694,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new NullField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -684,12 +705,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string[] expected = [.. db.UserRows.Select(user => user.UserName)];
+        string[] expected = [.. userRows.Select(user => user.UserName)];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -699,17 +720,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void OrderByNullFieldDescendingPreservesInputOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -723,8 +746,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new NullField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Desc
@@ -734,12 +757,12 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string[] expected = [.. db.UserRows.Select(user => user.UserName)];
+        string[] expected = [.. userRows.Select(user => user.UserName)];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -751,17 +774,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void NullFieldAsSecondaryKeyLeavesPrimaryOrderingIntactAscending()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -775,8 +800,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Asc
@@ -784,8 +809,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new NullField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -795,15 +820,15 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive).Select(user => user.UserName),
+            .. userRows.OrderBy(user => user.UserActive).Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -813,17 +838,19 @@ public sealed class OrderByThenByTypeMatrixTests
     [Fact]
     public void NullFieldAsSecondaryKeyLeavesPrimaryOrderingIntactDescending()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -837,8 +864,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Asc
@@ -846,8 +873,8 @@ public sealed class OrderByThenByTypeMatrixTests
                 new OrderByItem(
                     new Field(
                         new NullField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Desc
@@ -857,15 +884,15 @@ public sealed class OrderByThenByTypeMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive).Select(user => user.UserName),
+            .. userRows.OrderBy(user => user.UserActive).Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }

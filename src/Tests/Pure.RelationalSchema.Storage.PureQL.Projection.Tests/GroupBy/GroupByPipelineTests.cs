@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -28,20 +31,20 @@ public sealed class GroupByPipelineTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -54,20 +57,20 @@ public sealed class GroupByPipelineTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -83,8 +86,8 @@ public sealed class GroupByPipelineTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Id
+                            "schema_with_foreign_keys.orders",
+                            "order_id"
                         )
                     )
                 )
@@ -96,8 +99,8 @@ public sealed class GroupByPipelineTests
     {
         return new NumberArrayReturning(
             new NumberField(
-                SampleDatabase.Orders.Entity,
-                SampleDatabase.Orders.Total
+                "schema_with_foreign_keys.orders",
+                "order_total"
             )
         );
     }
@@ -154,14 +157,14 @@ public sealed class GroupByPipelineTests
     private static Query OrdersGroupedByUser(BooleanReturning having)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -172,8 +175,8 @@ public sealed class GroupByPipelineTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -189,17 +192,18 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void GroupByAgeDescOrderThenPaginateReturnsExactOrderedWindow()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         )
                     )
@@ -209,7 +213,7 @@ public sealed class GroupByPipelineTests
             join: null,
             [
                 new Field(
-                    new NumberField(SampleDatabase.Users.Entity, SampleDatabase.Users.Age)
+                    new NumberField("schema_with_foreign_keys.users", "user_age")
                 ),
             ],
             having: null,
@@ -217,8 +221,8 @@ public sealed class GroupByPipelineTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Desc
@@ -228,12 +232,12 @@ public sealed class GroupByPipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows.Select(user => user.UserAge)
+            .. userRows.Select(user => user.UserAge)
                 .Distinct()
                 .OrderByDescending(age => age)
                 .Take(2),
@@ -241,7 +245,7 @@ public sealed class GroupByPipelineTests
 
         double[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Users.Age)!.Value),
+            .. result.Rows.Select(row => row.Double("user_age")!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -252,17 +256,17 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void GroupByOrderByThenPaginateSkippingPastAllGroupsReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         )
                     )
@@ -272,7 +276,7 @@ public sealed class GroupByPipelineTests
             join: null,
             [
                 new Field(
-                    new NumberField(SampleDatabase.Users.Entity, SampleDatabase.Users.Age)
+                    new NumberField("schema_with_foreign_keys.users", "user_age")
                 ),
             ],
             having: null,
@@ -280,8 +284,8 @@ public sealed class GroupByPipelineTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Asc
@@ -291,7 +295,7 @@ public sealed class GroupByPipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -303,17 +307,19 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void GroupByJoinedBooleanKeyAggregatesBaseTableTotalsPerSide()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -330,8 +336,8 @@ public sealed class GroupByPipelineTests
             [
                 new Field(
                     new BooleanField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Active
+                        "schema_with_foreign_keys.users",
+                        "user_active"
                     )
                 ),
             ],
@@ -341,12 +347,12 @@ public sealed class GroupByPipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<bool, double> expected = db.OrderRows
+        Dictionary<bool, double> expected = orderRows
             .Join(
-                db.UserRows,
+                userRows,
                 order => order.OrderUserId,
                 user => user.UserId,
                 (order, user) => (user.UserActive, order.OrderTotal)
@@ -358,7 +364,7 @@ public sealed class GroupByPipelineTests
             );
 
         Dictionary<bool, double> actual = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("totalByActive")!.Value
         );
 
@@ -373,17 +379,19 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void LeftJoinGroupByJoinedTotalKeyPlacesUnmatchedUsersInOwnNullGroup()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -395,8 +403,8 @@ public sealed class GroupByPipelineTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Age
+                                            "schema_with_foreign_keys.users",
+                                            "user_age"
                                         )
                                     )
                                 )
@@ -411,8 +419,8 @@ public sealed class GroupByPipelineTests
             [
                 new Field(
                     new NumberField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Total
+                        "schema_with_foreign_keys.orders",
+                        "order_total"
                     )
                 ),
             ],
@@ -422,20 +430,20 @@ public sealed class GroupByPipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> matchedUserIds =
         [
-            .. db.OrderRows.Select(order => order.OrderUserId),
+            .. orderRows.Select(order => order.OrderUserId),
         ];
 
-        int distinctTotals = db.OrderRows
+        int distinctTotals = orderRows
             .Select(order => order.OrderTotal)
             .Distinct()
             .Count();
 
-        double unmatchedAgeSum = db.UserRows
+        double unmatchedAgeSum = userRows
             .Where(user => !matchedUserIds.Contains(user.UserId))
             .Sum(user => user.UserAge);
 
@@ -444,7 +452,7 @@ public sealed class GroupByPipelineTests
         Assert.Equal(distinctTotals + 1, result.Count);
 
         double? nullGroupAgeSum = result.Rows
-            .Where(row => row.Double(SampleDatabase.Orders.Total) is null)
+            .Where(row => row.Double("order_total") is null)
             .Select(row => row.Double("ageSum"))
             .SingleOrDefault();
 
@@ -457,17 +465,17 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void WhereEliminatesAllRowsGroupByWithHavingStillReturnsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -478,8 +486,8 @@ public sealed class GroupByPipelineTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("no-such-status"))
@@ -490,8 +498,8 @@ public sealed class GroupByPipelineTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        "schema_with_foreign_keys.orders",
+                        "order_status"
                     )
                 ),
             ],
@@ -501,7 +509,7 @@ public sealed class GroupByPipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -512,8 +520,9 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void HavingFourLevelNestedNotOrAndNotFiltersGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         BooleanReturning innerAnd = new BooleanReturning(
             new BooleanOperator(
                 new AndOperator([CountGreaterThan(1), MaxTotalAtLeast(200)])
@@ -535,10 +544,10 @@ public sealed class GroupByPipelineTests
         Query query = OrdersGroupedByUser(having);
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .Count(group =>
                 !(
@@ -555,8 +564,9 @@ public sealed class GroupByPipelineTests
     [Fact]
     public void HavingThreeLevelNestedAndOfTwoOrClausesFiltersGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         BooleanReturning leftOr = new BooleanReturning(
             new BooleanOperator(
                 new OrOperator(
@@ -590,10 +600,10 @@ public sealed class GroupByPipelineTests
         Query query = OrdersGroupedByUser(having);
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .Count(group =>
                 (group.Count() > 2 || !(group.Max(order => order.OrderTotal) >= 300))

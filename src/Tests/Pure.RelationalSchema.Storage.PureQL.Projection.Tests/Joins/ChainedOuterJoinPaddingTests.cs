@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -18,20 +21,20 @@ public sealed class ChainedOuterJoinPaddingTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -44,20 +47,20 @@ public sealed class ChainedOuterJoinPaddingTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.OrderItems.Entity,
+            "schema_with_foreign_keys.order_items",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                "schema_with_foreign_keys.order_items",
+                                "item_order_id"
                             )
                         )
                     )
@@ -69,17 +72,20 @@ public sealed class ChainedOuterJoinPaddingTests
     [Fact]
     public void SecondLeftJoinPadsRowsAlreadyPaddedByTheFirst()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -94,14 +100,14 @@ public sealed class ChainedOuterJoinPaddingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
+        int expectedCount = userRows.Sum(user =>
         {
-            List<OrderRow> orders =
+            List<OrderRecord> orders =
             [
-                .. db.OrderRows.Where(order =>
+                .. orderRows.Where(order =>
                     order.OrderUserId == user.UserId
                 ),
             ];
@@ -111,7 +117,7 @@ public sealed class ChainedOuterJoinPaddingTests
                 : orders.Sum(order =>
                     Math.Max(
                         1,
-                        db.OrderItemRows.Count(item =>
+                        orderItemRows.Count(item =>
                             item.ItemOrderId == order.OrderId
                         )
                     )
@@ -120,11 +126,11 @@ public sealed class ChainedOuterJoinPaddingTests
 
         Assert.Equal(expectedCount, result.Count);
 
-        foreach (UserRow user in db.UserRows)
+        foreach (UserRecord user in userRows)
         {
-            List<OrderRow> orders =
+            List<OrderRecord> orders =
             [
-                .. db.OrderRows.Where(order =>
+                .. orderRows.Where(order =>
                     order.OrderUserId == user.UserId
                 ),
             ];
@@ -134,7 +140,7 @@ public sealed class ChainedOuterJoinPaddingTests
                 : orders.Sum(order =>
                     Math.Max(
                         1,
-                        db.OrderItemRows.Count(item =>
+                        orderItemRows.Count(item =>
                             item.ItemOrderId == order.OrderId
                         )
                     )
@@ -143,7 +149,7 @@ public sealed class ChainedOuterJoinPaddingTests
             Assert.Equal(
                 expectedAppearances,
                 result
-                    .Column(SampleDatabase.Users.Name)
+                    .Column("user_name")
                     .Count(name => name == user.UserName)
             );
         }

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -20,19 +23,22 @@ public sealed class CrossEntityTemporalArithmeticTests
     [Fact]
     public void EachDateDiffDaysAcrossJoinedTablesFiltersByTheGap()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         const double thresholdDays = 1200;
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     )
@@ -46,14 +52,14 @@ public sealed class CrossEntityTemporalArithmeticTests
                             new EachDateDiffDays(
                                 new DateArrayReturning(
                                     new DateField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.PlacedOn
+                                        "schema_with_foreign_keys.orders",
+                                        "placed_on"
                                     )
                                 ),
                                 new DateArrayReturning(
                                     new DateField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.SignupDate
+                                        "schema_with_foreign_keys.users",
+                                        "signup_date"
                                     )
                                 )
                             )
@@ -65,20 +71,20 @@ public sealed class CrossEntityTemporalArithmeticTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -93,15 +99,15 @@ public sealed class CrossEntityTemporalArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(order =>
                 {
-                    UserRow user = db.UserRows.Single(candidate =>
+                    UserRecord user = userRows.Single(candidate =>
                         candidate.UserId == order.OrderUserId
                     );
 
@@ -117,7 +123,7 @@ public sealed class CrossEntityTemporalArithmeticTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid("order_id")!.Value)
                 .OrderBy(id => id),
         ];
 

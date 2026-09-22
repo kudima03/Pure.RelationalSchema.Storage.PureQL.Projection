@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayEqualities;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -24,7 +27,7 @@ public sealed class DateTimeArrayEqualitySequenceTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField("schema_with_foreign_keys.orders", "order_id")
                 )
             )
         );
@@ -35,10 +38,12 @@ public sealed class DateTimeArrayEqualitySequenceTests
     [Fact]
     public void WholeDateTimeArrayEqualityOfTwoEqualLiteralArraysKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -74,10 +79,10 @@ public sealed class DateTimeArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     // Two literal arrays with the same length but a different order:
@@ -85,10 +90,11 @@ public sealed class DateTimeArrayEqualitySequenceTests
     [Fact]
     public void WholeDateTimeArrayEqualityOfTwoReorderedLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -124,7 +130,7 @@ public sealed class DateTimeArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -140,15 +146,17 @@ public sealed class DateTimeArrayEqualitySequenceTests
     [Fact]
     public void WholeDateTimeArrayEqualityOfFieldAgainstLiteralFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         DateTime[] reversedPlacedAt =
         [
-            .. db.OrderRows.Select(order => order.PlacedAt).Reverse(),
+            .. orderRows.Select(order => order.PlacedAt).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -156,8 +164,8 @@ public sealed class DateTimeArrayEqualitySequenceTests
                         new DateTimeArrayEquality(
                             new DateTimeArrayReturning(
                                 new DateTimeField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.PlacedAt
+                                    "schema_with_foreign_keys.orders",
+                                    "placed_at"
                                 )
                             ),
                             new DateTimeArrayReturning(
@@ -175,7 +183,7 @@ public sealed class DateTimeArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -185,15 +193,17 @@ public sealed class DateTimeArrayEqualitySequenceTests
     [Fact]
     public void WholeDateTimeArrayEqualityOfLiteralAgainstFieldFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         DateTime[] reversedPlacedAt =
         [
-            .. db.OrderRows.Select(order => order.PlacedAt).Reverse(),
+            .. orderRows.Select(order => order.PlacedAt).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -204,8 +214,8 @@ public sealed class DateTimeArrayEqualitySequenceTests
                             ),
                             new DateTimeArrayReturning(
                                 new DateTimeField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.PlacedAt
+                                    "schema_with_foreign_keys.orders",
+                                    "placed_at"
                                 )
                             )
                         )
@@ -220,7 +230,7 @@ public sealed class DateTimeArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

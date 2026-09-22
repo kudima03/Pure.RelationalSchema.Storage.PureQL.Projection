@@ -4,16 +4,20 @@ using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.Samples.Cells;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
+using Pure.RelationalSchema.Storage.Samples.TableDataSets;
 using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 
 // A multi-schema dataset where every table carries a same-named primary-key
 // column ("id") — the shape of any real schema that uses a conventional PK
-// name. This deliberately violates SampleDatabase's globally-unique-name
-// invariant to cover the joined-column resolution bugs of issues #77 and
-// #78: planner.needs joins to refs.specialties (needs.spec_id -> specialties.id)
-// and to billing.estimates (needs.id -> estimates.need_id, 1:1).
+// name. This deliberately violates every other fixture's globally-unique-
+// name invariant to cover the joined-column resolution bugs of issues #77
+// and #78: planner.needs joins to refs.specialties (needs.spec_id ->
+// specialties.id) and to billing.estimates (needs.id -> estimates.need_id,
+// 1:1).
 internal sealed class CollidingNameDatabase
 {
     public const string PlannerSchemaName = "planner";
@@ -92,15 +96,15 @@ internal sealed class CollidingNameDatabase
         [
             SchemaDataset(
                 PlannerSchemaName,
-                new SampleTableDataset(needsTable, BuildNeedRows())
+                new StoredTableDataSet(needsTable, BuildNeedRows())
             ),
             SchemaDataset(
                 RefsSchemaName,
-                new SampleTableDataset(specialtiesTable, BuildSpecialtyRows())
+                new StoredTableDataSet(specialtiesTable, BuildSpecialtyRows())
             ),
             SchemaDataset(
                 BillingSchemaName,
-                new SampleTableDataset(estimatesTable, BuildEstimateRows())
+                new StoredTableDataSet(estimatesTable, BuildEstimateRows())
             ),
         ];
     }
@@ -144,7 +148,7 @@ internal sealed class CollidingNameDatabase
 
     private static IStoredSchemaDataSet SchemaDataset(
         string schemaName,
-        SampleTableDataset tableDataset
+        StoredTableDataSet tableDataset
     )
     {
         ISchema schema = new Schema.Schema(
@@ -153,19 +157,7 @@ internal sealed class CollidingNameDatabase
             []
         );
 
-        IReadOnlyDictionary<ITable, IStoredTableDataSet> datasetsByTable =
-            new Collections.Generic.Dictionary<
-                IStoredTableDataSet,
-                ITable,
-                IStoredTableDataSet
-            >(
-                [tableDataset],
-                dataset => dataset.TableSchema,
-                dataset => dataset,
-                table => new TableHash(table)
-            );
-
-        return new StoredSchemaDataset(schema, datasetsByTable);
+        return new StoredSchemaDataSet(schema, [tableDataset]);
     }
 
     private IReadOnlyList<IRow> BuildNeedRows()
@@ -177,9 +169,13 @@ internal sealed class CollidingNameDatabase
                     NeedColumns,
                     new Dictionary<string, string>
                     {
-                        [Needs.Id] = CellText.From(need.NeedId),
-                        [Needs.SpecialtyId] = CellText.From(need.NeedSpecialtyId),
-                        [Needs.PlannedHours] = CellText.From(need.NeedPlannedHours),
+                        [Needs.Id] = new InvariantCellText(need.NeedId).TextValue,
+                        [Needs.SpecialtyId] = new InvariantCellText(
+                            need.NeedSpecialtyId
+                        ).TextValue,
+                        [Needs.PlannedHours] = new InvariantCellText(
+                            need.NeedPlannedHours
+                        ).TextValue,
                     }
                 )
             ),
@@ -195,10 +191,12 @@ internal sealed class CollidingNameDatabase
                     SpecialtyColumns,
                     new Dictionary<string, string>
                     {
-                        [Specialties.Id] = CellText.From(specialty.SpecialtyId),
-                        [Specialties.Title] = CellText.From(
+                        [Specialties.Id] = new InvariantCellText(
+                            specialty.SpecialtyId
+                        ).TextValue,
+                        [Specialties.Title] = new InvariantCellText(
                             specialty.SpecialtyTitle
-                        ),
+                        ).TextValue,
                     }
                 )
             ),
@@ -214,16 +212,18 @@ internal sealed class CollidingNameDatabase
                     EstimateColumns,
                     new Dictionary<string, string>
                     {
-                        [Estimates.Id] = CellText.From(estimate.EstimateId),
-                        [Estimates.NeedId] = CellText.From(
+                        [Estimates.Id] = new InvariantCellText(
+                            estimate.EstimateId
+                        ).TextValue,
+                        [Estimates.NeedId] = new InvariantCellText(
                             estimate.EstimateNeedId
-                        ),
-                        [Estimates.Status] = CellText.From(
+                        ).TextValue,
+                        [Estimates.Status] = new InvariantCellText(
                             estimate.EstimateStatus
-                        ),
-                        [Estimates.ActualHours] = CellText.From(
+                        ).TextValue,
+                        [Estimates.ActualHours] = new InvariantCellText(
                             estimate.EstimateActualHours
-                        ),
+                        ).TextValue,
                     }
                 )
             ),

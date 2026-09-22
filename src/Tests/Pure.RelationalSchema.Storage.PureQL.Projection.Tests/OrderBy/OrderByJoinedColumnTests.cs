@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -16,17 +19,20 @@ public sealed class OrderByJoinedColumnTests
     [Fact]
     public void OrderByJoinedNameThenBaseTotalDescOrdersMergedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -35,8 +41,8 @@ public sealed class OrderByJoinedColumnTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -46,20 +52,20 @@ public sealed class OrderByJoinedColumnTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -73,8 +79,8 @@ public sealed class OrderByJoinedColumnTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -82,8 +88,8 @@ public sealed class OrderByJoinedColumnTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Desc
@@ -93,15 +99,15 @@ public sealed class OrderByJoinedColumnTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string, double)[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order =>
                     (
-                        Name: db.UserRows.Single(user =>
+                        Name: userRows.Single(user =>
                             user.UserId == order.OrderUserId
                         ).UserName,
                         Total: order.OrderTotal
@@ -115,8 +121,8 @@ public sealed class OrderByJoinedColumnTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Users.Name]!,
-                    row.Double(SampleDatabase.Orders.Total)!.Value
+                    row["user_name"]!,
+                    row.Double("order_total")!.Value
                 )
             ),
         ];

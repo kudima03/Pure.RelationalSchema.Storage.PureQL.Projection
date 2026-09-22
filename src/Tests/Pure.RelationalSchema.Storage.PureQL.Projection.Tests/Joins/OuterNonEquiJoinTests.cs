@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -15,19 +18,21 @@ public sealed class OuterNonEquiJoinTests
     [Fact]
     public void LeftJoinWithNonMatchingInequalityPreservesEveryLeftRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         // user_age (25..42) is never greater than order_total (50..300), so no
         // order matches any user and every user survives the left join once.
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -37,21 +42,21 @@ public sealed class OuterNonEquiJoinTests
             [
                 new Join(
                     JoinType.Left,
-                    SampleDatabase.Orders.Entity,
+                    "schema_with_foreign_keys.orders",
                     new BooleanArrayReturning(
                         new EachComparison(
                             new EachNumberComparison(
                                 EachComparisonOperator.EachGreaterThan,
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Age
+                                        "schema_with_foreign_keys.users",
+                                        "user_age"
                                     )
                                 ),
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Total
+                                        "schema_with_foreign_keys.orders",
+                                        "order_total"
                                     )
                                 )
                             )
@@ -66,20 +71,20 @@ public sealed class OuterNonEquiJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.Select(user => user.UserName).OrderBy(name => name),
+            .. userRows.Select(user => user.UserName).OrderBy(name => name),
         ];
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.Equal(expected, actual);
     }
 }

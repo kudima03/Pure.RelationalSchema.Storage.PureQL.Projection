@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -19,17 +22,19 @@ public sealed class EachEqualityTests
     [Fact]
     public void EachStringEqualityKeepsOnlyRowsWhoseFieldEqualsTheScalar()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -40,8 +45,8 @@ public sealed class EachEqualityTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("shipped"))
@@ -56,15 +61,15 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderStatus == "shipped"),
+            orderRows.Count(order => order.OrderStatus == "shipped"),
             result.Count
         );
         Assert.All(
-            result.Column(SampleDatabase.Orders.Status),
+            result.Column("order_status"),
             status => Assert.Equal("shipped", status)
         );
     }
@@ -72,17 +77,18 @@ public sealed class EachEqualityTests
     [Fact]
     public void EachStringEqualityWithNoMatchesReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -93,8 +99,8 @@ public sealed class EachEqualityTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("no-such-status"))
@@ -109,7 +115,7 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -118,17 +124,19 @@ public sealed class EachEqualityTests
     [Fact]
     public void EachNumberEqualityFiltersByDoubleField()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -139,8 +147,8 @@ public sealed class EachEqualityTests
                     new EachNumberEquality(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         ),
                         new NumberReturning(new NumberScalar(30))
@@ -155,32 +163,34 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Where(user => user.UserAge == 30)
+            userRows.Where(user => user.UserAge == 30)
                 .Select(user => user.UserName)
                 .OrderBy(name => name)
                 .ToArray(),
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column("user_name").OrderBy(name => name).ToArray()
         );
     }
 
     [Fact]
     public void EachBooleanEqualityFiltersByBoolField()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -191,8 +201,8 @@ public sealed class EachEqualityTests
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         ),
                         new BooleanReturning(new BooleanScalar(true))
@@ -207,27 +217,29 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count(user => user.UserActive), result.Count);
+        Assert.Equal(userRows.Count(user => user.UserActive), result.Count);
     }
 
     [Fact]
     public void EachDateEqualityFiltersByDateField()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateOnly target = new DateOnly(2020, 1, 15);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -238,8 +250,8 @@ public sealed class EachEqualityTests
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.SignupDate
+                                "schema_with_foreign_keys.users",
+                                "signup_date"
                             )
                         ),
                         new DateReturning(new DateScalar(target))
@@ -254,27 +266,29 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count(user => user.SignupDate == target), result.Count);
+        Assert.Equal(userRows.Count(user => user.SignupDate == target), result.Count);
     }
 
     [Fact]
     public void EachTimeEqualityFiltersByTimeField()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly target = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -285,8 +299,8 @@ public sealed class EachEqualityTests
                     new EachTimeEquality(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeReturning(new TimeScalar(target))
@@ -301,27 +315,29 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count(user => user.ShiftStart == target), result.Count);
+        Assert.Equal(userRows.Count(user => user.ShiftStart == target), result.Count);
     }
 
     [Fact]
     public void EachDateTimeEqualityFiltersByDateTimeField()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime target = new DateTime(2024, 6, 1, 8, 30, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -332,8 +348,8 @@ public sealed class EachEqualityTests
                     new EachDateTimeEquality(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                "schema_with_foreign_keys.users",
+                                "last_login"
                             )
                         ),
                         new DateTimeReturning(new DateTimeScalar(target))
@@ -348,27 +364,29 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count(user => user.LastLogin == target), result.Count);
+        Assert.Equal(userRows.Count(user => user.LastLogin == target), result.Count);
     }
 
     [Fact]
     public void EachUuidEqualityFiltersByUuidField()
     {
-        SampleDatabase db = new SampleDatabase();
-        Guid target = db.UserRows.Single(user => user.UserName == "Bob").UserId;
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        Guid target = userRows.Single(user => user.UserName == "Bob").UserId;
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -379,8 +397,8 @@ public sealed class EachEqualityTests
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidReturning(new UuidScalar(target))
@@ -395,10 +413,10 @@ public sealed class EachEqualityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal("Bob", result.Row(0)[SampleDatabase.Users.Name]);
+        Assert.Equal("Bob", result.Row(0)["user_name"]);
     }
 }

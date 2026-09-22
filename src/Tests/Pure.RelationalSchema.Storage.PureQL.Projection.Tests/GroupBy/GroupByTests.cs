@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -16,17 +19,18 @@ public sealed class GroupByTests
     [Fact]
     public void GroupByStringKeyYieldsOneRowPerDistinctValue()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -34,42 +38,43 @@ public sealed class GroupByTests
             ],
             where: null,
             join: null,
-            [new Field(new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status))],
+            [new Field(new StringField("schema_with_foreign_keys.orders", "order_status"))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows.Select(order => order.OrderStatus).Distinct().OrderBy(s => s),
+            .. orderRows.Select(order => order.OrderStatus).Distinct().OrderBy(s => s),
         ];
 
         Assert.Equal(expected.Length, result.Count);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Orders.Status).OrderBy(s => s).ToArray()
+            result.Column("order_status").OrderBy(s => s).ToArray()
         );
     }
 
     [Fact]
     public void GroupByBooleanKeyYieldsOneRowPerDistinctValue()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -77,18 +82,18 @@ public sealed class GroupByTests
             ],
             where: null,
             join: null,
-            [new Field(new BooleanField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active))],
+            [new Field(new BooleanField("schema_with_foreign_keys.users", "user_active"))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => user.UserActive).Distinct().Count(),
+            userRows.Select(user => user.UserActive).Distinct().Count(),
             result.Count
         );
     }
@@ -96,17 +101,18 @@ public sealed class GroupByTests
     [Fact]
     public void GroupByUuidKeyYieldsOneRowPerDistinctValue()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -114,18 +120,18 @@ public sealed class GroupByTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [new Field(new UuidField("schema_with_foreign_keys.orders", "order_user_id"))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Select(order => order.OrderUserId).Distinct().Count(),
+            orderRows.Select(order => order.OrderUserId).Distinct().Count(),
             result.Count
         );
     }
@@ -133,17 +139,18 @@ public sealed class GroupByTests
     [Fact]
     public void GroupByCompositeKeyYieldsOneRowPerDistinctCombination()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -152,8 +159,8 @@ public sealed class GroupByTests
             where: null,
             join: null,
             [
-                new Field(new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)),
-                new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)),
+                new Field(new StringField("schema_with_foreign_keys.orders", "order_status")),
+                new Field(new UuidField("schema_with_foreign_keys.orders", "order_user_id")),
             ],
             having: null,
             orderBy: null,
@@ -161,11 +168,11 @@ public sealed class GroupByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Select(order => (order.OrderStatus, order.OrderUserId))
+            orderRows.Select(order => (order.OrderStatus, order.OrderUserId))
                 .Distinct()
                 .Count(),
             result.Count

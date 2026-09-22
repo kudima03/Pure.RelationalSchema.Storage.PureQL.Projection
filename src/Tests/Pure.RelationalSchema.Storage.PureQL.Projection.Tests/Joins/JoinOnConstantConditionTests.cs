@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -18,14 +21,14 @@ public sealed class JoinOnConstantConditionTests
     private static Query UsersJoinedToProducts(JoinType joinType, bool condition)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -35,7 +38,7 @@ public sealed class JoinOnConstantConditionTests
             [
                 new Join(
                     joinType,
-                    SampleDatabase.Products.Entity,
+                    "schema_with_foreign_keys.products",
                     new BooleanReturning(new BooleanScalar(condition))
                 ),
             ],
@@ -49,26 +52,30 @@ public sealed class JoinOnConstantConditionTests
     [Fact]
     public void InnerJoinOnConstantTrueProducesTheCrossProduct()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 UsersJoinedToProducts(JoinType.Inner, condition: true)
             )
         );
 
-        Assert.Equal(db.UserRows.Count * db.ProductRows.Count, result.Count);
+        Assert.Equal(userRows.Count * productRows.Count, result.Count);
     }
 
     [Fact]
     public void InnerJoinOnConstantFalseReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 UsersJoinedToProducts(JoinType.Inner, condition: false)
             )
         );
@@ -79,40 +86,45 @@ public sealed class JoinOnConstantConditionTests
     [Fact]
     public void LeftJoinOnConstantFalsePadsEveryLeftRowOnce()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 UsersJoinedToProducts(JoinType.Left, condition: false)
             )
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
 
         string[] expected =
         [
-            .. db.UserRows.Select(user => user.UserName).OrderBy(name => name),
+            .. userRows.Select(user => user.UserName).OrderBy(name => name),
         ];
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column("user_name").OrderBy(name => name).ToArray()
         );
     }
 
     [Fact]
     public void FullJoinOnConstantFalseKeepsEverySideUnmatched()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 UsersJoinedToProducts(JoinType.Full, condition: false)
             )
         );
 
-        Assert.Equal(db.UserRows.Count + db.ProductRows.Count, result.Count);
+        Assert.Equal(userRows.Count + productRows.Count, result.Count);
     }
 }

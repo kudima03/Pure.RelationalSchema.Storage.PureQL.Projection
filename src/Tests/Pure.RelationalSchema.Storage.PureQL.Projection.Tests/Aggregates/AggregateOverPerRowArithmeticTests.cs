@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Numeric;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -20,20 +23,20 @@ public sealed class AggregateOverPerRowArithmeticTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Products.Entity,
+            "schema_with_foreign_keys.products",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.ProductId
+                                "schema_with_foreign_keys.order_items",
+                                "item_product_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Id
+                                "schema_with_foreign_keys.products",
+                                "product_id"
                             )
                         )
                     )
@@ -55,14 +58,14 @@ public sealed class AggregateOverPerRowArithmeticTests
                                         [
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.Qty
+                                                    "schema_with_foreign_keys.order_items",
+                                                    "item_qty"
                                                 )
                                             ),
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    SampleDatabase.Products.Entity,
-                                                    SampleDatabase.Products.Price
+                                                    "schema_with_foreign_keys.products",
+                                                    "product_price"
                                                 )
                                             ),
                                         ]
@@ -77,9 +80,12 @@ public sealed class AggregateOverPerRowArithmeticTests
         );
     }
 
-    private static double PriceOf(SampleDatabase db, Guid productId)
+    private static double PriceOf(
+        IReadOnlyList<ProductRecord> productRows,
+        Guid productId
+    )
     {
-        return db.ProductRows
+        return productRows
             .Single(product => product.ProductId == productId)
             .ProductPrice;
     }
@@ -87,17 +93,20 @@ public sealed class AggregateOverPerRowArithmeticTests
     [Fact]
     public void SumOfQuantityTimesPriceGroupedByOrderComputesRevenue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.OrderItems.Entity),
+            new FromExpression("schema_with_foreign_keys.order_items"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                "schema_with_foreign_keys.order_items",
+                                "item_order_id"
                             )
                         )
                     )
@@ -109,8 +118,8 @@ public sealed class AggregateOverPerRowArithmeticTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.OrderItems.Entity,
-                        SampleDatabase.OrderItems.OrderId
+                        "schema_with_foreign_keys.order_items",
+                        "item_order_id"
                     )
                 ),
             ],
@@ -120,20 +129,20 @@ public sealed class AggregateOverPerRowArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderItemRows
+        Dictionary<Guid, double> expected = orderItemRows
             .GroupBy(item => item.ItemOrderId)
             .ToDictionary(
                 group => group.Key,
                 group => group.Sum(item =>
-                    item.ItemQty * PriceOf(db, item.ItemProductId)
+                    item.ItemQty * PriceOf(productRows, item.ItemProductId)
                 )
             );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.OrderItems.OrderId)!.Value,
+            row => row.Uuid("item_order_id")!.Value,
             row => row.Double("revenue")!.Value
         );
 
@@ -143,10 +152,13 @@ public sealed class AggregateOverPerRowArithmeticTests
     [Fact]
     public void WholeSetSumOfQuantityTimesPriceComputesTotalRevenue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.OrderItems.Entity),
+            new FromExpression("schema_with_foreign_keys.order_items"),
             [SumOfQuantityTimesPrice("revenue")],
             where: null,
             [ItemsToProductsJoin()],
@@ -157,11 +169,11 @@ public sealed class AggregateOverPerRowArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double expected = db.OrderItemRows.Sum(item =>
-            item.ItemQty * PriceOf(db, item.ItemProductId)
+        double expected = orderItemRows.Sum(item =>
+            item.ItemQty * PriceOf(productRows, item.ItemProductId)
         );
 
         Assert.Equal(1, result.Count);

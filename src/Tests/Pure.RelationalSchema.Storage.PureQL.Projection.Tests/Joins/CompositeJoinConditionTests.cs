@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -19,17 +22,19 @@ public sealed class CompositeJoinConditionTests
     [Fact]
     public void InnerJoinOnKeyAndQuantityKeepsMatchingHighQuantityItems()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.Qty
+                                "schema_with_foreign_keys.order_items",
+                                "item_qty"
                             )
                         )
                     )
@@ -39,7 +44,7 @@ public sealed class CompositeJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.OrderItems.Entity,
+                    "schema_with_foreign_keys.order_items",
                     new BooleanArrayReturning(
                         new EachAndOperator(
                             [
@@ -48,14 +53,14 @@ public sealed class CompositeJoinConditionTests
                                         new EachUuidEquality(
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.OrderId
+                                                    "schema_with_foreign_keys.order_items",
+                                                    "item_order_id"
                                                 )
                                             ),
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.Id
+                                                    "schema_with_foreign_keys.orders",
+                                                    "order_id"
                                                 )
                                             )
                                         )
@@ -67,8 +72,8 @@ public sealed class CompositeJoinConditionTests
                                             EachComparisonOperator.EachGreaterThan,
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.Qty
+                                                    "schema_with_foreign_keys.order_items",
+                                                    "item_qty"
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1))
@@ -87,12 +92,12 @@ public sealed class CompositeJoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         int expected = (
-            from order in db.OrderRows
-            from item in db.OrderItemRows
+            from order in orderRows
+            from item in orderItemRows
             where item.ItemOrderId == order.OrderId && item.ItemQty > 1
             select 1
         ).Count();

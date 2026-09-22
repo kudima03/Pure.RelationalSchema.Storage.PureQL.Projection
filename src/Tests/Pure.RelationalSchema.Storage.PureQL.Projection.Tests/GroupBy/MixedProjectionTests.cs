@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Date;
@@ -22,20 +25,20 @@ public sealed class MixedProjectionTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -47,17 +50,18 @@ public sealed class MixedProjectionTests
     [Fact]
     public void GroupKeyAndSumProjectTogetherPerGroup()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -69,8 +73,8 @@ public sealed class MixedProjectionTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -85,8 +89,8 @@ public sealed class MixedProjectionTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -96,15 +100,15 @@ public sealed class MixedProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderRows
+        Dictionary<Guid, double> expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .ToDictionary(group => group.Key, group => group.Sum(order => order.OrderTotal));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("userTotal")!.Value
         );
 
@@ -114,17 +118,18 @@ public sealed class MixedProjectionTests
     [Fact]
     public void GroupKeyAndCountProjectTogetherPerGroup()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -136,8 +141,8 @@ public sealed class MixedProjectionTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -152,8 +157,8 @@ public sealed class MixedProjectionTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        "schema_with_foreign_keys.orders",
+                        "order_status"
                     )
                 ),
             ],
@@ -163,15 +168,15 @@ public sealed class MixedProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<string, double> expected = db.OrderRows
+        Dictionary<string, double> expected = orderRows
             .GroupBy(order => order.OrderStatus)
             .ToDictionary(group => group.Key, group => (double)group.Count());
 
         Dictionary<string, double> actual = result.Rows.ToDictionary(
-            row => row[SampleDatabase.Orders.Status]!,
+            row => row["order_status"]!,
             row => row.Double("statusCount")!.Value
         );
 
@@ -181,17 +186,18 @@ public sealed class MixedProjectionTests
     [Fact]
     public void MultipleAggregatesOfDifferentTypesProjectInOneRow()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -203,8 +209,8 @@ public sealed class MixedProjectionTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -220,8 +226,8 @@ public sealed class MixedProjectionTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -237,8 +243,8 @@ public sealed class MixedProjectionTests
                                 new MinDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_on"
                                         )
                                     )
                                 )
@@ -254,8 +260,8 @@ public sealed class MixedProjectionTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            "schema_with_foreign_keys.orders",
+                                            "order_status"
                                         )
                                     )
                                 )
@@ -270,8 +276,8 @@ public sealed class MixedProjectionTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -281,11 +287,11 @@ public sealed class MixedProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<Guid, (double Count, double Sum, DateOnly Min, string Max)> expected =
-            db.OrderRows
+            orderRows
                 .GroupBy(order => order.OrderUserId)
                 .ToDictionary(
                     group => group.Key,
@@ -303,7 +309,7 @@ public sealed class MixedProjectionTests
             result.Rows,
             row =>
             {
-                Guid userId = row.Uuid(SampleDatabase.Orders.UserId)!.Value;
+                Guid userId = row.Uuid("order_user_id")!.Value;
                 (double Count, double Sum, DateOnly Min, string Max) expectedGroup =
                     expected[userId];
                 Assert.Equal(expectedGroup.Count, row.Double("orderCount"));
@@ -317,17 +323,19 @@ public sealed class MixedProjectionTests
     [Fact]
     public void TwoNumericAggregatesOverDifferentColumnsProjectIndependently()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -339,8 +347,8 @@ public sealed class MixedProjectionTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -356,8 +364,8 @@ public sealed class MixedProjectionTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Age
+                                            "schema_with_foreign_keys.users",
+                                            "user_age"
                                         )
                                     )
                                 )
@@ -372,8 +380,8 @@ public sealed class MixedProjectionTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Id
+                        "schema_with_foreign_keys.users",
+                        "user_id"
                     )
                 ),
             ],
@@ -383,12 +391,12 @@ public sealed class MixedProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, (double Sum, double Avg)> expected = db.OrderRows
+        Dictionary<Guid, (double Sum, double Avg)> expected = orderRows
             .Join(
-                db.UserRows,
+                userRows,
                 order => order.OrderUserId,
                 user => user.UserId,
                 (order, user) => (user.UserId, order.OrderTotal, user.UserAge)
@@ -407,7 +415,7 @@ public sealed class MixedProjectionTests
             result.Rows,
             row =>
             {
-                Guid userId = row.Uuid(SampleDatabase.Users.Id)!.Value;
+                Guid userId = row.Uuid("user_id")!.Value;
                 (double Sum, double Avg) expectedGroup = expected[userId];
                 Assert.Equal(expectedGroup.Sum, row.Double("orderTotalSum"));
                 Assert.Equal(expectedGroup.Avg, row.Double("avgAge"));
@@ -418,17 +426,17 @@ public sealed class MixedProjectionTests
     [Fact]
     public void AggregateColumnsFollowAliasesInMixedProjection()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     ),
@@ -441,8 +449,8 @@ public sealed class MixedProjectionTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -458,8 +466,8 @@ public sealed class MixedProjectionTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -474,8 +482,8 @@ public sealed class MixedProjectionTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -485,7 +493,7 @@ public sealed class MixedProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(["buyer", "purchases", "spend"], result.ColumnNames);

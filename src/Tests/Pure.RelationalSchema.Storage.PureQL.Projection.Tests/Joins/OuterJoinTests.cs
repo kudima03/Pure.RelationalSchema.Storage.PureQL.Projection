@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -18,17 +21,20 @@ public sealed class OuterJoinTests
     [Fact]
     public void LeftJoinKeepsUsersWithNoOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -38,20 +44,20 @@ public sealed class OuterJoinTests
             [
                 new Join(
                     JoinType.Left,
-                    SampleDatabase.Orders.Entity,
+                    "schema_with_foreign_keys.orders",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 )
                             )
@@ -66,40 +72,43 @@ public sealed class OuterJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
-            Math.Max(1, db.OrderRows.Count(order => order.OrderUserId == user.UserId))
+        int expectedCount = userRows.Sum(user =>
+            Math.Max(1, orderRows.Count(order => order.OrderUserId == user.UserId))
         );
 
         Assert.Equal(expectedCount, result.Count);
         // Eve has no orders and must still appear exactly once.
         Assert.Equal(
             1,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Eve")
+            result.Column("user_name").Count(name => name == "Eve")
         );
         // Ann has two orders and must appear once per matched order.
         Assert.Equal(
             2,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Ann")
+            result.Column("user_name").Count(name => name == "Ann")
         );
     }
 
     [Fact]
     public void RightJoinKeepsUnmatchedUsersOnTheRightSide()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -109,20 +118,20 @@ public sealed class OuterJoinTests
             [
                 new Join(
                     JoinType.Right,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -137,34 +146,37 @@ public sealed class OuterJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
-            Math.Max(1, db.OrderRows.Count(order => order.OrderUserId == user.UserId))
+        int expectedCount = userRows.Sum(user =>
+            Math.Max(1, orderRows.Count(order => order.OrderUserId == user.UserId))
         );
 
         Assert.Equal(expectedCount, result.Count);
         Assert.Equal(
             1,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Eve")
+            result.Column("user_name").Count(name => name == "Eve")
         );
     }
 
     [Fact]
     public void FullJoinKeepsUnmatchedRowsFromBothSides()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -174,20 +186,20 @@ public sealed class OuterJoinTests
             [
                 new Join(
                     JoinType.Full,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -202,21 +214,21 @@ public sealed class OuterJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Every order matches exactly one user (matched merged rows = order
         // count), plus the one user with no orders appears once on the right.
         int expectedCount =
-            db.OrderRows.Count
-            + db.UserRows.Count(user =>
-                !db.OrderRows.Any(order => order.OrderUserId == user.UserId)
+            orderRows.Count
+            + userRows.Count(user =>
+                !orderRows.Any(order => order.OrderUserId == user.UserId)
             );
 
         Assert.Equal(expectedCount, result.Count);
         Assert.Equal(
             1,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Eve")
+            result.Column("user_name").Count(name => name == "Eve")
         );
     }
 }

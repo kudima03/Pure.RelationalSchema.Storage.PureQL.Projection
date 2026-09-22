@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Date;
@@ -35,20 +38,20 @@ public sealed class AggregateOverExpressionComboTemporalTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -64,10 +67,10 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new NumberArrayReturning(
             new EachDateDiffDays(
                 new DateArrayReturning(
-                    new DateField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.PlacedOn)
+                    new DateField("schema_with_foreign_keys.orders", "placed_on")
                 ),
                 new DateArrayReturning(
-                    new DateField(SampleDatabase.Users.Entity, SampleDatabase.Users.SignupDate)
+                    new DateField("schema_with_foreign_keys.users", "signup_date")
                 )
             )
         );
@@ -78,7 +81,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new NumberArrayReturning(
             new EachTimeDiffSeconds(
                 new TimeArrayReturning(
-                    new TimeField(SampleDatabase.Users.Entity, SampleDatabase.Users.ShiftStart)
+                    new TimeField("schema_with_foreign_keys.users", "shift_start")
                 ),
                 new TimeReturning(new TimeScalar(origin))
             )
@@ -90,10 +93,10 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new NumberArrayReturning(
             new EachDateTimeDiffSeconds(
                 new DateTimeArrayReturning(
-                    new DateTimeField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.PlacedAt)
+                    new DateTimeField("schema_with_foreign_keys.orders", "placed_at")
                 ),
                 new DateTimeArrayReturning(
-                    new DateTimeField(SampleDatabase.Users.Entity, SampleDatabase.Users.LastLogin)
+                    new DateTimeField("schema_with_foreign_keys.users", "last_login")
                 )
             )
         );
@@ -106,7 +109,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new DateArrayReturning(
             new EachDateAddDays(
                 new DateArrayReturning(
-                    new DateField(SampleDatabase.Users.Entity, SampleDatabase.Users.SignupDate)
+                    new DateField("schema_with_foreign_keys.users", "signup_date")
                 ),
                 new NumberReturning(new NumberScalar(days))
             )
@@ -118,7 +121,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new TimeArrayReturning(
             new EachTimeAddSeconds(
                 new TimeArrayReturning(
-                    new TimeField(SampleDatabase.Users.Entity, SampleDatabase.Users.ShiftStart)
+                    new TimeField("schema_with_foreign_keys.users", "shift_start")
                 ),
                 new NumberReturning(new NumberScalar(seconds))
             )
@@ -130,7 +133,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new DateTimeArrayReturning(
             new EachDateTimeAddSeconds(
                 new DateTimeArrayReturning(
-                    new DateTimeField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.PlacedAt)
+                    new DateTimeField("schema_with_foreign_keys.orders", "placed_at")
                 ),
                 new NumberReturning(new NumberScalar(seconds))
             )
@@ -240,12 +243,15 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void SumOfEachDateDiffDaysGroupedByOrderUserIdComputesTotalSpanDays()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 NumberAggregateSelect(
                     new NumberAggregate(new SumNumber(PlacedOnMinusSignupDate())),
                     "totalSpanDays"
@@ -253,19 +259,19 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<Guid, double> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select new
             {
                 order.OrderUserId,
@@ -276,7 +282,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Span));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("totalSpanDays")!.Value
         );
 
@@ -286,12 +292,15 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void AverageOfEachDateDiffDaysGroupedByOrderStatusComputesMeanSpanDays()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                StringGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status),
+                StringGroupKeySelect("schema_with_foreign_keys.orders", "order_status"),
                 NumberAggregateSelect(
                     new NumberAggregate(new AverageNumber(PlacedOnMinusSignupDate())),
                     "meanSpanDays"
@@ -299,19 +308,19 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [StringGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)],
+            [StringGroupKeyField("schema_with_foreign_keys.orders", "order_status")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<string, double> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select new
             {
                 order.OrderStatus,
@@ -322,7 +331,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Average(x => x.Span));
 
         Dictionary<string, double> actual = result.Rows.ToDictionary(
-            row => row[SampleDatabase.Orders.Status]!,
+            row => row["order_status"]!,
             row => row.Double("meanSpanDays")!.Value
         );
 
@@ -333,12 +342,15 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void MinAndMaxOfEachDateDiffDaysGroupedByUserActiveBoundSpanDays()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                BoolGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Active),
+                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
                 NumberAggregateSelect(
                     new NumberAggregate(new MinNumber(PlacedOnMinusSignupDate())),
                     "minSpanDays"
@@ -350,20 +362,20 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)],
+            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         IReadOnlyList<(bool Active, double Span)> spans =
         [
-            .. from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            .. from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select (
                 user.UserActive,
                 Span: (double)(order.PlacedOn.DayNumber - user.SignupDate.DayNumber)
@@ -379,12 +391,12 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Max(x => x.Span));
 
         Dictionary<bool, double> actualMin = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("minSpanDays")!.Value
         );
 
         Dictionary<bool, double> actualMax = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("maxSpanDays")!.Value
         );
 
@@ -395,36 +407,39 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void CountOfEachDateDiffDaysGroupedByUserAgeCountsDefinedSpans()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                NumberGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Age),
+                NumberGroupKeySelect("schema_with_foreign_keys.users", "user_age"),
                 CountSelect(PlacedOnMinusSignupDate(), "spanCount"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [new Field(new NumberField(SampleDatabase.Users.Entity, SampleDatabase.Users.Age))],
+            [new Field(new NumberField("schema_with_foreign_keys.users", "user_age"))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<double, double> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select user.UserAge
         )
             .GroupBy(age => age)
             .ToDictionary(g => g.Key, g => (double)g.Count());
 
         Dictionary<double, double> actual = result.Rows.ToDictionary(
-            row => row.Double(SampleDatabase.Users.Age)!.Value,
+            row => row.Double("user_age")!.Value,
             row => row.Double("spanCount")!.Value
         );
 
@@ -437,11 +452,13 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void SumOfEachTimeDiffSecondsWholeSetComputesTotalShiftGap()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 NumberAggregateSelect(
                     new NumberAggregate(new SumNumber(ShiftStartMinusOrigin(origin))),
@@ -451,10 +468,10 @@ public sealed class AggregateOverExpressionComboTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double expected = db.UserRows.Sum(user => (user.ShiftStart - origin).TotalSeconds);
+        double expected = userRows.Sum(user => (user.ShiftStart - origin).TotalSeconds);
 
         Assert.Equal(1, result.Count);
         Assert.Equal(expected, result.Row(0).Double("totalGapSeconds"));
@@ -463,12 +480,15 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void AverageOfEachDateTimeDiffSecondsGroupedByOrderUserIdComputesMeanGapSeconds()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 NumberAggregateSelect(
                     new NumberAggregate(new AverageNumber(PlacedAtMinusLastLogin())),
                     "meanGapSeconds"
@@ -476,19 +496,19 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<Guid, double> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select new
             {
                 order.OrderUserId,
@@ -499,7 +519,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Average(x => x.Gap));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("meanGapSeconds")!.Value
         );
 
@@ -511,12 +531,14 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void MaxOfEachDateAddDaysGroupedByUserActiveFindsLatestProjectedDate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
-                BoolGroupKeySelect(SampleDatabase.Users.Entity, SampleDatabase.Users.Active),
+                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
                 DateAggregateSelect(
                     new DateAggregate(new MaxDate(SignupDatePlusDays(30))),
                     "latestProjectedDate"
@@ -524,22 +546,22 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             join: null,
-            [BoolGroupKeyField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)],
+            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<bool, DateOnly> expected = db.UserRows
+        Dictionary<bool, DateOnly> expected = userRows
             .GroupBy(user => user.UserActive)
             .ToDictionary(g => g.Key, g => g.Max(user => user.SignupDate.AddDays(30)));
 
         Dictionary<bool, DateOnly> actual = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Date("latestProjectedDate")!.Value
         );
 
@@ -550,12 +572,15 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void MinOfEachDateAddDaysGroupedByOrderStatusFindsEarliestProjectedDate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                StringGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status),
+                StringGroupKeySelect("schema_with_foreign_keys.orders", "order_status"),
                 DateAggregateSelect(
                     new DateAggregate(new MinDate(SignupDatePlusDays(30))),
                     "earliestProjectedDate"
@@ -563,26 +588,26 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [StringGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)],
+            [StringGroupKeyField("schema_with_foreign_keys.orders", "order_status")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Dictionary<string, DateOnly> expected = (
-            from order in db.OrderRows
-            join user in db.UserRows on order.OrderUserId equals user.UserId
+            from order in orderRows
+            join user in userRows on order.OrderUserId equals user.UserId
             select new { order.OrderStatus, Projected = user.SignupDate.AddDays(30) }
         )
             .GroupBy(x => x.OrderStatus)
             .ToDictionary(g => g.Key, g => g.Min(x => x.Projected));
 
         Dictionary<string, DateOnly> actual = result.Rows.ToDictionary(
-            row => row[SampleDatabase.Orders.Status]!,
+            row => row["order_status"]!,
             row => row.Date("earliestProjectedDate")!.Value
         );
 
@@ -593,10 +618,12 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void MaxOfEachTimeAddSecondsWholeSetFindsLatestProjectedTime()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 TimeAggregateSelect(
                     new TimeAggregate(new MaxTime(ShiftStartPlusSeconds(3600))),
@@ -606,10 +633,10 @@ public sealed class AggregateOverExpressionComboTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        TimeOnly expected = db.UserRows.Max(user =>
+        TimeOnly expected = userRows.Max(user =>
             user.ShiftStart.Add(TimeSpan.FromSeconds(3600))
         );
 
@@ -620,12 +647,14 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void MinOfEachDateTimeAddSecondsGroupedByOrderUserIdFindsEarliestProjectedInstant()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 DateTimeAggregateSelect(
                     new DateTimeAggregate(new MinDateTime(PlacedAtPlusSeconds(1800))),
                     "earliestProjectedInstant"
@@ -633,17 +662,17 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             join: null,
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, DateTime> expected = db.OrderRows
+        Dictionary<Guid, DateTime> expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .ToDictionary(
                 g => g.Key,
@@ -651,7 +680,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             );
 
         Dictionary<Guid, DateTime> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.DateTime("earliestProjectedInstant")!.Value
         );
 
@@ -663,12 +692,15 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void HavingMaxOfEachDateDiffDaysComparisonKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
-                UuidGroupKeySelect(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId),
+                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
                 NumberAggregateSelect(
                     new NumberAggregate(new MaxNumber(PlacedOnMinusSignupDate())),
                     "maxSpanDays"
@@ -676,7 +708,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId)],
+            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
             new BooleanReturning(
                 new Comparison(
                     new NumberComparison(
@@ -691,14 +723,14 @@ public sealed class AggregateOverExpressionComboTemporalTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
             .. (
-                from order in db.OrderRows
-                join user in db.UserRows on order.OrderUserId equals user.UserId
+                from order in orderRows
+                join user in userRows on order.OrderUserId equals user.UserId
                 select new
                 {
                     order.OrderUserId,
@@ -712,7 +744,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Orders.UserId)!.Value),
+            .. result.Rows.Select(row => row.Uuid("order_user_id")!.Value),
         ];
 
         Assert.Equal(2, expected.Count);
@@ -726,10 +758,11 @@ public sealed class AggregateOverExpressionComboTemporalTests
     [Fact]
     public void AverageOfEachDateAddDaysThrowsNotSupportedForTemporalAverage()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 DateAggregateSelect(
                     new DateAggregate(new AverageDate(SignupDatePlusDays(30))),
@@ -739,7 +772,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

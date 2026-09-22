@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -17,20 +20,20 @@ public sealed class DistinctOverJoinTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -42,7 +45,7 @@ public sealed class DistinctOverJoinTests
     private static Query DistinctColumnThroughJoin(SelectExpression select)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [select],
             where: null,
             [UsersToOrdersInnerJoin()],
@@ -57,15 +60,18 @@ public sealed class DistinctOverJoinTests
     [Fact]
     public void DistinctCollapsesJoinFanOutDuplicates()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = DistinctColumnThroughJoin(
             new SelectExpression(
                 new ArrayReturning(
                     new StringArrayReturning(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     )
                 )
@@ -73,14 +79,14 @@ public sealed class DistinctOverJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(user =>
-                    db.OrderRows.Any(order => order.OrderUserId == user.UserId)
+                    orderRows.Any(order => order.OrderUserId == user.UserId)
                 )
                 .Select(user => user.UserName)
                 .OrderBy(name => name),
@@ -88,22 +94,24 @@ public sealed class DistinctOverJoinTests
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column("user_name").OrderBy(name => name).ToArray()
         );
     }
 
     [Fact]
     public void DistinctOnJoinedColumnCollapsesToItsDistinctValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = DistinctColumnThroughJoin(
             new SelectExpression(
                 new ArrayReturning(
                     new StringArrayReturning(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     )
                 )
@@ -111,12 +119,12 @@ public sealed class DistinctOverJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order => order.OrderStatus)
                 .Distinct()
                 .OrderBy(status => status),
@@ -125,7 +133,7 @@ public sealed class DistinctOverJoinTests
         Assert.Equal(
             expected,
             result
-                .Column(SampleDatabase.Orders.Status)
+                .Column("order_status")
                 .OrderBy(status => status)
                 .ToArray()
         );

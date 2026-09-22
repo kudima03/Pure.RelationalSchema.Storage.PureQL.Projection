@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Numeric;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -19,17 +22,19 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByActiveAscAgeDescNameAscOrdersThreeMixedDirectionKeys()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -43,8 +48,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Asc
@@ -52,8 +57,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Desc
@@ -61,8 +66,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -72,18 +77,18 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive)
+            .. userRows.OrderBy(user => user.UserActive)
                 .ThenByDescending(user => user.UserAge)
                 .ThenBy(user => user.UserName)
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -91,17 +96,19 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByFiveKeysAppliesFullCompositeOrdering()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -115,8 +122,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     SortDirection.Asc
@@ -124,8 +131,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Asc
@@ -133,8 +140,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new DateField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.SignupDate
+                            "schema_with_foreign_keys.users",
+                            "signup_date"
                         )
                     ),
                     SortDirection.Asc
@@ -142,8 +149,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new DateTimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.LastLogin
+                            "schema_with_foreign_keys.users",
+                            "last_login"
                         )
                     ),
                     SortDirection.Desc
@@ -151,8 +158,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -162,12 +169,12 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive)
+            .. userRows.OrderBy(user => user.UserActive)
                 .ThenBy(user => user.UserAge)
                 .ThenBy(user => user.SignupDate)
                 .ThenByDescending(user => user.LastLogin)
@@ -175,7 +182,7 @@ public sealed class OrderByExpansionTests
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -183,21 +190,23 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByFullTieOnEveryKeyPreservesOriginalRelativeOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         // Ann and Fay share SignupDate, LastLogin and ShiftStart exactly, so
         // ordering by that triple leaves zero distinguishing keys between
         // them: a stable sort must keep Ann (declared first) ahead of Fay
         // (declared last) in the output.
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -211,8 +220,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new DateField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.SignupDate
+                            "schema_with_foreign_keys.users",
+                            "signup_date"
                         )
                     ),
                     SortDirection.Asc
@@ -220,8 +229,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new DateTimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.LastLogin
+                            "schema_with_foreign_keys.users",
+                            "last_login"
                         )
                     ),
                     SortDirection.Asc
@@ -229,8 +238,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new TimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.ShiftStart
+                            "schema_with_foreign_keys.users",
+                            "shift_start"
                         )
                     ),
                     SortDirection.Asc
@@ -240,18 +249,18 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.SignupDate)
+            .. userRows.OrderBy(user => user.SignupDate)
                 .ThenBy(user => user.LastLogin)
                 .ThenBy(user => user.ShiftStart)
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
         Assert.Contains("Ann", expected);
@@ -265,20 +274,22 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByAliasedSelectColumnStillOrdersByUnderlyingField()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         // The select expression renames order_total to "grandTotal", but the
         // ORDER BY item still refers to the underlying field (there is no
         // alias reference in the model) and must keep sorting by it.
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     ),
@@ -293,8 +304,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Asc
@@ -304,12 +315,12 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double?[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderTotal)
+            .. orderRows.OrderBy(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal),
         ];
 
@@ -329,24 +340,25 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByAscendingWithUnmatchedLeftJoinRowsPlacesNullsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Join usersToOrders = new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -355,14 +367,14 @@ public sealed class OrderByExpansionTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -371,8 +383,8 @@ public sealed class OrderByExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -386,8 +398,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Asc
@@ -397,7 +409,7 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Eve and Fay place no orders, so their joined Total is NULL.
@@ -415,7 +427,7 @@ public sealed class OrderByExpansionTests
             "Fay",
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -428,24 +440,25 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByDescendingWithUnmatchedLeftJoinRowsPlacesNullsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Join usersToOrders = new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -454,14 +467,14 @@ public sealed class OrderByExpansionTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -470,8 +483,8 @@ public sealed class OrderByExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -485,8 +498,8 @@ public sealed class OrderByExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Desc
@@ -496,7 +509,7 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Eve and Fay place no orders, so their joined Total is NULL.
@@ -516,7 +529,7 @@ public sealed class OrderByExpansionTests
             "Fay",
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column("user_name")];
 
         Assert.Equal(expected, actual);
     }
@@ -531,17 +544,18 @@ public sealed class OrderByExpansionTests
     [Fact]
     public void OrderByAggregateResultOrdersEmittedGroupsByItsValue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -553,8 +567,8 @@ public sealed class OrderByExpansionTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -569,8 +583,8 @@ public sealed class OrderByExpansionTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        "schema_with_foreign_keys.orders",
+                        "order_status"
                     )
                 ),
             ],
@@ -578,7 +592,7 @@ public sealed class OrderByExpansionTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Orders.Entity, "totalSum")
+                        new NumberField("schema_with_foreign_keys.orders", "totalSum")
                     ),
                     SortDirection.Asc
                 ),
@@ -587,14 +601,14 @@ public sealed class OrderByExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Ascending by summed total per status: cancelled (75.25) <
         // pending (150.50) < shipped (600.50).
         string[] expected = ["cancelled", "pending", "shipped"];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Orders.Status)];
+        string?[] actual = [.. result.Column("order_status")];
 
         Assert.Equal(expected, actual);
     }

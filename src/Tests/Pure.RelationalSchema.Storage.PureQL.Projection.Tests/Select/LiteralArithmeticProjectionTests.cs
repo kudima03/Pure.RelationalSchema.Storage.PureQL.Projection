@@ -1,4 +1,6 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Arithmetics;
 using PureQL.CSharp.Model.Returnings;
@@ -19,10 +21,11 @@ public sealed class LiteralArithmeticProjectionTests
     [Fact]
     public void NestedArithmeticOfLiteralsProjectsFoldedConstant()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -56,7 +59,7 @@ public sealed class LiteralArithmeticProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(["result"], result.ColumnNames);
@@ -67,10 +70,11 @@ public sealed class LiteralArithmeticProjectionTests
     [Fact]
     public void LiteralArithmeticSubtractAndDivideFoldLeftToRight()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -104,7 +108,7 @@ public sealed class LiteralArithmeticProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.All(result.Rows, row => Assert.Equal(3, row.Double("result")));
@@ -113,10 +117,11 @@ public sealed class LiteralArithmeticProjectionTests
     [Fact]
     public void LiteralArithmeticDivideByZeroFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -137,7 +142,7 @@ public sealed class LiteralArithmeticProjectionTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 }

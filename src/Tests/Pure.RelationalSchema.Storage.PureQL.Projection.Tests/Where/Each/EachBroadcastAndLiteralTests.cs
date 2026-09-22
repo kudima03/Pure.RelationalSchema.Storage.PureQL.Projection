@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.ArrayScalars;
@@ -29,7 +32,7 @@ public sealed class EachBroadcastAndLiteralTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField("schema_with_foreign_keys.orders", "order_id")
                 )
             )
         );
@@ -40,10 +43,12 @@ public sealed class EachBroadcastAndLiteralTests
     [Fact]
     public void BroadcastScalarOperandAndArrayAlignedOperandCombineInSamePredicate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -54,8 +59,8 @@ public sealed class EachBroadcastAndLiteralTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(50))
@@ -68,14 +73,14 @@ public sealed class EachBroadcastAndLiteralTests
                                     EachComparisonOperator.EachGreaterThanOrEqual,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     ),
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -92,10 +97,10 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count(o => o.OrderTotal > 50), result.Count);
+        Assert.Equal(orderRows.Count(o => o.OrderTotal > 50), result.Count);
     }
 
     // A 2-element literal array ([999, -5]) compared against a 6-row table:
@@ -107,10 +112,12 @@ public sealed class EachBroadcastAndLiteralTests
     [Fact]
     public void LiteralNumberArrayOperandBroadcastsFirstElementRegardlessOfLength()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -131,12 +138,12 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Every row keeps: 999 (first literal element) > 0. A row-index zip
         // would instead only define rows 0-1 and leave the rest ambiguous.
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     // A 6-element literal string array whose *first* element is "shipped"
@@ -146,7 +153,9 @@ public sealed class EachBroadcastAndLiteralTests
     [Fact]
     public void LiteralStringArrayOperandBroadcastsFirstElementOnEqualityCheck()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         // The literal array is the left operand, checked per row against the
         // (per-row, array-aligned) status field on the right. If the literal
@@ -154,7 +163,7 @@ public sealed class EachBroadcastAndLiteralTests
         // index carries "shipped"); broadcast means every row is compared
         // against literal[0] = "shipped" instead.
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
@@ -173,8 +182,8 @@ public sealed class EachBroadcastAndLiteralTests
                         ),
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -188,11 +197,11 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(o => o.OrderStatus == "shipped"),
+            orderRows.Count(o => o.OrderStatus == "shipped"),
             result.Count
         );
     }
@@ -204,10 +213,11 @@ public sealed class EachBroadcastAndLiteralTests
     [Fact]
     public void EachDivideByZeroFailsFastEvenUnderEqualityComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
@@ -218,8 +228,8 @@ public sealed class EachBroadcastAndLiteralTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(0)),
@@ -239,7 +249,7 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -247,10 +257,11 @@ public sealed class EachBroadcastAndLiteralTests
     [Fact]
     public void EachDivideByZeroFailsFastEvenUnderComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -262,8 +273,8 @@ public sealed class EachBroadcastAndLiteralTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(0)),
@@ -283,7 +294,7 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -291,7 +302,8 @@ public sealed class EachBroadcastAndLiteralTests
     [Fact]
     public void EachDivideByZeroFailsFastEvenComparedAgainstItself()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         NumberArrayReturning divideByZero = new NumberArrayReturning(
             new EachArithmetic(
@@ -299,8 +311,8 @@ public sealed class EachBroadcastAndLiteralTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberReturning(new NumberScalar(0)),
@@ -310,7 +322,7 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachNotOperator(
@@ -329,7 +341,7 @@ public sealed class EachBroadcastAndLiteralTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

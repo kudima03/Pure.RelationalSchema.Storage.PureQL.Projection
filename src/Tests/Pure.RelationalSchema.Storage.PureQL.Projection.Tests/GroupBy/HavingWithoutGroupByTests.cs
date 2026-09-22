@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -31,8 +34,8 @@ public sealed class HavingWithoutGroupByTests
                             new ArrayReturning(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -53,8 +56,8 @@ public sealed class HavingWithoutGroupByTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Id
+                                    "schema_with_foreign_keys.users",
+                                    "user_id"
                                 )
                             )
                         )
@@ -68,17 +71,17 @@ public sealed class HavingWithoutGroupByTests
     [Fact]
     public void HavingWithoutGroupByFiltersTheImplicitWholeSetGroup()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -93,7 +96,7 @@ public sealed class HavingWithoutGroupByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -102,51 +105,53 @@ public sealed class HavingWithoutGroupByTests
     [Fact]
     public void WholeSetHavingKeepsTheSingleGroupWhenSatisfied()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [CountOfUserIds("userCount")],
             where: null,
             join: null,
             groupBy: null,
             UserCountComparedTo(
                 ComparisonOperator.GreaterThanOrEqual,
-                db.UserRows.Count
+                userRows.Count
             ),
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.UserRows.Count, result.Row(0).Double("userCount"));
+        Assert.Equal(userRows.Count, result.Row(0).Double("userCount"));
     }
 
     [Fact]
     public void WholeSetHavingRemovesTheSingleGroupWhenUnsatisfied()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [CountOfUserIds("userCount")],
             where: null,
             join: null,
             groupBy: null,
             UserCountComparedTo(
                 ComparisonOperator.GreaterThan,
-                db.UserRows.Count
+                userRows.Count
             ),
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);

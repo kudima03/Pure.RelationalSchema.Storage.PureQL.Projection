@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -19,17 +22,19 @@ public sealed class EachBooleanOpsTests
     [Fact]
     public void EachAndKeepsRowsSatisfyingEveryCondition()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -44,8 +49,8 @@ public sealed class EachBooleanOpsTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(100))
@@ -57,8 +62,8 @@ public sealed class EachBooleanOpsTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            "schema_with_foreign_keys.orders",
+                                            "order_status"
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -76,11 +81,11 @@ public sealed class EachBooleanOpsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order =>
+            orderRows.Count(order =>
                 order.OrderTotal > 100 && order.OrderStatus == "shipped"
             ),
             result.Count
@@ -90,17 +95,19 @@ public sealed class EachBooleanOpsTests
     [Fact]
     public void EachOrKeepsRowsSatisfyingAnyCondition()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -114,8 +121,8 @@ public sealed class EachBooleanOpsTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            "schema_with_foreign_keys.orders",
+                                            "order_status"
                                         )
                                     ),
                                     new StringReturning(new StringScalar("cancelled"))
@@ -128,8 +135,8 @@ public sealed class EachBooleanOpsTests
                                     EachComparisonOperator.EachGreaterThanOrEqual,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(300))
@@ -147,11 +154,11 @@ public sealed class EachBooleanOpsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order =>
+            orderRows.Count(order =>
                 order.OrderStatus == "cancelled" || order.OrderTotal >= 300
             ),
             result.Count
@@ -161,17 +168,19 @@ public sealed class EachBooleanOpsTests
     [Fact]
     public void EachNotNegatesAPerRowCondition()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -184,8 +193,8 @@ public sealed class EachBooleanOpsTests
                             new EachStringEquality(
                                 new StringArrayReturning(
                                     new StringField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Status
+                                        "schema_with_foreign_keys.orders",
+                                        "order_status"
                                     )
                                 ),
                                 new StringReturning(new StringScalar("shipped"))
@@ -202,11 +211,11 @@ public sealed class EachBooleanOpsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderStatus != "shipped"),
+            orderRows.Count(order => order.OrderStatus != "shipped"),
             result.Count
         );
     }

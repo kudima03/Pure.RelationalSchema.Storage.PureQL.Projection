@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -18,28 +21,28 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
 {
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, SampleDatabase.Orders.Entity, UsersOrdersCondition());
+        return new Join(JoinType.Left, "schema_with_foreign_keys.orders", UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, SampleDatabase.Users.Entity, OrdersUsersCondition());
+        return new Join(JoinType.Full, "schema_with_foreign_keys.users", OrdersUsersCondition());
     }
 
     private static Join UsersToOrdersInnerJoin()
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             UsersOrdersCondition()
         );
     }
@@ -50,12 +53,12 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField("schema_with_foreign_keys.users", "user_id")
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            "schema_with_foreign_keys.orders",
+                            "order_user_id"
                         )
                     )
                 )
@@ -70,12 +73,12 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            "schema_with_foreign_keys.orders",
+                            "order_user_id"
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField("schema_with_foreign_keys.users", "user_id")
                     )
                 )
             )
@@ -87,7 +90,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField(SampleDatabase.Users.Entity, SampleDatabase.Users.Name)
+                    new StringField("schema_with_foreign_keys.users", "user_name")
                 )
             )
         );
@@ -98,7 +101,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         return new SelectExpression(
             new ArrayReturning(
                 new NumberArrayReturning(
-                    new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+                    new NumberField("schema_with_foreign_keys.orders", "order_total")
                 )
             )
         );
@@ -108,7 +111,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     {
         return new OrderByItem(
             new Field(
-                new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+                new NumberField("schema_with_foreign_keys.orders", "order_total")
             ),
             SortDirection.Asc
         );
@@ -118,7 +121,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     {
         return new OrderByItem(
             new Field(
-                new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+                new NumberField("schema_with_foreign_keys.orders", "order_total")
             ),
             SortDirection.Desc
         );
@@ -128,7 +131,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     {
         return new OrderByItem(
             new Field(
-                new StringField(SampleDatabase.Users.Entity, SampleDatabase.Users.Name)
+                new StringField("schema_with_foreign_keys.users", "user_name")
             ),
             SortDirection.Asc
         );
@@ -139,12 +142,15 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     // Ties on total are broken by name so the expected sequence is fully
     // deterministic without depending on the translator's tie-break/stable-
     // sort behaviour matching this computation by coincidence.
-    private static List<(string Name, double? Total)> LeftOuterPairs(SampleDatabase db)
+    private static List<(string Name, double? Total)> LeftOuterPairs(
+        IReadOnlyList<UserRecord> userRows,
+        IReadOnlyList<OrderRecord> orderRows
+    )
     {
         return
         [
-            .. from user in db.UserRows
-                join order in db.OrderRows on user.UserId equals order.OrderUserId into g
+            .. from user in userRows
+                join order in orderRows on user.UserId equals order.OrderUserId into g
                 from order in g.DefaultIfEmpty()
                 select (user.UserName, order?.OrderTotal),
         ];
@@ -153,10 +159,13 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void LeftJoinOrderByJoinedTotalAscendingSortsNullsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect(), OrderTotalSelect()],
             where: null,
             [UsersToOrdersLeftJoin()],
@@ -167,12 +176,12 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string, double?)[] expected =
         [
-            .. LeftOuterPairs(db)
+            .. LeftOuterPairs(userRows, orderRows)
                 .OrderBy(pair => pair.Total.HasValue ? 0 : 1)
                 .ThenBy(pair => pair.Total)
                 .ThenBy(pair => pair.Name, StringComparer.Ordinal),
@@ -181,7 +190,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double?)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total))
+                (row["user_name"]!, row.Double("order_total"))
             ),
         ];
 
@@ -191,10 +200,13 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void RightJoinOrderByJoinedTotalAscendingSortsNullsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [UserNameSelect(), OrderTotalSelect()],
             where: null,
             [OrdersToUsersRightJoin()],
@@ -205,12 +217,12 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string, double?)[] expected =
         [
-            .. LeftOuterPairs(db)
+            .. LeftOuterPairs(userRows, orderRows)
                 .OrderBy(pair => pair.Total.HasValue ? 0 : 1)
                 .ThenBy(pair => pair.Total)
                 .ThenBy(pair => pair.Name, StringComparer.Ordinal),
@@ -219,7 +231,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double?)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total))
+                (row["user_name"]!, row.Double("order_total"))
             ),
         ];
 
@@ -229,10 +241,13 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void FullJoinOrderByJoinedTotalDescendingStillSortsNullsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [UserNameSelect(), OrderTotalSelect()],
             where: null,
             [OrdersToUsersFullJoin()],
@@ -243,14 +258,14 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // NULLS-last is unconditional: even under a descending primary
         // sort, the unmatched rows (NULL total) still land at the end.
         (string, double?)[] expected =
         [
-            .. LeftOuterPairs(db)
+            .. LeftOuterPairs(userRows, orderRows)
                 .OrderBy(pair => pair.Total.HasValue ? 0 : 1)
                 .ThenByDescending(pair => pair.Total)
                 .ThenBy(pair => pair.Name, StringComparer.Ordinal),
@@ -259,7 +274,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double?)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total))
+                (row["user_name"]!, row.Double("order_total"))
             ),
         ];
 
@@ -273,10 +288,13 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void LeftJoinGroupByOrderByAggregateAliasDescendingOrdersGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 UserNameSelect(),
                 new SelectExpression(
@@ -286,8 +304,8 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -302,8 +320,8 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Name
+                        "schema_with_foreign_keys.users",
+                        "user_name"
                     )
                 ),
             ],
@@ -311,7 +329,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Orders.Entity, "orderCount")
+                        new NumberField("schema_with_foreign_keys.orders", "orderCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -321,16 +339,16 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string, double)[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Select(user =>
                     (
                         user.UserName,
-                        (double)db.OrderRows.Count(order => order.OrderUserId == user.UserId)
+                        (double)orderRows.Count(order => order.OrderUserId == user.UserId)
                     )
                 )
                 .OrderByDescending(pair => pair.Item2)
@@ -340,7 +358,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double("orderCount")!.Value)
+                (row["user_name"]!, row.Double("orderCount")!.Value)
             ),
         ];
 
@@ -369,75 +387,81 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void LeftJoinDistinctOnUserNameKeepsEveryUserIncludingUnmatched()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = DistinctUserNames(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersLeftJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.Select(user => user.UserName).Distinct().OrderBy(name => name),
+            .. userRows.Select(user => user.UserName).Distinct().OrderBy(name => name),
         ];
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column("user_name").OrderBy(name => name).ToArray()
         );
     }
 
     [Fact]
     public void RightJoinDistinctOnUserNameKeepsEveryUserIncludingUnmatched()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = DistinctUserNames(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersRightJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.Select(user => user.UserName).Distinct().OrderBy(name => name),
+            .. userRows.Select(user => user.UserName).Distinct().OrderBy(name => name),
         ];
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column("user_name").OrderBy(name => name).ToArray()
         );
     }
 
     [Fact]
     public void FullJoinDistinctOnUserNameKeepsEveryUserIncludingUnmatched()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = DistinctUserNames(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersFullJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.Select(user => user.UserName).Distinct().OrderBy(name => name),
+            .. userRows.Select(user => user.UserName).Distinct().OrderBy(name => name),
         ];
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column("user_name").OrderBy(name => name).ToArray()
         );
     }
 
@@ -457,17 +481,19 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void LeftJoinDistinctOnJoinedStatusIncludesEmptyStringForPaddedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -483,12 +509,12 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order => order.OrderStatus)
                 .Append(string.Empty)
                 .Distinct()
@@ -498,7 +524,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         Assert.Equal(
             expected,
             result
-                .Column(SampleDatabase.Orders.Status)
+                .Column("order_status")
                 .OrderBy(status => status, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -508,13 +534,16 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     // (skip 2, take 3) lands entirely on matched rows for every join type
     // in this fixture (the NULL-total padded rows sort last, past the
     // window), so all four join types share the same expected slice.
-    private static (string Name, double Total)[] ExpectedInnerWindow(SampleDatabase db)
+    private static (string Name, double Total)[] ExpectedInnerWindow(
+        IReadOnlyList<UserRecord> userRows,
+        IReadOnlyList<OrderRecord> orderRows
+    )
     {
         return
         [
             .. (
-                from user in db.UserRows
-                join order in db.OrderRows on user.UserId equals order.OrderUserId
+                from user in userRows
+                join order in orderRows on user.UserId equals order.OrderUserId
                 select (user.UserName, order.OrderTotal)
             )
                 .OrderBy(pair => pair.OrderTotal)
@@ -541,23 +570,26 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void InnerJoinOrderByThenPaginationWindowsJoinedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersInnerJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        (string, double)[] expected = ExpectedInnerWindow(db);
+        (string, double)[] expected = ExpectedInnerWindow(userRows, orderRows);
 
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total)!.Value)
+                (row["user_name"]!, row.Double("order_total")!.Value)
             ),
         ];
 
@@ -567,23 +599,26 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void LeftJoinOrderByThenPaginationWindowsJoinedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersLeftJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        (string, double)[] expected = ExpectedInnerWindow(db);
+        (string, double)[] expected = ExpectedInnerWindow(userRows, orderRows);
 
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total)!.Value)
+                (row["user_name"]!, row.Double("order_total")!.Value)
             ),
         ];
 
@@ -593,23 +628,26 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void RightJoinOrderByThenPaginationWindowsJoinedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersRightJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        (string, double)[] expected = ExpectedInnerWindow(db);
+        (string, double)[] expected = ExpectedInnerWindow(userRows, orderRows);
 
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total)!.Value)
+                (row["user_name"]!, row.Double("order_total")!.Value)
             ),
         ];
 
@@ -619,23 +657,26 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     [Fact]
     public void FullJoinOrderByThenPaginationWindowsJoinedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersFullJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        (string, double)[] expected = ExpectedInnerWindow(db);
+        (string, double)[] expected = ExpectedInnerWindow(userRows, orderRows);
 
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Users.Name]!, row.Double(SampleDatabase.Orders.Total)!.Value)
+                (row["user_name"]!, row.Double("order_total")!.Value)
             ),
         ];
 

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -12,15 +15,17 @@ public sealed class SelectColumnsTests
     [Fact]
     public void SelectSingleStringColumnReturnsThatColumnForEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)
+                            new StringField("schema_with_foreign_keys.orders", "order_status")
                         )
                     )
                 ),
@@ -28,36 +33,38 @@ public sealed class SelectColumnsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
-        Assert.Equal([SampleDatabase.Orders.Status], result.ColumnNames);
+        Assert.Equal(orderRows.Count, result.Count);
+        Assert.Equal(["order_status"], result.ColumnNames);
         Assert.Equal(
-            [.. db.OrderRows.Select(order => order.OrderStatus)],
-            result.Column(SampleDatabase.Orders.Status)
+            [.. orderRows.Select(order => order.OrderStatus)],
+            result.Column("order_status")
         );
     }
 
     [Fact]
     public void SelectMultipleColumnsProjectsAllOfThemPreservingRowOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)
+                            new StringField("schema_with_foreign_keys.orders", "order_status")
                         )
                     )
                 ),
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
-                            new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+                            new NumberField("schema_with_foreign_keys.orders", "order_total")
                         )
                     )
                 ),
@@ -65,30 +72,32 @@ public sealed class SelectColumnsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
-        Assert.Contains(SampleDatabase.Orders.Status, result.ColumnNames);
-        Assert.Contains(SampleDatabase.Orders.Total, result.ColumnNames);
+        Assert.Equal(orderRows.Count, result.Count);
+        Assert.Contains("order_status", result.ColumnNames);
+        Assert.Contains("order_total", result.ColumnNames);
         Assert.Equal(
-            db.OrderRows.Select(order => (double?)order.OrderTotal).ToArray(),
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total))]
+            orderRows.Select(order => (double?)order.OrderTotal).ToArray(),
+            [.. result.Rows.Select(row => row.Double("order_total"))]
         );
     }
 
     [Fact]
     public void SelectUuidColumnRoundTripsEachIdentifier()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
-                            new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                            new UuidField("schema_with_foreign_keys.users", "user_id")
                         )
                     )
                 ),
@@ -96,12 +105,12 @@ public sealed class SelectColumnsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (Guid?)user.UserId).ToArray(),
-            [.. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id))]
+            userRows.Select(user => (Guid?)user.UserId).ToArray(),
+            [.. result.Rows.Select(row => row.Uuid("user_id"))]
         );
     }
 }

@@ -1,4 +1,6 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -19,17 +21,18 @@ public sealed class EmptyResultTests
     [Fact]
     public void EachNumberEqualityWithNoMatchReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -40,8 +43,8 @@ public sealed class EmptyResultTests
                     new EachNumberEquality(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberReturning(new NumberScalar(99999))
@@ -56,7 +59,7 @@ public sealed class EmptyResultTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -65,17 +68,18 @@ public sealed class EmptyResultTests
     [Fact]
     public void InnerJoinWithNeverMatchingKeyReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -85,20 +89,20 @@ public sealed class EmptyResultTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Id
+                                        "schema_with_foreign_keys.orders",
+                                        "order_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -113,7 +117,7 @@ public sealed class EmptyResultTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -122,17 +126,18 @@ public sealed class EmptyResultTests
     [Fact]
     public void GroupByOverAFilteredEmptySetReturnsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -143,8 +148,8 @@ public sealed class EmptyResultTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("no-such-status"))
@@ -152,14 +157,14 @@ public sealed class EmptyResultTests
                 )
             ),
             join: null,
-            [new Field(new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status))],
+            [new Field(new StringField("schema_with_foreign_keys.orders", "order_status"))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -168,17 +173,18 @@ public sealed class EmptyResultTests
     [Fact]
     public void PaginationOverAnEmptyFilteredSetReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -189,8 +195,8 @@ public sealed class EmptyResultTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("no-such-status"))
@@ -205,7 +211,7 @@ public sealed class EmptyResultTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -214,17 +220,18 @@ public sealed class EmptyResultTests
     [Fact]
     public void WhereMatchingNothingWithGroupByReturnsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -236,8 +243,8 @@ public sealed class EmptyResultTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -252,8 +259,8 @@ public sealed class EmptyResultTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("no-such-status"))
@@ -264,8 +271,8 @@ public sealed class EmptyResultTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -275,7 +282,7 @@ public sealed class EmptyResultTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -284,17 +291,18 @@ public sealed class EmptyResultTests
     [Fact]
     public void HavingFilteringEveryGroupReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -305,8 +313,8 @@ public sealed class EmptyResultTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -319,8 +327,8 @@ public sealed class EmptyResultTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -335,7 +343,7 @@ public sealed class EmptyResultTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.ArrayScalars;
@@ -29,7 +32,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField("schema_with_foreign_keys.orders", "order_id")
                 )
             )
         );
@@ -41,8 +44,8 @@ public sealed class EachMixedFamilyJoinedComboTests
             new ArrayReturning(
                 new StringArrayReturning(
                     new StringField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Name
+                        "schema_with_foreign_keys.users",
+                        "user_name"
                     )
                 )
             )
@@ -53,18 +56,18 @@ public sealed class EachMixedFamilyJoinedComboTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         ),
                         new UuidArrayReturning(
-                            new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                            new UuidField("schema_with_foreign_keys.users", "user_id")
                         )
                     )
                 )
@@ -80,14 +83,14 @@ public sealed class EachMixedFamilyJoinedComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         ),
                     ]
@@ -101,10 +104,13 @@ public sealed class EachMixedFamilyJoinedComboTests
     [Fact]
     public void EachGreaterThanOfSummedOrderTotalAndUserAgeAcrossJoinFiltersRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -123,15 +129,15 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                 {
-                    UserRow user = db.UserRows.Single(u => u.UserId == o.OrderUserId);
+                    UserRecord user = userRows.Single(u => u.UserId == o.OrderUserId);
                     return o.OrderTotal + user.UserAge > 120;
                 })
                 .Select(o => o.OrderId)
@@ -141,12 +147,12 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid("order_id")!.Value)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
+        Assert.True(expected.Length < orderRows.Count);
         Assert.Equal(expected, actual);
     }
 
@@ -156,10 +162,13 @@ public sealed class EachMixedFamilyJoinedComboTests
     [Fact]
     public void EachAndOfCrossEntityArithmeticComparisonAndOwnSideStringEquality()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -174,14 +183,14 @@ public sealed class EachMixedFamilyJoinedComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Users.Entity,
-                                                            SampleDatabase.Users.Age
+                                                            "schema_with_foreign_keys.users",
+                                                            "user_age"
                                                         )
                                                     ),
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            "schema_with_foreign_keys.orders",
+                                                            "order_total"
                                                         )
                                                     ),
                                                 ]
@@ -197,8 +206,8 @@ public sealed class EachMixedFamilyJoinedComboTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            "schema_with_foreign_keys.orders",
+                                            "order_status"
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -216,15 +225,15 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                 {
-                    UserRow user = db.UserRows.Single(u => u.UserId == o.OrderUserId);
+                    UserRecord user = userRows.Single(u => u.UserId == o.OrderUserId);
                     return user.UserAge - o.OrderTotal > -100 && o.OrderStatus == "shipped";
                 })
                 .Select(o => o.OrderId)
@@ -234,12 +243,12 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid("order_id")!.Value)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
+        Assert.True(expected.Length < orderRows.Count);
         Assert.Equal(expected, actual);
     }
 
@@ -248,10 +257,13 @@ public sealed class EachMixedFamilyJoinedComboTests
     [Fact]
     public void EachOrOfJoinedBooleanEqualityAndCrossEntityDateDiffComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -261,8 +273,8 @@ public sealed class EachMixedFamilyJoinedComboTests
                                 new EachBooleanEquality(
                                     new BooleanArrayReturning(
                                         new BooleanField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Active
+                                            "schema_with_foreign_keys.users",
+                                            "user_active"
                                         )
                                     ),
                                     new BooleanReturning(new BooleanScalar(false))
@@ -277,14 +289,14 @@ public sealed class EachMixedFamilyJoinedComboTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.PlacedOn
+                                                    "schema_with_foreign_keys.orders",
+                                                    "placed_on"
                                                 )
                                             ),
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.SignupDate
+                                                    "schema_with_foreign_keys.users",
+                                                    "signup_date"
                                                 )
                                             )
                                         )
@@ -304,15 +316,15 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                 {
-                    UserRow user = db.UserRows.Single(u => u.UserId == o.OrderUserId);
+                    UserRecord user = userRows.Single(u => u.UserId == o.OrderUserId);
                     int gap = o.PlacedOn.DayNumber - user.SignupDate.DayNumber;
                     return !user.UserActive || gap > 1500;
                 })
@@ -323,12 +335,12 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid("order_id")!.Value)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
+        Assert.True(expected.Length < orderRows.Count);
         Assert.Equal(expected, actual);
     }
 
@@ -340,10 +352,13 @@ public sealed class EachMixedFamilyJoinedComboTests
     [Fact]
     public void FourLevelTreeOverJoinedColumnsMixingCrossEntityArithmeticAndBooleanOps()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -356,8 +371,8 @@ public sealed class EachMixedFamilyJoinedComboTests
                                             new EachBooleanEquality(
                                                 new BooleanArrayReturning(
                                                     new BooleanField(
-                                                        SampleDatabase.Users.Entity,
-                                                        SampleDatabase.Users.Active
+                                                        "schema_with_foreign_keys.users",
+                                                        "user_active"
                                                     )
                                                 ),
                                                 new BooleanReturning(
@@ -387,8 +402,8 @@ public sealed class EachMixedFamilyJoinedComboTests
                                         new EachStringEquality(
                                             new StringArrayReturning(
                                                 new StringField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.Status
+                                                    "schema_with_foreign_keys.orders",
+                                                    "order_status"
                                                 )
                                             ),
                                             new StringReturning(
@@ -410,15 +425,15 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                 {
-                    UserRow user = db.UserRows.Single(u => u.UserId == o.OrderUserId);
+                    UserRecord user = userRows.Single(u => u.UserId == o.OrderUserId);
                     bool orCondition =
                         !user.UserActive || o.OrderTotal + user.UserAge > 300;
                     return orCondition && o.OrderStatus != "cancelled";
@@ -430,12 +445,12 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid("order_id")!.Value)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
+        Assert.True(expected.Length < orderRows.Count);
         Assert.Equal(expected, actual);
     }
 
@@ -447,24 +462,27 @@ public sealed class EachMixedFamilyJoinedComboTests
     [Fact]
     public void EachLeftJoinWithCrossEntityArithmeticExcludesUnmatchedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Join usersToOrders = new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -473,7 +491,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -485,14 +503,14 @@ public sealed class EachMixedFamilyJoinedComboTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Age
+                                                "schema_with_foreign_keys.users",
+                                                "user_age"
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                     ]
@@ -511,14 +529,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .GroupJoin(
-                    db.OrderRows,
+                    orderRows,
                     user => user.UserId,
                     order => order.OrderUserId,
                     (user, orders) => (user, orders)
@@ -529,7 +547,7 @@ public sealed class EachMixedFamilyJoinedComboTests
                 .OrderBy(name => name),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name).OrderBy(n => n)];
+        string?[] actual = [.. result.Column("user_name").OrderBy(n => n)];
 
         Assert.NotEmpty(expected);
         // Eve and Fay place no orders; their NULL total must never
@@ -546,10 +564,13 @@ public sealed class EachMixedFamilyJoinedComboTests
     [Fact]
     public void ThreeOperandShapesCombineOverJoinedColumnsInOnePredicate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -559,8 +580,8 @@ public sealed class EachMixedFamilyJoinedComboTests
                                 new EachBooleanEquality(
                                     new BooleanArrayReturning(
                                         new BooleanField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Active
+                                            "schema_with_foreign_keys.users",
+                                            "user_active"
                                         )
                                     ),
                                     new BooleanReturning(new BooleanScalar(true))
@@ -589,15 +610,15 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                 {
-                    UserRow user = db.UserRows.Single(u => u.UserId == o.OrderUserId);
+                    UserRecord user = userRows.Single(u => u.UserId == o.OrderUserId);
                     return user.UserActive && o.OrderTotal + user.UserAge > 100;
                 })
                 .Select(o => o.OrderId)
@@ -607,12 +628,12 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid("order_id")!.Value)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
+        Assert.True(expected.Length < orderRows.Count);
         Assert.Equal(expected, actual);
     }
 }

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -15,17 +18,19 @@ public sealed class OrderByTests
     [Fact]
     public void OrderByNumberAscendingSortsRowsLowToHigh()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -39,8 +44,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Asc
@@ -50,31 +55,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.OrderBy(order => order.OrderTotal)
+            orderRows.OrderBy(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total))]
+            [.. result.Rows.Select(row => row.Double("order_total"))]
         );
     }
 
     [Fact]
     public void OrderByNumberDescendingSortsRowsHighToLow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -88,8 +95,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Desc
@@ -99,31 +106,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.OrderByDescending(order => order.OrderTotal)
+            orderRows.OrderByDescending(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total))]
+            [.. result.Rows.Select(row => row.Double("order_total"))]
         );
     }
 
     [Fact]
     public void OrderByStringAscendingSortsRowsAlphabetically()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -137,8 +146,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -148,31 +157,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.OrderBy(user => user.UserName)
+            userRows.OrderBy(user => user.UserName)
                 .Select(user => user.UserName)
                 .ToArray(),
-            result.Column(SampleDatabase.Users.Name).ToArray()
+            result.Column("user_name").ToArray()
         );
     }
 
     [Fact]
     public void OrderByDateDescendingSortsRowsLatestFirst()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.SignupDate
+                                "schema_with_foreign_keys.users",
+                                "signup_date"
                             )
                         )
                     )
@@ -186,8 +197,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new DateField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.SignupDate
+                            "schema_with_foreign_keys.users",
+                            "signup_date"
                         )
                     ),
                     SortDirection.Desc
@@ -197,31 +208,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.OrderByDescending(user => user.SignupDate)
+            userRows.OrderByDescending(user => user.SignupDate)
                 .Select(user => (DateOnly?)user.SignupDate)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Date(SampleDatabase.Users.SignupDate))]
+            [.. result.Rows.Select(row => row.Date("signup_date"))]
         );
     }
 
     [Fact]
     public void OrderByDateTimeAscendingSortsRowsEarliestFirst()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                "schema_with_foreign_keys.users",
+                                "last_login"
                             )
                         )
                     )
@@ -235,8 +248,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new DateTimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.LastLogin
+                            "schema_with_foreign_keys.users",
+                            "last_login"
                         )
                     ),
                     SortDirection.Asc
@@ -246,31 +259,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.OrderBy(user => user.LastLogin)
+            userRows.OrderBy(user => user.LastLogin)
                 .Select(user => (DateTime?)user.LastLogin)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.DateTime(SampleDatabase.Users.LastLogin))]
+            [.. result.Rows.Select(row => row.DateTime("last_login"))]
         );
     }
 
     [Fact]
     public void OrderByTimeAscendingSortsRowsEarliestFirst()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         )
                     )
@@ -284,8 +299,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new TimeField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.ShiftStart
+                            "schema_with_foreign_keys.users",
+                            "shift_start"
                         )
                     ),
                     SortDirection.Asc
@@ -295,31 +310,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.OrderBy(user => user.ShiftStart)
+            userRows.OrderBy(user => user.ShiftStart)
                 .Select(user => (TimeOnly?)user.ShiftStart)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Time(SampleDatabase.Users.ShiftStart))]
+            [.. result.Rows.Select(row => row.Time("shift_start"))]
         );
     }
 
     [Fact]
     public void OrderByUuidAscendingMatchesGuidComparerOrdering()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -333,8 +350,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new UuidField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Id
+                            "schema_with_foreign_keys.users",
+                            "user_id"
                         )
                     ),
                     SortDirection.Asc
@@ -344,31 +361,33 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.OrderBy(user => user.UserId)
+            userRows.OrderBy(user => user.UserId)
                 .Select(user => (Guid?)user.UserId)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id))]
+            [.. result.Rows.Select(row => row.Uuid("user_id"))]
         );
     }
 
     [Fact]
     public void OrderByTwoKeysAppliesStableSecondaryOrdering()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -382,8 +401,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            "schema_with_foreign_keys.users",
+                            "user_age"
                         )
                     ),
                     SortDirection.Asc
@@ -391,8 +410,8 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            "schema_with_foreign_keys.users",
+                            "user_name"
                         )
                     ),
                     SortDirection.Asc
@@ -402,15 +421,15 @@ public sealed class OrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.OrderBy(user => user.UserAge)
+            userRows.OrderBy(user => user.UserAge)
                 .ThenBy(user => user.UserName)
                 .Select(user => user.UserName)
                 .ToArray(),
-            result.Column(SampleDatabase.Users.Name).ToArray()
+            result.Column("user_name").ToArray()
         );
     }
 }

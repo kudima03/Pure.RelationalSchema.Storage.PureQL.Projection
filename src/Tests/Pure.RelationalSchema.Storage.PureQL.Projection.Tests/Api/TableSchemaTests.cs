@@ -1,5 +1,7 @@
 using Pure.RelationalSchema.Abstractions.Column;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Date;
 using PureQL.CSharp.Model.Aggregates.DateTime;
@@ -23,17 +25,18 @@ public sealed class TableSchemaTests
     [Fact]
     public void TableSchemaColumnsFollowTheAliasedSelectExpressions()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     ),
@@ -43,8 +46,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     ),
@@ -54,8 +57,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     ),
@@ -64,7 +67,7 @@ public sealed class TableSchemaTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
@@ -81,10 +84,11 @@ public sealed class TableSchemaTests
     [Fact]
     public void TableSchemaColumnForAggregateFollowsAliasAndType()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -93,8 +97,8 @@ public sealed class TableSchemaTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -110,8 +114,8 @@ public sealed class TableSchemaTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            "schema_with_foreign_keys.orders",
+                                            "order_status"
                                         )
                                     )
                                 )
@@ -127,8 +131,8 @@ public sealed class TableSchemaTests
                                 new MaxDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_on"
                                         )
                                     )
                                 )
@@ -144,8 +148,8 @@ public sealed class TableSchemaTests
                                 new MinDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedAt
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_at"
                                         )
                                     )
                                 )
@@ -161,8 +165,8 @@ public sealed class TableSchemaTests
                                 new MaxTime(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.ShiftStart
+                                            "schema_with_foreign_keys.users",
+                                            "shift_start"
                                         )
                                     )
                                 )
@@ -176,20 +180,20 @@ public sealed class TableSchemaTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -203,7 +207,7 @@ public sealed class TableSchemaTests
             pagination: null
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
@@ -220,17 +224,18 @@ public sealed class TableSchemaTests
     [Fact]
     public void TableSchemaWithoutAliasesFallsBackToFieldNames()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     )
@@ -239,8 +244,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -248,12 +253,12 @@ public sealed class TableSchemaTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
         Assert.Equal(
-            [SampleDatabase.Orders.Id, SampleDatabase.Orders.Status],
+            ["order_id", "order_status"],
             [.. columns.Select(column => column.Name.TextValue)]
         );
 

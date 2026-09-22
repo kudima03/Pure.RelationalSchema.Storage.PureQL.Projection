@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -20,20 +23,20 @@ public sealed class OuterJoinAggregationTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -45,10 +48,12 @@ public sealed class OuterJoinAggregationTests
     [Fact]
     public void CountOverJoinedColumnAfterLeftJoinCountsOnlyMatchedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -57,8 +62,8 @@ public sealed class OuterJoinAggregationTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -77,29 +82,32 @@ public sealed class OuterJoinAggregationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // Every order matches a user; the padded row of the orderless user
         // must not contribute to the count.
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("orderCount"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("orderCount"));
     }
 
     [Fact]
     public void LeftJoinGroupByUserCountsZeroForUnmatchedUsers()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -111,8 +119,8 @@ public sealed class OuterJoinAggregationTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -127,8 +135,8 @@ public sealed class OuterJoinAggregationTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Id
+                        "schema_with_foreign_keys.users",
+                        "user_id"
                     )
                 ),
             ],
@@ -138,17 +146,17 @@ public sealed class OuterJoinAggregationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.UserRows.ToDictionary(
+        Dictionary<Guid, double> expected = userRows.ToDictionary(
             user => user.UserId,
             user => (double)
-                db.OrderRows.Count(order => order.OrderUserId == user.UserId)
+                orderRows.Count(order => order.OrderUserId == user.UserId)
         );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Users.Id)!.Value,
+            row => row.Uuid("user_id")!.Value,
             row => row.Double("orderCount")!.Value
         );
 
@@ -158,10 +166,12 @@ public sealed class OuterJoinAggregationTests
     [Fact]
     public void SumOverJoinedColumnAfterLeftJoinIgnoresPaddedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -170,8 +180,8 @@ public sealed class OuterJoinAggregationTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -190,12 +200,12 @@ public sealed class OuterJoinAggregationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
         Assert.Equal(
-            db.OrderRows.Sum(order => order.OrderTotal),
+            orderRows.Sum(order => order.OrderTotal),
             result.Row(0).Double("totalSum")
         );
     }

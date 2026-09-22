@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -31,28 +34,28 @@ public sealed class JoinPipelineFullStackTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             UsersOrdersCondition()
         );
     }
 
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, SampleDatabase.Orders.Entity, UsersOrdersCondition());
+        return new Join(JoinType.Left, "schema_with_foreign_keys.orders", UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            SampleDatabase.Users.Entity,
+            "schema_with_foreign_keys.users",
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, SampleDatabase.Users.Entity, OrdersUsersCondition());
+        return new Join(JoinType.Full, "schema_with_foreign_keys.users", OrdersUsersCondition());
     }
 
     private static BooleanArrayReturning UsersOrdersCondition()
@@ -61,12 +64,12 @@ public sealed class JoinPipelineFullStackTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField("schema_with_foreign_keys.users", "user_id")
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            "schema_with_foreign_keys.orders",
+                            "order_user_id"
                         )
                     )
                 )
@@ -81,12 +84,12 @@ public sealed class JoinPipelineFullStackTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            "schema_with_foreign_keys.orders",
+                            "order_user_id"
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField("schema_with_foreign_keys.users", "user_id")
                     )
                 )
             )
@@ -100,8 +103,8 @@ public sealed class JoinPipelineFullStackTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            "schema_with_foreign_keys.users",
+                            "user_active"
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -119,8 +122,8 @@ public sealed class JoinPipelineFullStackTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Id
+                                    "schema_with_foreign_keys.orders",
+                                    "order_id"
                                 )
                             )
                         )
@@ -142,8 +145,8 @@ public sealed class JoinPipelineFullStackTests
                             new SumNumber(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Total
+                                        "schema_with_foreign_keys.orders",
+                                        "order_total"
                                     )
                                 )
                             )
@@ -168,14 +171,14 @@ public sealed class JoinPipelineFullStackTests
             [join],
             [
                 new Field(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField("schema_with_foreign_keys.users", "user_id")
                 ),
             ],
             CountAtLeastOne(),
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "orderCount")
+                        new NumberField("schema_with_foreign_keys.users", "orderCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -190,14 +193,17 @@ public sealed class JoinPipelineFullStackTests
     // and Fay places none - Fay's zero-order group is dropped by HAVING.
     // Distinct group counts, sorted desc, are therefore [2, 1]; skipping
     // the first (2) and taking up to 5 leaves exactly [1].
-    private static double[] ExpectedDistinctOrderCountsSkippingFirst(SampleDatabase db)
+    private static double[] ExpectedDistinctOrderCountsSkippingFirst(
+        IReadOnlyList<UserRecord> userRows,
+        IReadOnlyList<OrderRecord> orderRows
+    )
     {
         return
         [
-            .. db.UserRows
+            .. userRows
                 .Where(user => user.UserActive)
                 .Select(user =>
-                    (double)db.OrderRows.Count(order => order.OrderUserId == user.UserId)
+                    (double)orderRows.Count(order => order.OrderUserId == user.UserId)
                 )
                 .Where(count => count >= 1)
                 .Distinct()
@@ -210,18 +216,21 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void InnerJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersInnerJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -231,18 +240,21 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void LeftJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             UsersToOrdersLeftJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -252,18 +264,21 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void RightJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersRightJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -273,18 +288,21 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void FullJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             OrdersToUsersFullJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -300,24 +318,27 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void CrossSchemaLeftJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Join usersToLoginsLeftJoin = new Join(
             JoinType.Left,
-            SampleDatabase.Logins.Entity,
+            "audit.logins",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Logins.Entity,
-                                SampleDatabase.Logins.UserId
+                                "audit.logins",
+                                "login_user_id"
                             )
                         )
                     )
@@ -326,7 +347,7 @@ public sealed class JoinPipelineFullStackTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -335,8 +356,8 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            "audit.logins",
+                                            "login_id"
                                         )
                                     )
                                 )
@@ -350,7 +371,7 @@ public sealed class JoinPipelineFullStackTests
             [usersToLoginsLeftJoin],
             [
                 new Field(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField("schema_with_foreign_keys.users", "user_id")
                 ),
             ],
             new BooleanReturning(
@@ -362,8 +383,8 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            "audit.logins",
+                                            "login_id"
                                         )
                                     )
                                 )
@@ -376,7 +397,7 @@ public sealed class JoinPipelineFullStackTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "loginCount")
+                        new NumberField("schema_with_foreign_keys.users", "loginCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -386,14 +407,14 @@ public sealed class JoinPipelineFullStackTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Select(user =>
-                    (double)db.LoginRows.Count(login => login.LoginUserId == user.UserId)
+                    (double)loginRows.Count(login => login.LoginUserId == user.UserId)
                 )
                 .Where(count => count >= 1)
                 .Distinct()
@@ -413,24 +434,27 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void CrossSchemaInnerJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Join usersToLoginsInnerJoin = new Join(
             JoinType.Inner,
-            SampleDatabase.Logins.Entity,
+            "audit.logins",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Logins.Entity,
-                                SampleDatabase.Logins.UserId
+                                "audit.logins",
+                                "login_user_id"
                             )
                         )
                     )
@@ -439,7 +463,7 @@ public sealed class JoinPipelineFullStackTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -448,8 +472,8 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            "audit.logins",
+                                            "login_id"
                                         )
                                     )
                                 )
@@ -463,14 +487,14 @@ public sealed class JoinPipelineFullStackTests
             [usersToLoginsInnerJoin],
             [
                 new Field(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField("schema_with_foreign_keys.users", "user_id")
                 ),
             ],
             having: null,
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "loginCount")
+                        new NumberField("schema_with_foreign_keys.users", "loginCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -480,14 +504,14 @@ public sealed class JoinPipelineFullStackTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Select(user =>
-                    (double)db.LoginRows.Count(login => login.LoginUserId == user.UserId)
+                    (double)loginRows.Count(login => login.LoginUserId == user.UserId)
                 )
                 .Where(count => count >= 1)
                 .Distinct()

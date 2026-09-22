@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -19,17 +22,19 @@ public sealed class CombinedClauseTests
     [Fact]
     public void WhereThenOrderByThenPaginateReturnsCorrectWindow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -41,8 +46,8 @@ public sealed class CombinedClauseTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberReturning(new NumberScalar(50))
@@ -56,8 +61,8 @@ public sealed class CombinedClauseTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Asc
@@ -67,12 +72,12 @@ public sealed class CombinedClauseTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double?[] expected =
         [
-            .. db.OrderRows.Where(order => order.OrderTotal > 50)
+            .. orderRows.Where(order => order.OrderTotal > 50)
                 .OrderBy(order => order.OrderTotal)
                 .Skip(1)
                 .Take(2)
@@ -81,7 +86,7 @@ public sealed class CombinedClauseTests
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total)),
+            .. result.Rows.Select(row => row.Double("order_total")),
         ];
 
         Assert.Equal(expected, actual);
@@ -90,17 +95,19 @@ public sealed class CombinedClauseTests
     [Fact]
     public void WhereThenGroupByYieldsGroupsOfTheFilteredRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -113,8 +120,8 @@ public sealed class CombinedClauseTests
                             new EachStringEquality(
                                 new StringArrayReturning(
                                     new StringField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Status
+                                        "schema_with_foreign_keys.orders",
+                                        "order_status"
                                     )
                                 ),
                                 new StringReturning(new StringScalar("cancelled"))
@@ -124,17 +131,24 @@ public sealed class CombinedClauseTests
                 )
             ),
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .Where(order => order.OrderStatus != "cancelled")
             .Select(order => order.OrderUserId)
             .Distinct()
@@ -146,17 +160,19 @@ public sealed class CombinedClauseTests
     [Fact]
     public void JoinThenWhereThenOrderByThenPaginateReturnsCorrectWindow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -168,8 +184,8 @@ public sealed class CombinedClauseTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         ),
                         new NumberReturning(new NumberScalar(75))
@@ -179,20 +195,20 @@ public sealed class CombinedClauseTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -206,8 +222,8 @@ public sealed class CombinedClauseTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            "schema_with_foreign_keys.orders",
+                            "order_total"
                         )
                     ),
                     SortDirection.Desc
@@ -217,12 +233,12 @@ public sealed class CombinedClauseTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double?[] expected =
         [
-            .. db.OrderRows.Where(order => order.OrderTotal > 75)
+            .. orderRows.Where(order => order.OrderTotal > 75)
                 .OrderByDescending(order => order.OrderTotal)
                 .Take(2)
                 .Select(order => (double?)order.OrderTotal),
@@ -230,7 +246,7 @@ public sealed class CombinedClauseTests
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total)),
+            .. result.Rows.Select(row => row.Double("order_total")),
         ];
 
         Assert.Equal(expected, actual);

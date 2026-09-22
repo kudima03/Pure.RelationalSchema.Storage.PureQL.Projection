@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Date;
 using PureQL.CSharp.Model.Aggregates.DateTime;
@@ -27,7 +30,7 @@ public sealed class HavingConditionMatrixTests
     private static NumberArrayReturning Totals()
     {
         return new NumberArrayReturning(
-            new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+            new NumberField("schema_with_foreign_keys.orders", "order_total")
         );
     }
 
@@ -49,7 +52,7 @@ public sealed class HavingConditionMatrixTests
     private static DateArrayReturning PlacedOns()
     {
         return new DateArrayReturning(
-            new DateField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.PlacedOn)
+            new DateField("schema_with_foreign_keys.orders", "placed_on")
         );
     }
 
@@ -62,8 +65,8 @@ public sealed class HavingConditionMatrixTests
     {
         return new DateTimeArrayReturning(
             new DateTimeField(
-                SampleDatabase.Orders.Entity,
-                SampleDatabase.Orders.PlacedAt
+                "schema_with_foreign_keys.orders",
+                "placed_at"
             )
         );
     }
@@ -78,7 +81,7 @@ public sealed class HavingConditionMatrixTests
     private static StringArrayReturning Statuses()
     {
         return new StringArrayReturning(
-            new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)
+            new StringField("schema_with_foreign_keys.orders", "order_status")
         );
     }
 
@@ -90,7 +93,7 @@ public sealed class HavingConditionMatrixTests
     private static TimeArrayReturning ShiftStarts()
     {
         return new TimeArrayReturning(
-            new TimeField(SampleDatabase.Users.Entity, SampleDatabase.Users.ShiftStart)
+            new TimeField("schema_with_foreign_keys.users", "shift_start")
         );
     }
 
@@ -102,14 +105,14 @@ public sealed class HavingConditionMatrixTests
     private static Query OrdersGroupedByUser(BooleanReturning having)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -120,8 +123,8 @@ public sealed class HavingConditionMatrixTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -134,14 +137,14 @@ public sealed class HavingConditionMatrixTests
     private static Query UsersGroupedByActive(BooleanReturning having)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -152,8 +155,8 @@ public sealed class HavingConditionMatrixTests
             [
                 new Field(
                     new BooleanField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Active
+                        "schema_with_foreign_keys.users",
+                        "user_active"
                     )
                 ),
             ],
@@ -169,8 +172,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingSumGreaterThanConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -184,12 +188,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Sum(order => order.OrderTotal) > 150)
                 .Select(group => group.Key),
@@ -198,14 +202,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -214,8 +218,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingSumGreaterThanOrEqualConstantKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -229,10 +234,10 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Select(order => order.OrderUserId).Distinct().Count();
+        int expected = orderRows.Select(order => order.OrderUserId).Distinct().Count();
 
         Assert.Equal(expected, result.Count);
     }
@@ -241,8 +246,8 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingSumLessThanConstantKeepsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -256,7 +261,7 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -266,8 +271,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingSumLessThanOrEqualConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -281,12 +287,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Sum(order => order.OrderTotal) <= 150.50)
                 .Select(group => group.Key),
@@ -295,14 +301,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -313,8 +319,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingMaxTotalGreaterThanMinTotalKeepsMultiOrderGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -328,12 +335,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     group.Max(order => order.OrderTotal)
@@ -345,14 +352,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -361,8 +368,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingMaxTotalGreaterThanOrEqualMinTotalKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -376,10 +384,10 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Select(order => order.OrderUserId).Distinct().Count();
+        int expected = orderRows.Select(order => order.OrderUserId).Distinct().Count();
 
         Assert.Equal(expected, result.Count);
     }
@@ -388,8 +396,8 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingMaxTotalLessThanMinTotalKeepsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -403,7 +411,7 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -413,8 +421,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingNumberComparison")]
     public void HavingMaxTotalLessThanOrEqualMinTotalKeepsSingleOrderGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -428,12 +437,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     group.Max(order => order.OrderTotal)
@@ -445,14 +454,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -463,7 +472,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateComparison")]
     public void HavingMaxPlacedOnGreaterThanConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = OrdersGroupedByUser(
@@ -479,12 +490,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedOn) > threshold)
                 .Select(group => group.Key),
@@ -493,14 +504,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -509,7 +520,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateComparison")]
     public void HavingMaxPlacedOnGreaterThanOrEqualConstantKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 1);
 
         Query query = OrdersGroupedByUser(
@@ -525,10 +538,10 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Select(order => order.OrderUserId).Distinct().Count();
+        int expected = orderRows.Select(order => order.OrderUserId).Distinct().Count();
 
         Assert.Equal(expected, result.Count);
     }
@@ -537,7 +550,8 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateComparison")]
     public void HavingMaxPlacedOnLessThanConstantKeepsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         DateOnly threshold = new DateOnly(2024, 6, 1);
 
         Query query = OrdersGroupedByUser(
@@ -553,7 +567,7 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -563,7 +577,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateComparison")]
     public void HavingMaxPlacedOnLessThanOrEqualConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = OrdersGroupedByUser(
@@ -579,12 +595,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedOn) <= threshold)
                 .Select(group => group.Key),
@@ -593,14 +609,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -611,7 +627,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateTimeComparison")]
     public void HavingMaxPlacedAtGreaterThanConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 3, 12, 0, 0);
 
         Query query = OrdersGroupedByUser(
@@ -627,12 +645,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedAt) > threshold)
                 .Select(group => group.Key),
@@ -641,14 +659,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -657,7 +675,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateTimeComparison")]
     public void HavingMaxPlacedAtGreaterThanOrEqualConstantKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 1, 0, 0, 0);
 
         Query query = OrdersGroupedByUser(
@@ -673,10 +693,10 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Select(order => order.OrderUserId).Distinct().Count();
+        int expected = orderRows.Select(order => order.OrderUserId).Distinct().Count();
 
         Assert.Equal(expected, result.Count);
     }
@@ -685,7 +705,8 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateTimeComparison")]
     public void HavingMaxPlacedAtLessThanConstantKeepsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         DateTime threshold = new DateTime(2024, 6, 1, 0, 0, 0);
 
         Query query = OrdersGroupedByUser(
@@ -701,7 +722,7 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -711,7 +732,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingDateTimeComparison")]
     public void HavingMaxPlacedAtLessThanOrEqualConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 3, 12, 0, 0);
 
         Query query = OrdersGroupedByUser(
@@ -727,12 +750,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedAt) <= threshold)
                 .Select(group => group.Key),
@@ -741,14 +764,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -759,7 +782,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingTimeComparison")]
     public void HavingMaxShiftStartGreaterThanConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(10, 0, 0);
 
         Query query = UsersGroupedByActive(
@@ -775,12 +800,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<bool> expected =
         [
-            .. db.UserRows
+            .. userRows
                 .GroupBy(user => user.UserActive)
                 .Where(group => group.Max(user => user.ShiftStart) > threshold)
                 .Select(group => group.Key),
@@ -789,13 +814,13 @@ public sealed class HavingConditionMatrixTests
         HashSet<bool> actual =
         [
             .. result.Rows.Select(row =>
-                row.Bool(SampleDatabase.Users.Active)!.Value
+                row.Bool("user_active")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
-            expected.Count < db.UserRows.Select(user => user.UserActive).Distinct().Count()
+            expected.Count < userRows.Select(user => user.UserActive).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -804,7 +829,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingTimeComparison")]
     public void HavingMaxShiftStartGreaterThanOrEqualConstantKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
         Query query = UsersGroupedByActive(
@@ -820,10 +847,10 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.UserRows.Select(user => user.UserActive).Distinct().Count();
+        int expected = userRows.Select(user => user.UserActive).Distinct().Count();
 
         Assert.Equal(expected, result.Count);
     }
@@ -832,7 +859,8 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingTimeComparison")]
     public void HavingMaxShiftStartLessThanConstantKeepsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         TimeOnly threshold = new TimeOnly(8, 0, 0);
 
         Query query = UsersGroupedByActive(
@@ -848,7 +876,7 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -858,7 +886,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingTimeComparison")]
     public void HavingMaxShiftStartLessThanOrEqualConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(10, 0, 0);
 
         Query query = UsersGroupedByActive(
@@ -874,12 +904,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<bool> expected =
         [
-            .. db.UserRows
+            .. userRows
                 .GroupBy(user => user.UserActive)
                 .Where(group => group.Max(user => user.ShiftStart) <= threshold)
                 .Select(group => group.Key),
@@ -888,13 +918,13 @@ public sealed class HavingConditionMatrixTests
         HashSet<bool> actual =
         [
             .. result.Rows.Select(row =>
-                row.Bool(SampleDatabase.Users.Active)!.Value
+                row.Bool("user_active")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
-            expected.Count < db.UserRows.Select(user => user.UserActive).Distinct().Count()
+            expected.Count < userRows.Select(user => user.UserActive).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -905,8 +935,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingStringComparison")]
     public void HavingMinStatusGreaterThanConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -920,12 +951,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     string.CompareOrdinal(
@@ -939,14 +970,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -955,8 +986,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingStringComparison")]
     public void HavingMinStatusGreaterThanOrEqualConstantKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -970,10 +1002,10 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Select(order => order.OrderUserId).Distinct().Count();
+        int expected = orderRows.Select(order => order.OrderUserId).Distinct().Count();
 
         Assert.Equal(expected, result.Count);
     }
@@ -982,8 +1014,8 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingStringComparison")]
     public void HavingMinStatusLessThanConstantKeepsNoGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -997,7 +1029,7 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -1007,8 +1039,9 @@ public sealed class HavingConditionMatrixTests
     [Trait("Feature", "HavingStringComparison")]
     public void HavingMinStatusLessThanOrEqualConstantKeepsSomeGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -1022,12 +1055,12 @@ public sealed class HavingConditionMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     string.CompareOrdinal(
@@ -1041,14 +1074,14 @@ public sealed class HavingConditionMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid("order_user_id")!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }

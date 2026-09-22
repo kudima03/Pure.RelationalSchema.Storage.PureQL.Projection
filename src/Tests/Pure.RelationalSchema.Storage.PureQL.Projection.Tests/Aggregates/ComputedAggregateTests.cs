@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -25,20 +28,20 @@ public sealed class ComputedAggregateTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Products.Entity,
+            "schema_with_foreign_keys.products",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.ProductId
+                                "schema_with_foreign_keys.order_items",
+                                "item_product_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Id
+                                "schema_with_foreign_keys.products",
+                                "product_id"
                             )
                         )
                     )
@@ -51,20 +54,20 @@ public sealed class ComputedAggregateTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            "schema_with_foreign_keys.orders",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -81,14 +84,14 @@ public sealed class ComputedAggregateTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.Qty
+                                "schema_with_foreign_keys.order_items",
+                                "item_qty"
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Price
+                                "schema_with_foreign_keys.products",
+                                "product_price"
                             )
                         ),
                     ]
@@ -97,9 +100,12 @@ public sealed class ComputedAggregateTests
         );
     }
 
-    private static double PriceOf(SampleDatabase db, Guid productId)
+    private static double PriceOf(
+        IReadOnlyList<ProductRecord> productRows,
+        Guid productId
+    )
     {
-        return db.ProductRows
+        return productRows
             .Single(product => product.ProductId == productId)
             .ProductPrice;
     }
@@ -107,17 +113,20 @@ public sealed class ComputedAggregateTests
     [Fact]
     public void SumOfEachMultiplyProjectsPerGroupRevenue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.OrderItems.Entity),
+            new FromExpression("schema_with_foreign_keys.order_items"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                "schema_with_foreign_keys.order_items",
+                                "item_order_id"
                             )
                         )
                     )
@@ -136,8 +145,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.OrderItems.Entity,
-                        SampleDatabase.OrderItems.OrderId
+                        "schema_with_foreign_keys.order_items",
+                        "item_order_id"
                     )
                 ),
             ],
@@ -147,18 +156,20 @@ public sealed class ComputedAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderItemRows
+        Dictionary<Guid, double> expected = orderItemRows
             .GroupBy(item => item.ItemOrderId)
             .ToDictionary(
                 group => group.Key,
-                group => group.Sum(item => item.ItemQty * PriceOf(db, item.ItemProductId))
+                group => group.Sum(item =>
+                    item.ItemQty * PriceOf(productRows, item.ItemProductId)
+                )
             );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.OrderItems.OrderId)!.Value,
+            row => row.Uuid("item_order_id")!.Value,
             row => row.Double("revenue")!.Value
         );
 
@@ -168,17 +179,20 @@ public sealed class ComputedAggregateTests
     [Fact]
     public void AverageOfEachMultiplyProjectsPerGroupMean()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.OrderItems.Entity),
+            new FromExpression("schema_with_foreign_keys.order_items"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                "schema_with_foreign_keys.order_items",
+                                "item_order_id"
                             )
                         )
                     )
@@ -197,8 +211,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.OrderItems.Entity,
-                        SampleDatabase.OrderItems.OrderId
+                        "schema_with_foreign_keys.order_items",
+                        "item_order_id"
                     )
                 ),
             ],
@@ -208,20 +222,20 @@ public sealed class ComputedAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderItemRows
+        Dictionary<Guid, double> expected = orderItemRows
             .GroupBy(item => item.ItemOrderId)
             .ToDictionary(
                 group => group.Key,
                 group => group.Average(item =>
-                    item.ItemQty * PriceOf(db, item.ItemProductId)
+                    item.ItemQty * PriceOf(productRows, item.ItemProductId)
                 )
             );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.OrderItems.OrderId)!.Value,
+            row => row.Uuid("item_order_id")!.Value,
             row => row.Double("meanLineValue")!.Value
         );
 
@@ -231,17 +245,20 @@ public sealed class ComputedAggregateTests
     [Fact]
     public void MaxOfEachDateDiffDaysProjectsPerGroupSpan()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                "schema_with_foreign_keys.users",
+                                "user_id"
                             )
                         )
                     )
@@ -255,14 +272,14 @@ public sealed class ComputedAggregateTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.PlacedOn
+                                                    "schema_with_foreign_keys.orders",
+                                                    "placed_on"
                                                 )
                                             ),
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.SignupDate
+                                                    "schema_with_foreign_keys.users",
+                                                    "signup_date"
                                                 )
                                             )
                                         )
@@ -279,8 +296,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Id
+                        "schema_with_foreign_keys.users",
+                        "user_id"
                     )
                 ),
             ],
@@ -290,12 +307,12 @@ public sealed class ComputedAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderRows
+        Dictionary<Guid, double> expected = orderRows
             .Join(
-                db.UserRows,
+                userRows,
                 order => order.OrderUserId,
                 user => user.UserId,
                 (order, user) => (user.UserId, Span: (double)(order.PlacedOn.DayNumber - user.SignupDate.DayNumber))
@@ -304,7 +321,7 @@ public sealed class ComputedAggregateTests
             .ToDictionary(group => group.Key, group => group.Max(pair => pair.Span));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Users.Id)!.Value,
+            row => row.Uuid("user_id")!.Value,
             row => row.Double("maxSpanDays")!.Value
         );
 
@@ -314,18 +331,20 @@ public sealed class ComputedAggregateTests
     [Fact]
     public void MinOfEachTimeDiffSecondsProjectsPerGroupValue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -339,8 +358,8 @@ public sealed class ComputedAggregateTests
                                         new EachTimeDiffSeconds(
                                             new TimeArrayReturning(
                                                 new TimeField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.ShiftStart
+                                                    "schema_with_foreign_keys.users",
+                                                    "shift_start"
                                                 )
                                             ),
                                             new TimeReturning(new TimeScalar(origin))
@@ -358,8 +377,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new BooleanField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Active
+                        "schema_with_foreign_keys.users",
+                        "user_active"
                     )
                 ),
             ],
@@ -369,10 +388,10 @@ public sealed class ComputedAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<bool, double> expected = db.UserRows
+        Dictionary<bool, double> expected = userRows
             .GroupBy(user => user.UserActive)
             .ToDictionary(
                 group => group.Key,
@@ -380,7 +399,7 @@ public sealed class ComputedAggregateTests
             );
 
         Dictionary<bool, double> actual = result.Rows.ToDictionary(
-            row => row.Bool(SampleDatabase.Users.Active)!.Value,
+            row => row.Bool("user_active")!.Value,
             row => row.Double("minShiftGapSeconds")!.Value
         );
 
@@ -390,17 +409,19 @@ public sealed class ComputedAggregateTests
     [Fact]
     public void CountOfEachArithmeticCountsGroupRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -416,8 +437,8 @@ public sealed class ComputedAggregateTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            "schema_with_foreign_keys.orders",
+                                                            "order_total"
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -439,8 +460,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
                     )
                 ),
             ],
@@ -450,15 +471,15 @@ public sealed class ComputedAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderRows
+        Dictionary<Guid, double> expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .ToDictionary(group => group.Key, group => (double)group.Count());
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid("order_user_id")!.Value,
             row => row.Double("rowCount")!.Value
         );
 

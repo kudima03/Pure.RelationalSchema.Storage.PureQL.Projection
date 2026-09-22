@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -16,17 +19,19 @@ public sealed class JoinCardinalityTests
     [Fact]
     public void InnerJoinFansEachUserOutOncePerOrder()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -36,20 +41,20 @@ public sealed class JoinCardinalityTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Orders.Entity,
+                    "schema_with_foreign_keys.orders",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 )
                             )
@@ -64,21 +69,21 @@ public sealed class JoinCardinalityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
             .. (
-                from user in db.UserRows
-                join order in db.OrderRows on user.UserId equals order.OrderUserId
+                from user in userRows
+                join order in orderRows on user.UserId equals order.OrderUserId
                 select user.UserName
             ).OrderBy(name => name),
         ];
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
         Assert.Equal(expected.Length, result.Count);
@@ -88,17 +93,19 @@ public sealed class JoinCardinalityTests
     [Fact]
     public void LeftJoinPreservesADoubleColumnForEveryUser()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         )
                     )
@@ -108,20 +115,20 @@ public sealed class JoinCardinalityTests
             [
                 new Join(
                     JoinType.Left,
-                    SampleDatabase.Orders.Entity,
+                    "schema_with_foreign_keys.orders",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        "schema_with_foreign_keys.orders",
+                                        "order_user_id"
                                     )
                                 )
                             )
@@ -136,17 +143,17 @@ public sealed class JoinCardinalityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows.SelectMany(user =>
+            .. userRows.SelectMany(user =>
                     Enumerable.Repeat(
                         user.UserAge,
                         Math.Max(
                             1,
-                            db.OrderRows.Count(order => order.OrderUserId == user.UserId)
+                            orderRows.Count(order => order.OrderUserId == user.UserId)
                         )
                     )
                 )
@@ -155,7 +162,7 @@ public sealed class JoinCardinalityTests
 
         double[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Users.Age)!.Value)
+            .. result.Rows.Select(row => row.Double("user_age")!.Value)
                 .OrderBy(age => age),
         ];
 

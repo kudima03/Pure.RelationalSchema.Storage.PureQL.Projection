@@ -1,4 +1,5 @@
-using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachArithmetics;
@@ -19,10 +20,11 @@ public sealed class EachExpressionSelectTests
     [Fact]
     public void BareEachMultiplyInSelectWithoutGroupByFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
@@ -32,14 +34,14 @@ public sealed class EachExpressionSelectTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Age
+                                                "schema_with_foreign_keys.users",
+                                                "user_age"
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.PrecisionValue
+                                                "schema_with_foreign_keys.users",
+                                                "user_precision_value"
                                             )
                                         ),
                                     ]
@@ -53,24 +55,25 @@ public sealed class EachExpressionSelectTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query).ToList()
+            new PureQLProjection(datasets, query).ToList()
         );
     }
 
     [Fact]
     public void BareEachSubtractInGroupBySelectFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -83,14 +86,14 @@ public sealed class EachExpressionSelectTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                     ]
@@ -106,8 +109,8 @@ public sealed class EachExpressionSelectTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        "schema_with_foreign_keys.orders",
+                        "order_status"
                     )
                 ),
             ],
@@ -117,7 +120,7 @@ public sealed class EachExpressionSelectTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query).ToList()
+            new PureQLProjection(datasets, query).ToList()
         );
     }
 }

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -19,20 +22,20 @@ public sealed class DistinctInteractionTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Products.Entity,
+            "schema_with_foreign_keys.products",
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.ProductId
+                                "schema_with_foreign_keys.order_items",
+                                "item_product_id"
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Id
+                                "schema_with_foreign_keys.products",
+                                "product_id"
                             )
                         )
                     )
@@ -44,17 +47,19 @@ public sealed class DistinctInteractionTests
     [Fact]
     public void DistinctOnMultiColumnProjectionDeduplicatesTuples()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                "schema_with_foreign_keys.users",
+                                "user_age"
                             )
                         )
                     )
@@ -63,8 +68,8 @@ public sealed class DistinctInteractionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                "schema_with_foreign_keys.users",
+                                "user_active"
                             )
                         )
                     )
@@ -80,12 +85,12 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (double, bool)[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Select(user => (user.UserAge, user.UserActive))
                 .Distinct()
                 .OrderBy(pair => pair.UserAge)
@@ -97,32 +102,34 @@ public sealed class DistinctInteractionTests
             .. result.Rows
                 .Select(row =>
                     (
-                        row.Double(SampleDatabase.Users.Age)!.Value,
-                        row.Bool(SampleDatabase.Users.Active)!.Value
+                        row.Double("user_age")!.Value,
+                        row.Bool("user_active")!.Value
                     )
                 )
                 .OrderBy(pair => pair.Item1)
                 .ThenBy(pair => pair.Item2),
         ];
 
-        Assert.True(expected.Length < db.UserRows.Count);
+        Assert.True(expected.Length < userRows.Count);
         Assert.Equal(expected, actual);
     }
 
     [Fact]
     public void DistinctCollapsesJoinFanOutDuplicates()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.OrderItems.Entity),
+            new FromExpression("schema_with_foreign_keys.order_items"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                "schema_with_foreign_keys.order_items",
+                                "item_order_id"
                             )
                         )
                     )
@@ -138,12 +145,12 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderItemRows
+            .. orderItemRows
                 .Select(item => item.ItemOrderId)
                 .Distinct()
                 .OrderBy(id => id),
@@ -151,29 +158,31 @@ public sealed class DistinctInteractionTests
 
         Guid[] actual =
         [
-            .. result.Column(SampleDatabase.OrderItems.OrderId)
+            .. result.Column("item_order_id")
                 .Select(text => Guid.Parse(text!))
                 .OrderBy(id => id),
         ];
 
-        Assert.True(expected.Length < db.OrderItemRows.Count);
+        Assert.True(expected.Length < orderItemRows.Count);
         Assert.Equal(expected, actual);
     }
 
     [Fact]
     public void DistinctPreservesFirstOccurrenceOrderAfterOrderBy()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -187,8 +196,8 @@ public sealed class DistinctInteractionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Desc
@@ -199,18 +208,18 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order => order.OrderStatus)
                 .OrderByDescending(status => status, StringComparer.Ordinal)
                 .Distinct(),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Orders.Status)];
+        string?[] actual = [.. result.Column("order_status")];
 
         Assert.Equal(expected, actual);
     }
@@ -218,17 +227,19 @@ public sealed class DistinctInteractionTests
     [Fact]
     public void DistinctAppliesBeforePagination()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -242,8 +253,8 @@ public sealed class DistinctInteractionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            "schema_with_foreign_keys.orders",
+                            "order_status"
                         )
                     ),
                     SortDirection.Asc
@@ -254,19 +265,19 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order => order.OrderStatus)
                 .Distinct()
                 .OrderBy(status => status, StringComparer.Ordinal)
                 .Take(2),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Orders.Status)];
+        string?[] actual = [.. result.Column("order_status")];
 
         Assert.Equal(expected, actual);
     }
@@ -274,17 +285,19 @@ public sealed class DistinctInteractionTests
     [Fact]
     public void DistinctOnAliasedColumnDeduplicatesProjectedValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     ),
@@ -301,12 +314,12 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Contains("state", result.ColumnNames);
         Assert.Equal(
-            db.OrderRows.Select(order => order.OrderStatus).Distinct().Count(),
+            orderRows.Select(order => order.OrderStatus).Distinct().Count(),
             result.Count
         );
     }
@@ -314,17 +327,19 @@ public sealed class DistinctInteractionTests
     [Fact]
     public void DistinctOnDateColumnCollapsesDuplicateValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.SignupDate
+                                "schema_with_foreign_keys.users",
+                                "signup_date"
                             )
                         )
                     )
@@ -340,32 +355,34 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedDistinct = db.UserRows
+        int expectedDistinct = userRows
             .Select(user => user.SignupDate)
             .Distinct()
             .Count();
 
-        Assert.True(expectedDistinct < db.UserRows.Count);
+        Assert.True(expectedDistinct < userRows.Count);
         Assert.Equal(expectedDistinct, result.Count);
     }
 
     [Fact]
     public void DistinctOnNumberColumnCollapsesDuplicateValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                "schema_with_foreign_keys.orders",
+                                "order_total"
                             )
                         )
                     )
@@ -381,32 +398,34 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedDistinct = db.OrderRows
+        int expectedDistinct = orderRows
             .Select(order => order.OrderTotal)
             .Distinct()
             .Count();
 
-        Assert.True(expectedDistinct < db.OrderRows.Count);
+        Assert.True(expectedDistinct < orderRows.Count);
         Assert.Equal(expectedDistinct, result.Count);
     }
 
     [Fact]
     public void DistinctOnUuidColumnCollapsesDuplicateValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                "schema_with_foreign_keys.orders",
+                                "order_user_id"
                             )
                         )
                     )
@@ -422,32 +441,34 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedDistinct = db.OrderRows
+        int expectedDistinct = orderRows
             .Select(order => order.OrderUserId)
             .Distinct()
             .Count();
 
-        Assert.True(expectedDistinct < db.OrderRows.Count);
+        Assert.True(expectedDistinct < orderRows.Count);
         Assert.Equal(expectedDistinct, result.Count);
     }
 
     [Fact]
     public void DistinctOnTimeColumnCollapsesDuplicateValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         )
                     )
@@ -463,32 +484,34 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedDistinct = db.UserRows
+        int expectedDistinct = userRows
             .Select(user => user.ShiftStart)
             .Distinct()
             .Count();
 
-        Assert.True(expectedDistinct < db.UserRows.Count);
+        Assert.True(expectedDistinct < userRows.Count);
         Assert.Equal(expectedDistinct, result.Count);
     }
 
     [Fact]
     public void DistinctOnDateTimeColumnCollapsesDuplicateValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                "schema_with_foreign_keys.users",
+                                "last_login"
                             )
                         )
                     )
@@ -504,15 +527,15 @@ public sealed class DistinctInteractionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedDistinct = db.UserRows
+        int expectedDistinct = userRows
             .Select(user => user.LastLogin)
             .Distinct()
             .Count();
 
-        Assert.True(expectedDistinct < db.UserRows.Count);
+        Assert.True(expectedDistinct < userRows.Count);
         Assert.Equal(expectedDistinct, result.Count);
     }
 }

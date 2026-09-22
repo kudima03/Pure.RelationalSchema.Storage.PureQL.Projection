@@ -5,6 +5,9 @@ using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Cells;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
+using Pure.RelationalSchema.Storage.Samples.TableDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -28,6 +31,15 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 [Trait("Feature", "Negative")]
 public sealed class NegativePathTests
 {
+    // Names from the centralized Pure.RelationalSchema.Storage.Samples
+    // catalogue: SingleTableSchemaDataSet exposes the schema
+    // "single_table_schema" holding the table "single_column_table", whose
+    // single column "id" is a uuid.
+    private const string MissingTableSchema = "single_table_schema";
+    private const string MissingTableBaseEntity =
+        $"{MissingTableSchema}.single_column_table";
+    private const string MissingTableIdField = "id";
+
     // ===== Table/entity not present in the supplied datasets =====
 
     // EntityReferenceValidator only checks that every referenced entity
@@ -41,15 +53,22 @@ public sealed class NegativePathTests
     [Fact]
     public void FromEntityNotInSuppliedDatasetsThrowsInvalidOperationException()
     {
-        SampleDatabase db = new SampleDatabase();
+        // The stored rows are irrelevant here - the lookup fails before any
+        // cell is read - so this uses the minimal shape fixture rather than
+        // SchemaDataSetWithForeignKeys, which makes that independence
+        // explicit.
+        IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
         Query query = new Query(
-            new FromExpression("shop.nonexistent_table"),
+            new FromExpression($"{MissingTableSchema}.nonexistent_table"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("shop.nonexistent_table", "whatever")
+                            new StringField(
+                                $"{MissingTableSchema}.nonexistent_table",
+                                "whatever"
+                            )
                         )
                     )
                 ),
@@ -57,7 +76,7 @@ public sealed class NegativePathTests
         );
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection([dataset], query)
         );
 
         Assert.Contains(
@@ -75,17 +94,17 @@ public sealed class NegativePathTests
     [Fact]
     public void JoinEntityNotInSuppliedDatasetsThrowsInvalidOperationException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(MissingTableBaseEntity),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                MissingTableBaseEntity,
+                                MissingTableIdField
                             )
                         )
                     )
@@ -95,19 +114,19 @@ public sealed class NegativePathTests
             [
                 new Join(
                     JoinType.Inner,
-                    "shop.nonexistent_join_table",
+                    $"{MissingTableSchema}.nonexistent_join_table",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        MissingTableBaseEntity,
+                                        MissingTableIdField
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "shop.nonexistent_join_table",
+                                        $"{MissingTableSchema}.nonexistent_join_table",
                                         "whatever_id"
                                     )
                                 )
@@ -123,7 +142,7 @@ public sealed class NegativePathTests
         );
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection([dataset], query)
         );
 
         Assert.Contains(
@@ -143,16 +162,17 @@ public sealed class NegativePathTests
     [Fact]
     public void SelectFieldNotOnResolvedTableThrowsKeyNotFoundException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
+                                "schema_with_foreign_keys.users",
                                 "user_nickname"
                             )
                         )
@@ -162,7 +182,7 @@ public sealed class NegativePathTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains("user_nickname", exception.Message, System.StringComparison.Ordinal);
@@ -176,17 +196,18 @@ public sealed class NegativePathTests
     [Fact]
     public void GroupBySelectFieldNotOnResolvedTableThrowsKeyNotFoundException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     ),
@@ -196,7 +217,7 @@ public sealed class NegativePathTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
+                                "schema_with_foreign_keys.orders",
                                 "order_notes"
                             )
                         )
@@ -210,8 +231,8 @@ public sealed class NegativePathTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        "schema_with_foreign_keys.orders",
+                        "order_status"
                     )
                 ),
             ],
@@ -221,7 +242,7 @@ public sealed class NegativePathTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains("order_notes", exception.Message, System.StringComparison.Ordinal);
@@ -238,17 +259,18 @@ public sealed class NegativePathTests
     [Fact]
     public void AggregateInsideWhereComparisonThrowsNotSupportedException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -263,8 +285,8 @@ public sealed class NegativePathTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            "schema_with_foreign_keys.orders",
+                                            "order_id"
                                         )
                                     )
                                 )
@@ -281,7 +303,9 @@ public sealed class NegativePathTests
             pagination: null
         );
 
-        _ = Assert.Throws<NotSupportedException>(() => new PureQLProjection(db.Datasets, query));
+        _ = Assert.Throws<NotSupportedException>(
+            () => new PureQLProjection(datasets, query)
+        );
     }
 
     // ===== Missing column outside SELECT fails fast =====
@@ -295,17 +319,18 @@ public sealed class NegativePathTests
     [Trait("Clause", "Where")]
     public void WhereFieldNotOnResolvedTableFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                "schema_with_foreign_keys.orders",
+                                "order_id"
                             )
                         )
                     )
@@ -316,7 +341,7 @@ public sealed class NegativePathTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
+                                "schema_with_foreign_keys.orders",
                                 "order_notes"
                             )
                         ),
@@ -332,7 +357,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<KeyNotFoundException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -349,17 +374,18 @@ public sealed class NegativePathTests
     [Trait("Clause", "Where")]
     public void TypeMismatchNumberFieldAgainstStringColumnFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -371,8 +397,8 @@ public sealed class NegativePathTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new NumberReturning(new NumberScalar(0))
@@ -387,7 +413,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<FormatException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -412,28 +438,17 @@ public sealed class NegativePathTests
             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
                 table.Columns,
                 column => column,
-                _ => new Cell(new String("not-a-valid-uuid")),
+                _ => new InvariantCell(new String("not-a-valid-uuid")),
                 column => new ColumnHash(column)
             )
         );
 
-        IStoredTableDataSet tableDataset = new SampleTableDataset(table, [malformedRow]);
+        IStoredTableDataSet tableDataset = new StoredTableDataSet(table, [malformedRow]);
 
         ISchema schema = new Schema.Schema(new String("shop"), [table], []);
 
-        IReadOnlyDictionary<ITable, IStoredTableDataSet> byTable =
-            new Collections.Generic.Dictionary<
-                IStoredTableDataSet,
-                ITable,
-                IStoredTableDataSet
-            >(
-                [tableDataset],
-                dataset => dataset.TableSchema,
-                dataset => dataset,
-                t => new TableHash(t)
-            );
-
-        IStoredSchemaDataSet[] datasets = [new StoredSchemaDataset(schema, byTable)];
+        IStoredSchemaDataSet[] datasets =
+            [new StoredSchemaDataSet(schema, [tableDataset])];
 
         Query query = new Query(
             new FromExpression("shop.widgets"),
@@ -478,17 +493,18 @@ public sealed class NegativePathTests
     [Trait("Clause", "Where")]
     public void EachDivideByZeroFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -504,8 +520,8 @@ public sealed class NegativePathTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                "schema_with_foreign_keys.orders",
+                                                "order_total"
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(0)),
@@ -525,7 +541,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -539,17 +555,18 @@ public sealed class NegativePathTests
     [Trait("Clause", "OrderBy")]
     public void OrderByFieldNotOnResolvedTableFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -563,7 +580,10 @@ public sealed class NegativePathTests
             [
                 new OrderByItem(
                     new Field(
-                        new StringField(SampleDatabase.Users.Entity, "user_nickname")
+                        new StringField(
+                            "schema_with_foreign_keys.users",
+                            "user_nickname"
+                        )
                     ),
                     SortDirection.Asc
                 ),
@@ -572,7 +592,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<KeyNotFoundException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -18,17 +21,19 @@ public sealed class EachComparisonMoreTests
     [Fact]
     public void EachStringLessThanFiltersRowsBelowThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -40,8 +45,8 @@ public sealed class EachComparisonMoreTests
                         EachComparisonOperator.EachLessThan,
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         ),
                         new StringReturning(new StringScalar("pending"))
@@ -56,11 +61,11 @@ public sealed class EachComparisonMoreTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order =>
+            orderRows.Count(order =>
                 string.CompareOrdinal(order.OrderStatus, "pending") < 0
             ),
             result.Count
@@ -70,18 +75,20 @@ public sealed class EachComparisonMoreTests
     [Fact]
     public void EachDateLessThanOrEqualIncludesThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                "schema_with_foreign_keys.orders",
+                                "order_status"
                             )
                         )
                     )
@@ -93,8 +100,8 @@ public sealed class EachComparisonMoreTests
                         EachComparisonOperator.EachLessThanOrEqual,
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                "schema_with_foreign_keys.orders",
+                                "placed_on"
                             )
                         ),
                         new DateReturning(new DateScalar(threshold))
@@ -109,11 +116,11 @@ public sealed class EachComparisonMoreTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedOn <= threshold),
+            orderRows.Count(order => order.PlacedOn <= threshold),
             result.Count
         );
     }
@@ -121,18 +128,20 @@ public sealed class EachComparisonMoreTests
     [Fact]
     public void EachTimeGreaterThanOrEqualIncludesThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(10, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -144,8 +153,8 @@ public sealed class EachComparisonMoreTests
                         EachComparisonOperator.EachGreaterThanOrEqual,
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                "schema_with_foreign_keys.users",
+                                "shift_start"
                             )
                         ),
                         new TimeReturning(new TimeScalar(threshold))
@@ -160,11 +169,11 @@ public sealed class EachComparisonMoreTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user => user.ShiftStart >= threshold),
+            userRows.Count(user => user.ShiftStart >= threshold),
             result.Count
         );
     }
@@ -172,18 +181,20 @@ public sealed class EachComparisonMoreTests
     [Fact]
     public void EachDateTimeLessThanFiltersEarlierInstants()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime threshold = new DateTime(2024, 6, 2, 9, 15, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -195,8 +206,8 @@ public sealed class EachComparisonMoreTests
                         EachComparisonOperator.EachLessThan,
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                "schema_with_foreign_keys.users",
+                                "last_login"
                             )
                         ),
                         new DateTimeReturning(new DateTimeScalar(threshold))
@@ -211,11 +222,11 @@ public sealed class EachComparisonMoreTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user => user.LastLogin < threshold),
+            userRows.Count(user => user.LastLogin < threshold),
             result.Count
         );
     }

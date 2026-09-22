@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayEqualities;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -24,7 +27,7 @@ public sealed class UuidArrayEqualitySequenceTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField("schema_with_foreign_keys.orders", "order_id")
                 )
             )
         );
@@ -35,15 +38,17 @@ public sealed class UuidArrayEqualitySequenceTests
     [Fact]
     public void WholeUuidArrayEqualityOfTwoEqualLiteralArraysKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Guid[] threeOrderIds =
         [
-            .. db.OrderRows.Select(order => order.OrderId).Take(3),
+            .. orderRows.Select(order => order.OrderId).Take(3),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -63,10 +68,10 @@ public sealed class UuidArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     // Two literal arrays with the same length but a different order:
@@ -74,16 +79,18 @@ public sealed class UuidArrayEqualitySequenceTests
     [Fact]
     public void WholeUuidArrayEqualityOfTwoReorderedLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Guid[] threeOrderIds =
         [
-            .. db.OrderRows.Select(order => order.OrderId).Take(3),
+            .. orderRows.Select(order => order.OrderId).Take(3),
         ];
         Guid[] reversedThreeOrderIds = [.. threeOrderIds.Reverse()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -105,7 +112,7 @@ public sealed class UuidArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -116,19 +123,21 @@ public sealed class UuidArrayEqualitySequenceTests
     [Fact]
     public void WholeUuidArrayEqualityOfDifferentLengthLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Guid[] threeOrderIds =
         [
-            .. db.OrderRows.Select(order => order.OrderId).Take(3),
+            .. orderRows.Select(order => order.OrderId).Take(3),
         ];
         Guid[] twoOrderIds =
         [
-            .. db.OrderRows.Select(order => order.OrderId).Take(2),
+            .. orderRows.Select(order => order.OrderId).Take(2),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -148,7 +157,7 @@ public sealed class UuidArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -164,15 +173,17 @@ public sealed class UuidArrayEqualitySequenceTests
     [Fact]
     public void WholeUuidArrayEqualityOfFieldAgainstLiteralFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Guid[] reversedOrderIds =
         [
-            .. db.OrderRows.Select(order => order.OrderId).Reverse(),
+            .. orderRows.Select(order => order.OrderId).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -180,8 +191,8 @@ public sealed class UuidArrayEqualitySequenceTests
                         new UuidArrayEquality(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Id
+                                    "schema_with_foreign_keys.orders",
+                                    "order_id"
                                 )
                             ),
                             new UuidArrayReturning(
@@ -199,7 +210,7 @@ public sealed class UuidArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -209,15 +220,17 @@ public sealed class UuidArrayEqualitySequenceTests
     [Fact]
     public void WholeUuidArrayEqualityOfLiteralAgainstFieldFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Guid[] reversedOrderIds =
         [
-            .. db.OrderRows.Select(order => order.OrderId).Reverse(),
+            .. orderRows.Select(order => order.OrderId).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -228,8 +241,8 @@ public sealed class UuidArrayEqualitySequenceTests
                             ),
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Id
+                                    "schema_with_foreign_keys.orders",
+                                    "order_id"
                                 )
                             )
                         )
@@ -244,7 +257,7 @@ public sealed class UuidArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -16,14 +19,14 @@ public sealed class PaginationRangeTests
     private static Query AllUserNames(ModelPagination pagination)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -41,26 +44,29 @@ public sealed class PaginationRangeTests
     [Fact]
     public void TakeBeyondIntMaxReturnsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 AllUserNames(new ModelPagination(0, long.MaxValue))
             )
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
     }
 
     [Fact]
     public void SkipBeyondIntMaxReturnsNoRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 AllUserNames(new ModelPagination(long.MaxValue, 1))
             )
         );

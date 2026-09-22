@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -18,10 +21,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfBooleanColumnGroupedByStockStatusProjectsGroupRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Products.Entity),
+            new FromExpression("schema_with_foreign_keys.products"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -30,8 +35,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new BooleanArrayReturning(
                                         new BooleanField(
-                                            SampleDatabase.Products.Entity,
-                                            SampleDatabase.Products.InStock
+                                            "schema_with_foreign_keys.products",
+                                            "product_in_stock"
                                         )
                                     )
                                 )
@@ -46,8 +51,8 @@ public sealed class CountByColumnTypeTests
             [
                 new Field(
                     new BooleanField(
-                        SampleDatabase.Products.Entity,
-                        SampleDatabase.Products.InStock
+                        "schema_with_foreign_keys.products",
+                        "product_in_stock"
                     )
                 ),
             ],
@@ -57,12 +62,12 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.ProductRows.GroupBy(product => product.ProductInStock)
+            .. productRows.GroupBy(product => product.ProductInStock)
                 .Select(group => (double)group.Count())
                 .OrderBy(value => value),
         ];
@@ -79,10 +84,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfBooleanColumnOverAllProductsProjectsWholeSetRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Products.Entity),
+            new FromExpression("schema_with_foreign_keys.products"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -91,8 +98,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new BooleanArrayReturning(
                                         new BooleanField(
-                                            SampleDatabase.Products.Entity,
-                                            SampleDatabase.Products.InStock
+                                            "schema_with_foreign_keys.products",
+                                            "product_in_stock"
                                         )
                                     )
                                 )
@@ -105,20 +112,22 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.ProductRows.Count, result.Row(0).Double("n"));
+        Assert.Equal(productRows.Count, result.Row(0).Double("n"));
     }
 
     [Fact]
     public void CountOfDateColumnPerUserProjectsGroupRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -127,8 +136,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_on"
                                         )
                                     )
                                 )
@@ -140,19 +149,26 @@ public sealed class CountByColumnTypeTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => (double)group.Count())
                 .OrderBy(value => value),
         ];
@@ -169,10 +185,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfDateColumnOverAllOrdersProjectsWholeSetRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -181,8 +199,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_on"
                                         )
                                     )
                                 )
@@ -195,20 +213,22 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("n"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("n"));
     }
 
     [Fact]
     public void CountOfDateTimeColumnPerUserProjectsGroupRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -217,8 +237,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedAt
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_at"
                                         )
                                     )
                                 )
@@ -230,19 +250,26 @@ public sealed class CountByColumnTypeTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => (double)group.Count())
                 .OrderBy(value => value),
         ];
@@ -259,10 +286,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfDateTimeColumnOverAllOrdersProjectsWholeSetRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -271,8 +300,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedAt
+                                            "schema_with_foreign_keys.orders",
+                                            "placed_at"
                                         )
                                     )
                                 )
@@ -285,20 +314,22 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("n"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("n"));
     }
 
     [Fact]
     public void CountOfNumberColumnPerUserProjectsGroupRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -307,8 +338,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -320,19 +351,26 @@ public sealed class CountByColumnTypeTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        "schema_with_foreign_keys.orders",
+                        "order_user_id"
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => (double)group.Count())
                 .OrderBy(value => value),
         ];
@@ -349,10 +387,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfNumberColumnOverAllOrdersProjectsWholeSetRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression("schema_with_foreign_keys.orders"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -361,8 +401,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            "schema_with_foreign_keys.orders",
+                                            "order_total"
                                         )
                                     )
                                 )
@@ -375,20 +415,22 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("n"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("n"));
     }
 
     [Fact]
     public void CountOfTimeColumnGroupedByActiveStatusProjectsGroupRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -397,8 +439,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.ShiftStart
+                                            "schema_with_foreign_keys.users",
+                                            "shift_start"
                                         )
                                     )
                                 )
@@ -412,7 +454,7 @@ public sealed class CountByColumnTypeTests
             join: null,
             [
                 new Field(
-                    new BooleanField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)
+                    new BooleanField("schema_with_foreign_keys.users", "user_active")
                 ),
             ],
             having: null,
@@ -421,12 +463,12 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows.GroupBy(user => user.UserActive)
+            .. userRows.GroupBy(user => user.UserActive)
                 .Select(group => (double)group.Count())
                 .OrderBy(value => value),
         ];
@@ -443,10 +485,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfTimeColumnOverAllUsersProjectsWholeSetRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -455,8 +499,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.ShiftStart
+                                            "schema_with_foreign_keys.users",
+                                            "shift_start"
                                         )
                                     )
                                 )
@@ -469,11 +513,11 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.UserRows.Count, result.Row(0).Double("n"));
+        Assert.Equal(userRows.Count, result.Row(0).Double("n"));
     }
 
     // SQL semantics: count(column) counts non-NULL values, not row presence.
@@ -482,10 +526,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfNullableScoreColumnExcludesNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -494,8 +540,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Score
+                                            "schema_with_foreign_keys.users",
+                                            "user_score"
                                         )
                                     )
                                 )
@@ -508,12 +554,12 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
         Assert.Equal(
-            db.UserRows.Count(user => user.Score is not null),
+            userRows.Count(user => user.UserScore is not null),
             result.Row(0).Double("n")
         );
     }
@@ -525,10 +571,12 @@ public sealed class CountByColumnTypeTests
     [Fact]
     public void CountOfNullableScoreColumnGroupedByActiveExcludesNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -537,8 +585,8 @@ public sealed class CountByColumnTypeTests
                                 new ArrayReturning(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Score
+                                            "schema_with_foreign_keys.users",
+                                            "user_score"
                                         )
                                     )
                                 )
@@ -552,7 +600,7 @@ public sealed class CountByColumnTypeTests
             join: null,
             [
                 new Field(
-                    new BooleanField(SampleDatabase.Users.Entity, SampleDatabase.Users.Active)
+                    new BooleanField("schema_with_foreign_keys.users", "user_active")
                 ),
             ],
             having: null,
@@ -561,13 +609,13 @@ public sealed class CountByColumnTypeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows.GroupBy(user => user.UserActive)
-                .Select(group => (double)group.Count(user => user.Score is not null))
+            .. userRows.GroupBy(user => user.UserActive)
+                .Select(group => (double)group.Count(user => user.UserScore is not null))
                 .OrderBy(value => value),
         ];
 

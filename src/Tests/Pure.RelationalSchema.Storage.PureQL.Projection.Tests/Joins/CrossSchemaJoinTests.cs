@@ -1,4 +1,7 @@
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -16,17 +19,19 @@ public sealed class CrossSchemaJoinTests
     [Fact]
     public void InnerJoinFromUsersToLoginsInAnotherSchema()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression("schema_with_foreign_keys.users"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -36,20 +41,20 @@ public sealed class CrossSchemaJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Logins.Entity,
+                    "audit.logins",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Logins.Entity,
-                                        SampleDatabase.Logins.UserId
+                                        "audit.logins",
+                                        "login_user_id"
                                     )
                                 )
                             )
@@ -64,21 +69,21 @@ public sealed class CrossSchemaJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
             .. (
-                from user in db.UserRows
-                join login in db.LoginRows on user.UserId equals login.LoginUserId
+                from user in userRows
+                join login in loginRows on user.UserId equals login.LoginUserId
                 select user.UserName
             ).OrderBy(name => name),
         ];
 
         string?[] actual =
         [
-            .. result.Column(SampleDatabase.Users.Name).OrderBy(name => name),
+            .. result.Column("user_name").OrderBy(name => name),
         ];
 
         Assert.Equal(expected.Length, result.Count);
@@ -88,17 +93,18 @@ public sealed class CrossSchemaJoinTests
     [Fact]
     public void InnerJoinFromLoginsToUsersInAnotherSchema()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Logins.Entity),
+            new FromExpression("audit.logins"),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                "schema_with_foreign_keys.users",
+                                "user_name"
                             )
                         )
                     )
@@ -108,20 +114,20 @@ public sealed class CrossSchemaJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    "schema_with_foreign_keys.users",
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Logins.Entity,
-                                        SampleDatabase.Logins.UserId
+                                        "audit.logins",
+                                        "login_user_id"
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        "schema_with_foreign_keys.users",
+                                        "user_id"
                                     )
                                 )
                             )
@@ -136,9 +142,9 @@ public sealed class CrossSchemaJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.LoginRows.Count, result.Count);
+        Assert.Equal(loginRows.Count, result.Count);
     }
 }
