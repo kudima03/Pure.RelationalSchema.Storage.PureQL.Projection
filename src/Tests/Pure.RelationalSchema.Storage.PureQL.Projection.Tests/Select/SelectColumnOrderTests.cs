@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
@@ -24,13 +29,13 @@ public sealed class SelectColumnOrderTests
     {
         string[] expectedOrder =
         [
-            "shift_start",
-            "user_id",
-            "last_login",
-            "user_name",
-            "signup_date",
-            "user_active",
-            "user_age",
+            new ShiftStartColumn().Name.TextValue,
+            new UserIdColumn().Name.TextValue,
+            new LastLoginColumn().Name.TextValue,
+            new UserNameColumn().Name.TextValue,
+            new SignupDateColumn().Name.TextValue,
+            new UserActiveColumn().Name.TextValue,
+            new UserAgeColumn().Name.TextValue,
         ];
 
         for (int iteration = 0; iteration < 25; iteration++)
@@ -39,14 +44,23 @@ public sealed class SelectColumnOrderTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
             Query query = new Query(
-                new FromExpression("schema_with_foreign_keys.users"),
+                new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
                 [
                     new SelectExpression(
                         new ArrayReturning(
                             new TimeArrayReturning(
                                 new TimeField(
-                                    "schema_with_foreign_keys.users",
-                                    "shift_start"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new ShiftStartColumn().Name.TextValue
                                 )
                             )
                         )
@@ -55,8 +69,14 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.users",
-                                    "user_id"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new UserIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -65,8 +85,14 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new DateTimeArrayReturning(
                                 new DateTimeField(
-                                    "schema_with_foreign_keys.users",
-                                    "last_login"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new LastLoginColumn().Name.TextValue
                                 )
                             )
                         )
@@ -75,8 +101,14 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new StringArrayReturning(
                                 new StringField(
-                                    "schema_with_foreign_keys.users",
-                                    "user_name"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new UserNameColumn().Name.TextValue
                                 )
                             )
                         )
@@ -85,8 +117,14 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new DateArrayReturning(
                                 new DateField(
-                                    "schema_with_foreign_keys.users",
-                                    "signup_date"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new SignupDateColumn().Name.TextValue
                                 )
                             )
                         )
@@ -95,8 +133,14 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new BooleanArrayReturning(
                                 new BooleanField(
-                                    "schema_with_foreign_keys.users",
-                                    "user_active"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new UserActiveColumn().Name.TextValue
                                 )
                             )
                         )
@@ -105,8 +149,14 @@ public sealed class SelectColumnOrderTests
                         new ArrayReturning(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    "schema_with_foreign_keys.users",
-                                    "user_age"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new UserAgeColumn().Name.TextValue
                                 )
                             )
                         )

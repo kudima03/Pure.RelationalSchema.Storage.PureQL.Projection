@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -22,20 +27,35 @@ public sealed class DistinctInteractionTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.products",
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_product_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemProductIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.products",
-                                "product_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new ProductsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ProductIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -52,14 +72,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -68,8 +97,14 @@ public sealed class DistinctInteractionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -102,8 +137,8 @@ public sealed class DistinctInteractionTests
             .. result.Rows
                 .Select(row =>
                     (
-                        row.Double("user_age")!.Value,
-                        row.Bool("user_active")!.Value
+                        row.Double(new UserAgeColumn().Name.TextValue)!.Value,
+                        row.Bool(new UserActiveColumn().Name.TextValue)!.Value
                     )
                 )
                 .OrderBy(pair => pair.Item1)
@@ -122,14 +157,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_order_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -158,7 +202,7 @@ public sealed class DistinctInteractionTests
 
         Guid[] actual =
         [
-            .. result.Column("item_order_id")
+            .. result.Column(new ItemOrderIdColumn().Name.TextValue)
                 .Select(text => Guid.Parse(text!))
                 .OrderBy(id => id),
         ];
@@ -175,14 +219,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -196,8 +249,14 @@ public sealed class DistinctInteractionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -219,7 +278,7 @@ public sealed class DistinctInteractionTests
                 .Distinct(),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }
@@ -232,14 +291,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -253,8 +321,14 @@ public sealed class DistinctInteractionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -277,7 +351,7 @@ public sealed class DistinctInteractionTests
                 .Take(2),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }
@@ -290,14 +364,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -332,14 +415,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -375,14 +467,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -418,14 +519,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -461,14 +571,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -504,14 +623,23 @@ public sealed class DistinctInteractionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )

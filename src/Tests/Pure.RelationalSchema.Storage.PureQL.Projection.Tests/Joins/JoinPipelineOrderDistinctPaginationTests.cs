@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -21,28 +26,40 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
 {
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, "schema_with_foreign_keys.orders", UsersOrdersCondition());
+        return new Join(JoinType.Left, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            "schema_with_foreign_keys.users",
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, "schema_with_foreign_keys.users", OrdersUsersCondition());
+        return new Join(JoinType.Full, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, OrdersUsersCondition());
     }
 
     private static Join UsersToOrdersInnerJoin()
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
             UsersOrdersCondition()
         );
     }
@@ -53,12 +70,18 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField("schema_with_foreign_keys.users", "user_id")
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -73,12 +96,18 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField("schema_with_foreign_keys.users", "user_id")
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     )
                 )
             )
@@ -90,7 +119,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField("schema_with_foreign_keys.users", "user_name")
+                    new StringField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserNameColumn().Name.TextValue)
                 )
             )
         );
@@ -101,7 +133,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         return new SelectExpression(
             new ArrayReturning(
                 new NumberArrayReturning(
-                    new NumberField("schema_with_foreign_keys.orders", "order_total")
+                    new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, new OrderTotalColumn().Name.TextValue)
                 )
             )
         );
@@ -111,7 +146,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     {
         return new OrderByItem(
             new Field(
-                new NumberField("schema_with_foreign_keys.orders", "order_total")
+                new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, new OrderTotalColumn().Name.TextValue)
             ),
             SortDirection.Asc
         );
@@ -121,7 +159,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     {
         return new OrderByItem(
             new Field(
-                new NumberField("schema_with_foreign_keys.orders", "order_total")
+                new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, new OrderTotalColumn().Name.TextValue)
             ),
             SortDirection.Desc
         );
@@ -131,7 +172,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
     {
         return new OrderByItem(
             new Field(
-                new StringField("schema_with_foreign_keys.users", "user_name")
+                new StringField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserNameColumn().Name.TextValue)
             ),
             SortDirection.Asc
         );
@@ -165,7 +209,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [UserNameSelect(), OrderTotalSelect()],
             where: null,
             [UsersToOrdersLeftJoin()],
@@ -190,7 +237,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double?)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total"))
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue))
             ),
         ];
 
@@ -206,7 +253,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [UserNameSelect(), OrderTotalSelect()],
             where: null,
             [OrdersToUsersRightJoin()],
@@ -231,7 +281,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double?)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total"))
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue))
             ),
         ];
 
@@ -247,7 +297,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [UserNameSelect(), OrderTotalSelect()],
             where: null,
             [OrdersToUsersFullJoin()],
@@ -274,7 +327,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double?)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total"))
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue))
             ),
         ];
 
@@ -294,7 +347,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 UserNameSelect(),
                 new SelectExpression(
@@ -304,8 +360,11 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_id"
+                                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -320,8 +379,11 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
             [
                 new Field(
                     new StringField(
-                        "schema_with_foreign_keys.users",
-                        "user_name"
+                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                        new UserNameColumn().Name.TextValue
                     )
                 ),
             ],
@@ -329,7 +391,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField("schema_with_foreign_keys.orders", "orderCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, "orderCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -358,7 +423,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("orderCount")!.Value)
+                (row[new UserNameColumn().Name.TextValue]!, row.Double("orderCount")!.Value)
             ),
         ];
 
@@ -392,7 +457,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = DistinctUserNames(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersLeftJoin()
         );
 
@@ -407,7 +475,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
 
         Assert.Equal(
             expected,
-            result.Column("user_name").OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
         );
     }
 
@@ -419,7 +487,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = DistinctUserNames(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersRightJoin()
         );
 
@@ -434,7 +505,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
 
         Assert.Equal(
             expected,
-            result.Column("user_name").OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
         );
     }
 
@@ -446,7 +517,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = DistinctUserNames(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersFullJoin()
         );
 
@@ -461,7 +535,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
 
         Assert.Equal(
             expected,
-            result.Column("user_name").OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
         );
     }
 
@@ -486,14 +560,20 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -524,7 +604,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         Assert.Equal(
             expected,
             result
-                .Column("order_status")
+                .Column(new OrderStatusColumn().Name.TextValue)
                 .OrderBy(status => status, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -576,7 +656,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersInnerJoin()
         );
 
@@ -589,7 +672,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total")!.Value)
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue)!.Value)
             ),
         ];
 
@@ -605,7 +688,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersLeftJoin()
         );
 
@@ -618,7 +704,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total")!.Value)
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue)!.Value)
             ),
         ];
 
@@ -634,7 +720,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersRightJoin()
         );
 
@@ -647,7 +736,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total")!.Value)
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue)!.Value)
             ),
         ];
 
@@ -663,7 +752,10 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = WindowedQuery(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersFullJoin()
         );
 
@@ -676,7 +768,7 @@ public sealed class JoinPipelineOrderDistinctPaginationTests
         (string, double)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row["user_name"]!, row.Double("order_total")!.Value)
+                (row[new UserNameColumn().Name.TextValue]!, row.Double(new OrderTotalColumn().Name.TextValue)!.Value)
             ),
         ];
 

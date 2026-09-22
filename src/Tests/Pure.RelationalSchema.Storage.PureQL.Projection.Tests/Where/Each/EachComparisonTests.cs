@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -26,14 +31,20 @@ public sealed class EachComparisonTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -45,8 +56,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(100))
@@ -75,14 +89,20 @@ public sealed class EachComparisonTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -95,8 +115,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(0))
@@ -127,14 +150,20 @@ public sealed class EachComparisonTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -146,8 +175,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThanOrEqual,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(100.50))
@@ -179,14 +211,20 @@ public sealed class EachComparisonTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -198,8 +236,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachLessThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(100))
@@ -228,14 +269,20 @@ public sealed class EachComparisonTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -247,8 +294,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachLessThanOrEqual,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(75.25))
@@ -280,14 +330,20 @@ public sealed class EachComparisonTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -299,8 +355,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThan,
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         ),
                         new StringReturning(new StringScalar("pending"))
@@ -335,14 +394,20 @@ public sealed class EachComparisonTests
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -354,8 +419,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         ),
                         new DateReturning(new DateScalar(threshold))
@@ -388,14 +456,20 @@ public sealed class EachComparisonTests
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -407,8 +481,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThan,
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         ),
                         new TimeReturning(new TimeScalar(threshold))
@@ -441,14 +518,20 @@ public sealed class EachComparisonTests
         DateTime threshold = new DateTime(2024, 6, 2, 9, 15, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -460,8 +543,11 @@ public sealed class EachComparisonTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         ),
                         new DateTimeReturning(new DateTimeScalar(threshold))

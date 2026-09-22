@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -20,20 +25,35 @@ public sealed class DistinctOverJoinTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -45,7 +65,10 @@ public sealed class DistinctOverJoinTests
     private static Query DistinctColumnThroughJoin(SelectExpression select)
     {
         return new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [select],
             where: null,
             [UsersToOrdersInnerJoin()],
@@ -70,8 +93,14 @@ public sealed class DistinctOverJoinTests
                 new ArrayReturning(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.users",
-                            "user_name"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserNameColumn().Name.TextValue
                         )
                     )
                 )
@@ -94,7 +123,7 @@ public sealed class DistinctOverJoinTests
 
         Assert.Equal(
             expected,
-            result.Column("user_name").OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
         );
     }
 
@@ -110,8 +139,14 @@ public sealed class DistinctOverJoinTests
                 new ArrayReturning(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     )
                 )
@@ -133,7 +168,7 @@ public sealed class DistinctOverJoinTests
         Assert.Equal(
             expected,
             result
-                .Column("order_status")
+                .Column(new OrderStatusColumn().Name.TextValue)
                 .OrderBy(status => status)
                 .ToArray()
         );

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -24,14 +29,20 @@ public sealed class NonEquiJoinTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.products",
-                                "product_name"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                new ProductNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -41,21 +52,30 @@ public sealed class NonEquiJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.products",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachComparison(
                             new EachNumberComparison(
                                 EachComparisonOperator.EachLessThan,
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        "schema_with_foreign_keys.products",
-                                        "product_price"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                        new ProductPriceColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_total"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderTotalColumn().Name.TextValue
                                     )
                                 )
                             )

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -22,14 +27,23 @@ public sealed class GroupByTypesTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -37,7 +51,10 @@ public sealed class GroupByTypesTests
             ],
             where: null,
             join: null,
-            [new Field(new NumberField("schema_with_foreign_keys.users", "user_age"))],
+            [new Field(new NumberField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue, new UserAgeColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
@@ -54,7 +71,7 @@ public sealed class GroupByTypesTests
 
         double[] actual =
         [
-            .. result.Rows.Select(row => row.Double("user_age")!.Value)
+            .. result.Rows.Select(row => row.Double(new UserAgeColumn().Name.TextValue)!.Value)
                 .OrderBy(v => v),
         ];
 
@@ -69,14 +86,23 @@ public sealed class GroupByTypesTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -84,7 +110,10 @@ public sealed class GroupByTypesTests
             ],
             where: null,
             join: null,
-            [new Field(new DateField("schema_with_foreign_keys.users", "signup_date"))],
+            [new Field(new DateField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue, new SignupDateColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
@@ -107,14 +136,23 @@ public sealed class GroupByTypesTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -122,7 +160,10 @@ public sealed class GroupByTypesTests
             ],
             where: null,
             join: null,
-            [new Field(new DateTimeField("schema_with_foreign_keys.users", "last_login"))],
+            [new Field(new DateTimeField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue, new LastLoginColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
@@ -145,14 +186,23 @@ public sealed class GroupByTypesTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -160,7 +210,10 @@ public sealed class GroupByTypesTests
             ],
             where: null,
             join: null,
-            [new Field(new TimeField("schema_with_foreign_keys.users", "shift_start"))],
+            [new Field(new TimeField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue, new ShiftStartColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null

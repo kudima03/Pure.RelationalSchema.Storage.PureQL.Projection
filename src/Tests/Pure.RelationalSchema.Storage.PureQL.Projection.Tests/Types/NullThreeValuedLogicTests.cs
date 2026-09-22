@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -45,20 +50,29 @@ public sealed class NullThreeValuedLogicTests
     {
         return new Join(
             JoinType.Left,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -80,14 +94,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -99,8 +119,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(20))
@@ -129,7 +152,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -145,14 +168,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -164,8 +193,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachGreaterThanOrEqual,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(28))
@@ -194,7 +226,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -211,14 +243,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -230,8 +268,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachLessThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(29))
@@ -260,7 +301,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -276,14 +317,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -295,8 +342,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachLessThanOrEqual,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(10))
@@ -325,7 +375,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -346,14 +396,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -369,8 +425,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_score"
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(1)),
@@ -404,7 +463,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -421,14 +480,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -444,8 +509,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_score"
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(10)),
@@ -479,7 +547,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -496,14 +564,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -519,8 +593,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_score"
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(2)),
@@ -554,7 +631,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -572,14 +649,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -595,8 +678,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_score"
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(2)),
@@ -630,7 +716,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -659,14 +745,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -681,14 +773,20 @@ public sealed class NullThreeValuedLogicTests
                                     new NumberArrayEquality(
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_age"
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserAgeColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_score"
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         )
                                     )
@@ -722,7 +820,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -742,14 +840,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -762,8 +866,11 @@ public sealed class NullThreeValuedLogicTests
                             new EachNumberEquality(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_score"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new UserScoreColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(30))
@@ -796,7 +903,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -818,14 +925,20 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -837,8 +950,11 @@ public sealed class NullThreeValuedLogicTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.users",
-                                            "user_score"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                            new UserScoreColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -853,8 +969,11 @@ public sealed class NullThreeValuedLogicTests
             [
                 new Field(
                     new BooleanField(
-                        "schema_with_foreign_keys.users",
-                        "user_active"
+                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                        new UserActiveColumn().Name.TextValue
                     )
                 ),
             ],
@@ -867,8 +986,11 @@ public sealed class NullThreeValuedLogicTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.users",
-                                            "user_score"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                            new UserScoreColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -893,7 +1015,7 @@ public sealed class NullThreeValuedLogicTests
             .Average();
 
         Assert.Equal(1, result.Count);
-        Assert.Equal("True", result.Row(0)["user_active"]);
+        Assert.Equal("True", result.Row(0)[new UserActiveColumn().Name.TextValue]);
         Assert.Equal(expectedAverage, result.Row(0).Double("avg_score"));
     }
 
@@ -912,7 +1034,10 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -921,8 +1046,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MinDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            "schema_with_foreign_keys.orders",
-                                            "placed_on"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new PlacedOnColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -962,7 +1090,10 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -971,8 +1102,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MaxDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            "schema_with_foreign_keys.orders",
-                                            "placed_at"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new PlacedAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1016,7 +1150,10 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1025,8 +1162,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1071,7 +1211,10 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1080,8 +1223,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MinString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1121,7 +1267,10 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1130,8 +1279,11 @@ public sealed class NullThreeValuedLogicTests
                                 new ArrayReturning(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1174,7 +1326,10 @@ public sealed class NullThreeValuedLogicTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1183,8 +1338,11 @@ public sealed class NullThreeValuedLogicTests
                                 new ArrayReturning(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )

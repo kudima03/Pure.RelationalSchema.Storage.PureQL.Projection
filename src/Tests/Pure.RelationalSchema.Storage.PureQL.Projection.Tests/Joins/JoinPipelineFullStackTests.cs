@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -34,28 +39,40 @@ public sealed class JoinPipelineFullStackTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
             UsersOrdersCondition()
         );
     }
 
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, "schema_with_foreign_keys.orders", UsersOrdersCondition());
+        return new Join(JoinType.Left, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            "schema_with_foreign_keys.users",
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, "schema_with_foreign_keys.users", OrdersUsersCondition());
+        return new Join(JoinType.Full, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, OrdersUsersCondition());
     }
 
     private static BooleanArrayReturning UsersOrdersCondition()
@@ -64,12 +81,18 @@ public sealed class JoinPipelineFullStackTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField("schema_with_foreign_keys.users", "user_id")
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -84,12 +107,18 @@ public sealed class JoinPipelineFullStackTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField("schema_with_foreign_keys.users", "user_id")
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     )
                 )
             )
@@ -103,8 +132,11 @@ public sealed class JoinPipelineFullStackTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            "schema_with_foreign_keys.users",
-                            "user_active"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -122,8 +154,11 @@ public sealed class JoinPipelineFullStackTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_id"
+                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                    new OrderIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -145,8 +180,11 @@ public sealed class JoinPipelineFullStackTests
                             new SumNumber(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_total"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderTotalColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -171,14 +209,20 @@ public sealed class JoinPipelineFullStackTests
             [join],
             [
                 new Field(
-                    new UuidField("schema_with_foreign_keys.users", "user_id")
+                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                 ),
             ],
             CountAtLeastOne(),
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField("schema_with_foreign_keys.users", "orderCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "orderCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -222,7 +266,10 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersInnerJoin()
         );
 
@@ -246,7 +293,10 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersLeftJoin()
         );
 
@@ -270,7 +320,10 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersRightJoin()
         );
 
@@ -294,7 +347,10 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersFullJoin()
         );
 
@@ -325,20 +381,29 @@ public sealed class JoinPipelineFullStackTests
 
         Join usersToLoginsLeftJoin = new Join(
             JoinType.Left,
-            "audit.logins",
+            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "audit.logins",
-                                "login_user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -347,7 +412,10 @@ public sealed class JoinPipelineFullStackTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -356,8 +424,11 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "audit.logins",
-                                            "login_id"
+                                            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -371,7 +442,10 @@ public sealed class JoinPipelineFullStackTests
             [usersToLoginsLeftJoin],
             [
                 new Field(
-                    new UuidField("schema_with_foreign_keys.users", "user_id")
+                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                 ),
             ],
             new BooleanReturning(
@@ -383,8 +457,11 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "audit.logins",
-                                            "login_id"
+                                            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -397,7 +474,10 @@ public sealed class JoinPipelineFullStackTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField("schema_with_foreign_keys.users", "loginCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "loginCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -441,20 +521,29 @@ public sealed class JoinPipelineFullStackTests
 
         Join usersToLoginsInnerJoin = new Join(
             JoinType.Inner,
-            "audit.logins",
+            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "audit.logins",
-                                "login_user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -463,7 +552,10 @@ public sealed class JoinPipelineFullStackTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -472,8 +564,11 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "audit.logins",
-                                            "login_id"
+                                            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -487,14 +582,20 @@ public sealed class JoinPipelineFullStackTests
             [usersToLoginsInnerJoin],
             [
                 new Field(
-                    new UuidField("schema_with_foreign_keys.users", "user_id")
+                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                 ),
             ],
             having: null,
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField("schema_with_foreign_keys.users", "loginCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "loginCount")
                     ),
                     SortDirection.Desc
                 ),

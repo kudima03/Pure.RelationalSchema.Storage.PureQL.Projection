@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -36,8 +41,14 @@ public sealed class HavingEqualityMatrixTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_id"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -48,7 +59,10 @@ public sealed class HavingEqualityMatrixTests
     private static NumberArrayReturning Totals()
     {
         return new NumberArrayReturning(
-            new NumberField("schema_with_foreign_keys.orders", "order_total")
+            new NumberField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderTotalColumn().Name.TextValue)
         );
     }
 
@@ -65,7 +79,10 @@ public sealed class HavingEqualityMatrixTests
     private static DateArrayReturning PlacedOns()
     {
         return new DateArrayReturning(
-            new DateField("schema_with_foreign_keys.orders", "placed_on")
+            new DateField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new PlacedOnColumn().Name.TextValue)
         );
     }
 
@@ -78,8 +95,11 @@ public sealed class HavingEqualityMatrixTests
     {
         return new DateTimeArrayReturning(
             new DateTimeField(
-                "schema_with_foreign_keys.orders",
-                "placed_at"
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                new PlacedAtColumn().Name.TextValue
             )
         );
     }
@@ -94,7 +114,10 @@ public sealed class HavingEqualityMatrixTests
     private static StringArrayReturning Statuses()
     {
         return new StringArrayReturning(
-            new StringField("schema_with_foreign_keys.orders", "order_status")
+            new StringField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderStatusColumn().Name.TextValue)
         );
     }
 
@@ -106,7 +129,10 @@ public sealed class HavingEqualityMatrixTests
     private static TimeArrayReturning ShiftStarts()
     {
         return new TimeArrayReturning(
-            new TimeField("schema_with_foreign_keys.users", "shift_start")
+            new TimeField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue, new ShiftStartColumn().Name.TextValue)
         );
     }
 
@@ -157,14 +183,23 @@ public sealed class HavingEqualityMatrixTests
     private static Query OrdersGroupedByUser(BooleanReturning having)
     {
         return new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -175,8 +210,14 @@ public sealed class HavingEqualityMatrixTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -189,14 +230,23 @@ public sealed class HavingEqualityMatrixTests
     private static Query UsersGroupedByActive(BooleanReturning having)
     {
         return new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -207,8 +257,14 @@ public sealed class HavingEqualityMatrixTests
             [
                 new Field(
                     new BooleanField(
-                        "schema_with_foreign_keys.users",
-                        "user_active"
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue,
+                        new UserActiveColumn().Name.TextValue
                     )
                 ),
             ],
@@ -255,7 +311,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -334,7 +390,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -384,7 +440,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -435,7 +491,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -517,7 +573,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -599,7 +655,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<bool> actual =
         [
             .. result.Rows.Select(row =>
-                row.Bool("user_active")!.Value
+                row.Bool(new UserActiveColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -685,7 +741,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 

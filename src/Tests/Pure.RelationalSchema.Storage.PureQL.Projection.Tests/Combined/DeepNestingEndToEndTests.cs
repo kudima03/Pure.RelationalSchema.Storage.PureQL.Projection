@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -32,18 +37,18 @@ public sealed class DeepNestingEndToEndTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.users",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.users", "user_id")
+                            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserIdColumn().Name.TextValue)
                         )
                     )
                 )
@@ -55,17 +60,17 @@ public sealed class DeepNestingEndToEndTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.order_items",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.orders", "order_id")
+                            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderIdColumn().Name.TextValue)
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_order_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -79,7 +84,7 @@ public sealed class DeepNestingEndToEndTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.order_items", "item_id")
+                    new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue, new ItemIdColumn().Name.TextValue)
                 )
             )
         );
@@ -91,8 +96,8 @@ public sealed class DeepNestingEndToEndTests
             new ArrayReturning(
                 new NumberArrayReturning(
                     new NumberField(
-                        "schema_with_foreign_keys.order_items",
-                        "item_qty"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                        new ItemQtyColumn().Name.TextValue
                     )
                 )
             )
@@ -104,7 +109,7 @@ public sealed class DeepNestingEndToEndTests
         return new SelectExpression(
             new ArrayReturning(
                 new NumberArrayReturning(
-                    new NumberField("schema_with_foreign_keys.orders", "order_total")
+                    new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderTotalColumn().Name.TextValue)
                 )
             )
         );
@@ -166,14 +171,14 @@ public sealed class DeepNestingEndToEndTests
     private static NumberArrayReturning TotalField()
     {
         return new NumberArrayReturning(
-            new NumberField("schema_with_foreign_keys.orders", "order_total")
+            new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderTotalColumn().Name.TextValue)
         );
     }
 
     private static StringArrayReturning StatusField()
     {
         return new StringArrayReturning(
-            new StringField("schema_with_foreign_keys.orders", "order_status")
+            new StringField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)
         );
     }
 
@@ -400,7 +405,7 @@ public sealed class DeepNestingEndToEndTests
     private static Field OrderIdKey()
     {
         return new Field(
-            new UuidField("schema_with_foreign_keys.orders", "order_id")
+            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderIdColumn().Name.TextValue)
         );
     }
 
@@ -409,7 +414,7 @@ public sealed class DeepNestingEndToEndTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.orders", "order_id")
+                    new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -422,8 +427,8 @@ public sealed class DeepNestingEndToEndTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.order_items",
-                            "item_id"
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                            new ItemIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -438,8 +443,8 @@ public sealed class DeepNestingEndToEndTests
                 new SumNumber(
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.order_items",
-                            "item_qty"
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                            new ItemQtyColumn().Name.TextValue
                         )
                     )
                 )
@@ -541,7 +546,7 @@ public sealed class DeepNestingEndToEndTests
     )
     {
         return new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderIdFieldSelect(), QtySumSelect(), ItemCountSelect()],
             where,
             [OrdersToUsersJoin(), OrdersToItemsJoin()],
@@ -569,7 +574,7 @@ public sealed class DeepNestingEndToEndTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [ItemIdSelect(), ItemQtySelect(), OrderTotalSelect()],
             ScalarFiveLevelAlwaysTrueTree(),
             [OrdersToUsersJoin(), OrdersToItemsJoin()],
@@ -579,8 +584,8 @@ public sealed class DeepNestingEndToEndTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -588,8 +593,8 @@ public sealed class DeepNestingEndToEndTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.order_items",
-                            "item_qty"
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                            new ItemQtyColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -621,9 +626,9 @@ public sealed class DeepNestingEndToEndTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row.Uuid("item_id")!.Value,
-                    row.Double("item_qty")!.Value,
-                    row.Double("order_total")!.Value
+                    row.Uuid(new ItemIdColumn().Name.TextValue)!.Value,
+                    row.Double(new ItemQtyColumn().Name.TextValue)!.Value,
+                    row.Double(new OrderTotalColumn().Name.TextValue)!.Value
                 )
             ),
         ];
@@ -694,7 +699,7 @@ public sealed class DeepNestingEndToEndTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row.Uuid("order_id")!.Value,
+                    row.Uuid(new OrderIdColumn().Name.TextValue)!.Value,
                     row.Double("qtySum")!.Value,
                     row.Double("itemCount")!.Value
                 )
@@ -740,7 +745,7 @@ public sealed class DeepNestingEndToEndTests
             [
                 .. result.Rows.Select(row =>
                     (
-                        row.Uuid("order_id")!.Value,
+                        row.Uuid(new OrderIdColumn().Name.TextValue)!.Value,
                         row.Double("qtySum")!.Value,
                         row.Double("itemCount")!.Value
                     )

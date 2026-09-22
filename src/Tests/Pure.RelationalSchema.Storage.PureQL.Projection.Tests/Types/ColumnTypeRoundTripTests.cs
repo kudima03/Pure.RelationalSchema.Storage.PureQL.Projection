@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -24,12 +29,26 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.users", "user_id")
+                            new UuidField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
+                            )
                         )
                     )
                 ),
@@ -42,7 +61,7 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => (Guid?)user.UserId).ToArray(),
-            [.. result.Rows.Select(row => row.Uuid("user_id"))]
+            [.. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue))]
         );
     }
 
@@ -54,12 +73,26 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("schema_with_foreign_keys.users", "user_name")
+                            new StringField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
+                            )
                         )
                     )
                 ),
@@ -72,7 +105,7 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => user.UserName).ToArray(),
-            result.Column("user_name").ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
         );
     }
 
@@ -84,12 +117,26 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
-                            new NumberField("schema_with_foreign_keys.users", "user_age")
+                            new NumberField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
+                            )
                         )
                     )
                 ),
@@ -102,7 +149,7 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => (double?)user.UserAge).ToArray(),
-            [.. result.Rows.Select(row => row.Double("user_age"))]
+            [.. result.Rows.Select(row => row.Double(new UserAgeColumn().Name.TextValue))]
         );
     }
 
@@ -114,14 +161,25 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -135,7 +193,11 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => (bool?)user.UserActive).ToArray(),
-            [.. result.Rows.Select(row => row.Bool("user_active"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Bool(new UserActiveColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
@@ -147,14 +209,25 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -168,7 +241,11 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => (DateOnly?)user.SignupDate).ToArray(),
-            [.. result.Rows.Select(row => row.Date("signup_date"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Date(new SignupDateColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
@@ -180,14 +257,25 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -201,7 +289,11 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => (DateTime?)user.LastLogin).ToArray(),
-            [.. result.Rows.Select(row => row.DateTime("last_login"))]
+            [
+                .. result.Rows.Select(
+                    row => row.DateTime(new LastLoginColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
@@ -213,14 +305,25 @@ public sealed class ColumnTypeRoundTripTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -234,7 +337,11 @@ public sealed class ColumnTypeRoundTripTests
 
         Assert.Equal(
             userRows.Select(user => (TimeOnly?)user.ShiftStart).ToArray(),
-            [.. result.Rows.Select(row => row.Time("shift_start"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Time(new ShiftStartColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 }

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -27,7 +32,7 @@ public sealed class TemporalAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -36,8 +41,8 @@ public sealed class TemporalAggregateTests
                                 new MaxDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            "schema_with_foreign_keys.orders",
-                                            "placed_on"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedOnColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -52,8 +57,8 @@ public sealed class TemporalAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -90,7 +95,7 @@ public sealed class TemporalAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -99,8 +104,8 @@ public sealed class TemporalAggregateTests
                                 new MinDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            "schema_with_foreign_keys.orders",
-                                            "placed_at"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -115,8 +120,8 @@ public sealed class TemporalAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -154,7 +159,7 @@ public sealed class TemporalAggregateTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -163,8 +168,8 @@ public sealed class TemporalAggregateTests
                                 new MaxTime(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            "schema_with_foreign_keys.users",
-                                            "shift_start"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                            new ShiftStartColumn().Name.TextValue
                                         )
                                     )
                                 )

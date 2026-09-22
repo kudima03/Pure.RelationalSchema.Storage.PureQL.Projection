@@ -1,4 +1,9 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
@@ -22,14 +27,14 @@ public sealed class AsyncEnumerationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -44,7 +49,7 @@ public sealed class AsyncEnumerationTests
         {
             foreach (KeyValuePair<IColumn, ICell> cell in row.Cells)
             {
-                if (cell.Key.Name.TextValue == "order_status")
+                if (cell.Key.Name.TextValue == new OrderStatusColumn().Name.TextValue)
                 {
                     statuses.Add(cell.Value.Value.TextValue);
                 }

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -31,7 +36,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField("schema_with_foreign_keys.products", "product_name")
+                    new StringField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new ProductsTable().Name,
+                            ]
+                        ).TextValue, new ProductNameColumn().Name.TextValue)
                 )
             )
         );
@@ -42,7 +54,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         return new SelectExpression(
             new ArrayReturning(
                 new NumberArrayReturning(
-                    new NumberField("schema_with_foreign_keys.orders", "order_total")
+                    new NumberField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderTotalColumn().Name.TextValue)
                 )
             )
         );
@@ -53,7 +72,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField("schema_with_foreign_keys.users", "user_name")
+                    new StringField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue, new UserNameColumn().Name.TextValue)
                 )
             )
         );
@@ -70,15 +96,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.products"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new ProductsTable().Name,
+                    ]
+                ).TextValue),
             [ProductNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.products",
-                                "product_in_stock"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new ProductsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ProductInStockColumn().Name.TextValue
                             )
                         ),
                         new BooleanArrayReturning(new BooleanArrayScalar([true]))
@@ -116,15 +155,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.products"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new ProductsTable().Name,
+                    ]
+                ).TextValue),
             [ProductNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachBooleanEquality(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.products",
-                                "product_in_stock"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new ProductsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ProductInStockColumn().Name.TextValue
                             )
                         ),
                         new BooleanArrayReturning(
@@ -149,7 +201,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal("Gadget", Assert.Single(result.Column("product_name")));
+        Assert.Equal("Gadget", Assert.Single(result.Column(new ProductNameColumn().Name.TextValue)));
     }
 
     // eachNot wraps a literal-operand eachEqual, showing the broadcast first
@@ -163,7 +215,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.products"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new ProductsTable().Name,
+                    ]
+                ).TextValue),
             [ProductNameSelect()],
             new BooleanArrayReturning(
                 new EachNotOperator(
@@ -172,8 +231,15 @@ public sealed class EachLiteralOperandTypeMatrixTests
                             new EachBooleanEquality(
                                 new BooleanArrayReturning(
                                     new BooleanField(
-                                        "schema_with_foreign_keys.products",
-                                        "product_in_stock"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys()
+                                                    .Name,
+                                                new ProductsTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new ProductInStockColumn().Name.TextValue
                                     )
                                 ),
                                 new BooleanArrayReturning(new BooleanArrayScalar([true]))
@@ -198,7 +264,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal("Gadget", Assert.Single(result.Column("product_name")));
+        Assert.Equal("Gadget", Assert.Single(result.Column(new ProductNameColumn().Name.TextValue)));
     }
 
     // ===== Uuid: Orders.Id (each order id is distinct) =====
@@ -212,13 +278,27 @@ public sealed class EachLiteralOperandTypeMatrixTests
         Guid target = orderRows.Single(order => order.OrderTotal == 200.00).OrderId;
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.orders", "order_id")
+                            new UuidField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue, new OrderIdColumn().Name.TextValue)
                         ),
                         new UuidArrayReturning(new UuidArrayScalar([target]))
                     )
@@ -240,7 +320,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal(200.00, result.Row(0).Double("order_total"));
+        Assert.Equal(200.00, result.Row(0).Double(new OrderTotalColumn().Name.TextValue));
     }
 
     // A 3-element literal whose first element is the target order id and
@@ -257,13 +337,27 @@ public sealed class EachLiteralOperandTypeMatrixTests
         Guid decoyTwo = orderRows.Single(order => order.OrderTotal == 75.25).OrderId;
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.orders", "order_id")
+                            new UuidField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue, new OrderIdColumn().Name.TextValue)
                         ),
                         new UuidArrayReturning(
                             new UuidArrayScalar([target, decoyOne, decoyTwo])
@@ -287,7 +381,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal(200.00, result.Row(0).Double("order_total"));
+        Assert.Equal(200.00, result.Row(0).Double(new OrderTotalColumn().Name.TextValue));
     }
 
     // ===== Date: Orders.PlacedOn (2024-06-01 .. 2024-06-06, one per row) =====
@@ -301,15 +395,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateOnly target = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         ),
                         new DateArrayReturning(new DateArrayScalar([target]))
@@ -347,15 +454,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateOnly target = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         ),
                         new DateArrayReturning(
@@ -397,7 +517,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -405,8 +532,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         ),
                         new DateArrayReturning(new DateArrayScalar([threshold]))
@@ -445,7 +578,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -453,8 +593,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachLessThan,
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         ),
                         new DateArrayReturning(
@@ -489,15 +635,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateOnly target = new DateOnly(2099, 1, 1);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateEquality(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         ),
                         new DateArrayReturning(new DateArrayScalar([target]))
@@ -530,15 +689,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateTime target = new DateTime(2024, 6, 1, 10, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateTimeEquality(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_at"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         ),
                         new DateTimeArrayReturning(new DateTimeArrayScalar([target]))
@@ -575,15 +747,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateTime target = new DateTime(2024, 6, 1, 10, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachDateTimeEquality(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_at"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         ),
                         new DateTimeArrayReturning(
@@ -621,7 +806,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         DateTime threshold = new DateTime(2024, 6, 3, 12, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderTotalSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -629,8 +821,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachGreaterThan,
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_at"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         ),
                         new DateTimeArrayReturning(new DateTimeArrayScalar([threshold]))
@@ -668,15 +866,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         TimeOnly target = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachTimeEquality(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         ),
                         new TimeArrayReturning(new TimeArrayScalar([target]))
@@ -714,15 +925,28 @@ public sealed class EachLiteralOperandTypeMatrixTests
         TimeOnly target = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachTimeEquality(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         ),
                         new TimeArrayReturning(
@@ -760,7 +984,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -768,8 +999,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachLessThan,
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         ),
                         new TimeArrayReturning(new TimeArrayScalar([threshold]))
@@ -792,7 +1029,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             result.Count
         );
         Assert.Equal(1, result.Count);
-        Assert.Equal("Eve", Assert.Single(result.Column("user_name")));
+        Assert.Equal("Eve", Assert.Single(result.Column(new UserNameColumn().Name.TextValue)));
     }
 
     [Fact]
@@ -804,7 +1041,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -812,8 +1056,14 @@ public sealed class EachLiteralOperandTypeMatrixTests
                         EachComparisonOperator.EachGreaterThanOrEqual,
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         ),
                         new TimeArrayReturning(new TimeArrayScalar([threshold]))

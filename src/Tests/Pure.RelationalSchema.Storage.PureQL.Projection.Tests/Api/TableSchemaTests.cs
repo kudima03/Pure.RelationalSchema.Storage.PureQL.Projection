@@ -1,4 +1,9 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
@@ -29,14 +34,14 @@ public sealed class TableSchemaTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     ),
@@ -46,8 +51,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -57,8 +62,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -88,7 +93,7 @@ public sealed class TableSchemaTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -97,8 +102,8 @@ public sealed class TableSchemaTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -114,8 +119,8 @@ public sealed class TableSchemaTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -131,8 +136,8 @@ public sealed class TableSchemaTests
                                 new MaxDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            "schema_with_foreign_keys.orders",
-                                            "placed_on"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedOnColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -148,8 +153,8 @@ public sealed class TableSchemaTests
                                 new MinDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            "schema_with_foreign_keys.orders",
-                                            "placed_at"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -165,8 +170,8 @@ public sealed class TableSchemaTests
                                 new MaxTime(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            "schema_with_foreign_keys.users",
-                                            "shift_start"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                            new ShiftStartColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -180,20 +185,20 @@ public sealed class TableSchemaTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -228,14 +233,14 @@ public sealed class TableSchemaTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -244,8 +249,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -258,7 +263,7 @@ public sealed class TableSchemaTests
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
         Assert.Equal(
-            ["order_id", "order_status"],
+            [new OrderIdColumn().Name.TextValue, new OrderStatusColumn().Name.TextValue],
             [.. columns.Select(column => column.Name.TextValue)]
         );
 

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -25,7 +30,7 @@ public sealed class NumericAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -34,8 +39,8 @@ public sealed class NumericAggregateTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -50,8 +55,8 @@ public sealed class NumericAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -88,7 +93,7 @@ public sealed class NumericAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -97,8 +102,8 @@ public sealed class NumericAggregateTests
                                 new MinNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -113,8 +118,8 @@ public sealed class NumericAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -151,7 +156,7 @@ public sealed class NumericAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -160,8 +165,8 @@ public sealed class NumericAggregateTests
                                 new MaxNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -176,8 +181,8 @@ public sealed class NumericAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -214,7 +219,7 @@ public sealed class NumericAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -223,8 +228,8 @@ public sealed class NumericAggregateTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )

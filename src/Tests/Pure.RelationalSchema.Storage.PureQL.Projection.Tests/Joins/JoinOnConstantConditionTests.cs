@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -21,14 +26,20 @@ public sealed class JoinOnConstantConditionTests
     private static Query UsersJoinedToProducts(JoinType joinType, bool condition)
     {
         return new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -38,7 +49,10 @@ public sealed class JoinOnConstantConditionTests
             [
                 new Join(
                     joinType,
-                    "schema_with_foreign_keys.products",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
                     new BooleanReturning(new BooleanScalar(condition))
                 ),
             ],
@@ -106,7 +120,7 @@ public sealed class JoinOnConstantConditionTests
 
         Assert.Equal(
             expected,
-            result.Column("user_name").OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
         );
     }
 

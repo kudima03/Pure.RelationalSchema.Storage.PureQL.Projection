@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -25,14 +30,20 @@ public sealed class MultiJoinTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -41,8 +52,11 @@ public sealed class MultiJoinTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.products",
-                                "product_name"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                new ProductNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -52,20 +66,29 @@ public sealed class MultiJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.order_items",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.order_items",
-                                        "item_order_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                        new ItemOrderIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -74,20 +97,29 @@ public sealed class MultiJoinTests
                 ),
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.products",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.order_items",
-                                        "item_product_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                        new ItemProductIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.products",
-                                        "product_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                        new ProductIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -121,8 +153,8 @@ public sealed class MultiJoinTests
             .. result
                 .Rows.Select(row =>
                     (
-                        row["order_status"],
-                        row["product_name"]
+                        row[new OrderStatusColumn().Name.TextValue],
+                        row[new ProductNameColumn().Name.TextValue]
                     )
                 )
                 .OrderBy(pair => pair.Item1)

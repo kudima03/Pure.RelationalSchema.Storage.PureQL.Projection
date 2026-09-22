@@ -1,4 +1,9 @@
 using System.Globalization;
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -43,12 +48,18 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("schema_with_foreign_keys.users", "user_name")
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -59,14 +70,20 @@ public sealed class NullSemanticsTests
                         new NumberArrayEquality(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    "schema_with_foreign_keys.users",
-                                    "user_age"
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                    new UserAgeColumn().Name.TextValue
                                 )
                             ),
                             new NumberArrayReturning(
                                 new NumberField(
-                                    "schema_with_foreign_keys.users",
-                                    "user_score"
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                    new UserScoreColumn().Name.TextValue
                                 )
                             )
                         )
@@ -95,7 +112,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -114,12 +131,18 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("schema_with_foreign_keys.users", "user_name")
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -129,8 +152,11 @@ public sealed class NullSemanticsTests
                     new EachNumberEquality(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(30))
@@ -159,7 +185,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(["Ann", "Cara"], expected);
         Assert.Equal(
             expected,
-            result.Column("user_name")
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -178,14 +204,20 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         )
                     )
@@ -197,8 +229,11 @@ public sealed class NullSemanticsTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "schema_with_foreign_keys.users",
-                                            "user_id"
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                            new UserIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -213,8 +248,11 @@ public sealed class NullSemanticsTests
             [
                 new Field(
                     new NumberField(
-                        "schema_with_foreign_keys.users",
-                        "user_score"
+                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                        new UserScoreColumn().Name.TextValue
                     )
                 ),
             ],
@@ -237,7 +275,7 @@ public sealed class NullSemanticsTests
 
         ResultRow nullGroup = Assert.Single(
             result.Rows,
-            row => row["user_score"] == string.Empty
+            row => row[new UserScoreColumn().Name.TextValue] == string.Empty
         );
         Assert.Equal(2.0, nullGroup.Double("n"));
     }
@@ -262,7 +300,10 @@ public sealed class NullSemanticsTests
         Query SumAvgMinMaxQuery(string aggregateAlias, SelectExpression expression)
         {
             return new Query(
-                new FromExpression("schema_with_foreign_keys.users"),
+                new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
                 [expression]
             );
         }
@@ -276,7 +317,10 @@ public sealed class NullSemanticsTests
         }
 
         NumberArrayReturning scoreField = new NumberArrayReturning(
-            new NumberField("schema_with_foreign_keys.users", "user_score")
+            new NumberField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserScoreColumn().Name.TextValue)
         );
 
         ProjectionResult sumResult = new ProjectionResult(
@@ -334,14 +378,20 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         )
                     )
@@ -369,7 +419,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(expectedDistinctCount, result.Count);
         _ = Assert.Single(
             result.Rows,
-            row => row["user_score"] == string.Empty
+            row => row[new UserScoreColumn().Name.TextValue] == string.Empty
         );
     }
 
@@ -391,12 +441,18 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("schema_with_foreign_keys.users", "user_name")
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -409,8 +465,11 @@ public sealed class NullSemanticsTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_score"
+                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                            new UserScoreColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -435,7 +494,10 @@ public sealed class NullSemanticsTests
         ];
 
         Assert.Equal(["Bob", "Dan"], expected[^2..]);
-        Assert.Equal(expected, result.Column("user_name").ToArray());
+        Assert.Equal(
+            expected,
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
+        );
     }
 
     // Descending companion: proves NULLS LAST holds in the direction where
@@ -451,12 +513,18 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("schema_with_foreign_keys.users", "user_name")
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -469,8 +537,11 @@ public sealed class NullSemanticsTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_score"
+                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                            new UserScoreColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -496,7 +567,10 @@ public sealed class NullSemanticsTests
         ];
 
         Assert.Equal(["Bob", "Dan"], expected[^2..]);
-        Assert.Equal(expected, result.Column("user_name").ToArray());
+        Assert.Equal(
+            expected,
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
+        );
     }
 
     // Numeric precision/extremes: double.MaxValue/MinValue, the smallest
@@ -516,14 +590,20 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_precision_value"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserPrecisionValueColumn().Name.TextValue
                             )
                         )
                     )
@@ -537,7 +617,11 @@ public sealed class NullSemanticsTests
 
         Assert.Equal(
             [.. userRows.Select(user => (double?)user.UserPrecisionValue)],
-            [.. result.Rows.Select(row => row.Double("user_precision_value"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Double(new UserPrecisionValueColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Contains(
             double.MaxValue,
@@ -568,14 +652,20 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "user_edge_date"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -584,8 +674,11 @@ public sealed class NullSemanticsTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "user_edge_datetime"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeDateTimeColumn().Name.TextValue
                             )
                         )
                     )
@@ -594,8 +687,11 @@ public sealed class NullSemanticsTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "user_edge_time"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeTimeColumn().Name.TextValue
                             )
                         )
                     )
@@ -609,15 +705,27 @@ public sealed class NullSemanticsTests
 
         Assert.Equal(
             [.. userRows.Select(user => (DateOnly?)user.UserEdgeDate)],
-            [.. result.Rows.Select(row => row.Date("user_edge_date"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Date(new UserEdgeDateColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Equal(
             [.. userRows.Select(user => (DateTime?)user.UserEdgeDateTime)],
-            [.. result.Rows.Select(row => row.DateTime("user_edge_datetime"))]
+            [
+                .. result.Rows.Select(
+                    row => row.DateTime(new UserEdgeDateTimeColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Equal(
             [.. userRows.Select(user => (TimeOnly?)user.UserEdgeTime)],
-            [.. result.Rows.Select(row => row.Time("user_edge_time"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Time(new UserEdgeTimeColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Contains(
             new DateOnly(2024, 2, 29),
@@ -648,14 +756,20 @@ public sealed class NullSemanticsTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "user_edge_datetime"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeDateTimeColumn().Name.TextValue
                             )
                         )
                     )
@@ -664,8 +778,11 @@ public sealed class NullSemanticsTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_precision_value"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserPrecisionValueColumn().Name.TextValue
                             )
                         )
                     )
@@ -688,11 +805,19 @@ public sealed class NullSemanticsTests
 
         Assert.Equal(
             [.. userRows.Select(user => (DateTime?)user.UserEdgeDateTime)],
-            [.. result.Rows.Select(row => row.DateTime("user_edge_datetime"))]
+            [
+                .. result.Rows.Select(
+                    row => row.DateTime(new UserEdgeDateTimeColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Equal(
             [.. userRows.Select(user => (double?)user.UserPrecisionValue)],
-            [.. result.Rows.Select(row => row.Double("user_precision_value"))]
+            [
+                .. result.Rows.Select(
+                    row => row.Double(new UserPrecisionValueColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
@@ -710,14 +835,20 @@ public sealed class NullSemanticsTests
         IEnumerable<IStoredSchemaDataSet> datasets = [new UuidCasingSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_without_foreign_keys.table_without_indexes"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithoutForeignKeys().Name, new TableWithoutIndexes().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_without_foreign_keys.table_without_indexes",
-                                "name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithoutForeignKeys().Name, new TableWithoutIndexes().Name]
+).TextValue,
+                                new NameColumn().Name.TextValue
                             )
                         )
                     )
@@ -728,8 +859,11 @@ public sealed class NullSemanticsTests
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_without_foreign_keys.table_without_indexes",
-                                "id"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithoutForeignKeys().Name, new TableWithoutIndexes().Name]
+).TextValue,
+                                new IdColumn().Name.TextValue
                             )
                         ),
                         new UuidReturning(
@@ -756,7 +890,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(2, result.Count);
         Assert.Equal(
             expectedLabels,
-            result.Column("name")
+            result.Column(new NameColumn().Name.TextValue)
                 .OrderBy(label => label, StringComparer.Ordinal)
                 .ToArray()
         );

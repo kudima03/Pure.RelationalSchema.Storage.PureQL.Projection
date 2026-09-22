@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -28,28 +33,40 @@ public sealed class JoinPipelineWhereHavingTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
             UsersOrdersCondition()
         );
     }
 
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, "schema_with_foreign_keys.orders", UsersOrdersCondition());
+        return new Join(JoinType.Left, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            "schema_with_foreign_keys.users",
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, "schema_with_foreign_keys.users", OrdersUsersCondition());
+        return new Join(JoinType.Full, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, OrdersUsersCondition());
     }
 
     private static BooleanArrayReturning UsersOrdersCondition()
@@ -58,12 +75,18 @@ public sealed class JoinPipelineWhereHavingTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField("schema_with_foreign_keys.users", "user_id")
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -78,12 +101,18 @@ public sealed class JoinPipelineWhereHavingTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField("schema_with_foreign_keys.users", "user_id")
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     )
                 )
             )
@@ -98,8 +127,11 @@ public sealed class JoinPipelineWhereHavingTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(100))
@@ -113,7 +145,10 @@ public sealed class JoinPipelineWhereHavingTests
         return new SelectExpression(
             new ArrayReturning(
                 new StringArrayReturning(
-                    new StringField("schema_with_foreign_keys.users", "user_name")
+                    new StringField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserNameColumn().Name.TextValue)
                 )
             )
         );
@@ -147,7 +182,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [UsersToOrdersInnerJoin()],
@@ -165,7 +203,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         string?[] actual =
         [
-            .. result.Column("user_name").OrderBy(name => name),
+            .. result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -180,7 +218,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [UsersToOrdersLeftJoin()],
@@ -201,7 +242,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         string?[] actual =
         [
-            .. result.Column("user_name").OrderBy(name => name),
+            .. result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -216,7 +257,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [OrdersToUsersRightJoin()],
@@ -234,7 +278,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         string?[] actual =
         [
-            .. result.Column("user_name").OrderBy(name => name),
+            .. result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -249,7 +293,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [UserNameSelect()],
             TotalAtLeast100Each(),
             [OrdersToUsersFullJoin()],
@@ -267,7 +314,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         string?[] actual =
         [
-            .. result.Column("user_name").OrderBy(name => name),
+            .. result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name),
         ];
 
         Assert.Equal(expected, actual);
@@ -282,8 +329,11 @@ public sealed class JoinPipelineWhereHavingTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_id"
+                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                    new OrderIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -303,8 +353,11 @@ public sealed class JoinPipelineWhereHavingTests
                         new SumNumber(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_total"
+                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                    new OrderTotalColumn().Name.TextValue
                                 )
                             )
                         )
@@ -318,7 +371,10 @@ public sealed class JoinPipelineWhereHavingTests
     private static Field UsersIdField()
     {
         return new Field(
-            new UuidField("schema_with_foreign_keys.users", "user_id")
+            new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
         );
     }
 
@@ -335,14 +391,20 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -380,7 +442,7 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         Dictionary<Guid, (double Count, double? Sum)> actual = result.Rows.ToDictionary(
-            row => row.Uuid("user_id")!.Value,
+            row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value,
             row => (row.Double("orderCount")!.Value, row.Double("totalSum"))
         );
 
@@ -398,14 +460,20 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -443,7 +511,7 @@ public sealed class JoinPipelineWhereHavingTests
         );
 
         Dictionary<Guid, (double Count, double? Sum)> actual = result.Rows.ToDictionary(
-            row => row.Uuid("user_id")!.Value,
+            row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value,
             row => (row.Double("orderCount")!.Value, row.Double("totalSum"))
         );
 
@@ -483,8 +551,11 @@ public sealed class JoinPipelineWhereHavingTests
                             new SumNumber(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_total"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderTotalColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -505,8 +576,11 @@ public sealed class JoinPipelineWhereHavingTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -531,7 +605,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersInnerJoin()
         );
 
@@ -543,7 +620,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -558,7 +635,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersLeftJoin()
         );
 
@@ -570,7 +650,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -585,7 +665,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersRightJoin()
         );
 
@@ -597,7 +680,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(expected, actual);
@@ -612,7 +695,10 @@ public sealed class JoinPipelineWhereHavingTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = GroupedByUserWithHaving(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersFullJoin()
         );
 
@@ -624,7 +710,7 @@ public sealed class JoinPipelineWhereHavingTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(expected, actual);

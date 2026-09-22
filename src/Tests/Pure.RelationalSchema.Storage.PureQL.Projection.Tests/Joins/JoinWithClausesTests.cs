@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -23,14 +28,20 @@ public sealed class JoinWithClausesTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -40,20 +51,29 @@ public sealed class JoinWithClausesTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -61,7 +81,10 @@ public sealed class JoinWithClausesTests
                     )
                 ),
             ],
-            [new Field(new StringField("schema_with_foreign_keys.orders", "order_status"))],
+            [new Field(new StringField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, new OrderStatusColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
@@ -78,7 +101,7 @@ public sealed class JoinWithClausesTests
 
         string?[] actual =
         [
-            .. result.Column("order_status").OrderBy(s => s),
+            .. result.Column(new OrderStatusColumn().Name.TextValue).OrderBy(s => s),
         ];
 
         Assert.Equal(expected.Length, result.Count);
@@ -93,14 +116,20 @@ public sealed class JoinWithClausesTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -110,20 +139,29 @@ public sealed class JoinWithClausesTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -137,8 +175,11 @@ public sealed class JoinWithClausesTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -161,7 +202,7 @@ public sealed class JoinWithClausesTests
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double("order_total")),
+            .. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);

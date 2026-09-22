@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
@@ -24,7 +29,10 @@ public sealed class EachExpressionSelectTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
@@ -34,14 +42,26 @@ public sealed class EachExpressionSelectTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_age"
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys().Name,
+                                                        new UsersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new UserAgeColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_precision_value"
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys().Name,
+                                                        new UsersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new UserPrecisionValueColumn().Name.TextValue
                                             )
                                         ),
                                     ]
@@ -66,14 +86,23 @@ public sealed class EachExpressionSelectTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -86,14 +115,26 @@ public sealed class EachExpressionSelectTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.orders",
-                                                "order_total"
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys().Name,
+                                                        new OrdersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.orders",
-                                                "order_total"
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys().Name,
+                                                        new OrdersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                     ]
@@ -109,8 +150,14 @@ public sealed class EachExpressionSelectTests
             [
                 new Field(
                     new StringField(
-                        "schema_with_foreign_keys.orders",
-                        "order_status"
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],

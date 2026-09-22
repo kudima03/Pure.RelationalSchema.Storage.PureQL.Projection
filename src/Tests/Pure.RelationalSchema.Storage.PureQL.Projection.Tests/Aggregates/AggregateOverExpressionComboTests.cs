@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -44,20 +49,20 @@ public sealed class AggregateOverExpressionComboTests
         [
             new Join(
                 JoinType.Inner,
-                "schema_with_foreign_keys.order_items",
+                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
                 new BooleanArrayReturning(
                     new EachEquality(
                         new EachUuidEquality(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.order_items",
-                                    "item_order_id"
+                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                    new ItemOrderIdColumn().Name.TextValue
                                 )
                             ),
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_id"
+                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                    new OrderIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -66,20 +71,20 @@ public sealed class AggregateOverExpressionComboTests
             ),
             new Join(
                 JoinType.Inner,
-                "schema_with_foreign_keys.products",
+                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
                 new BooleanArrayReturning(
                     new EachEquality(
                         new EachUuidEquality(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.order_items",
-                                    "item_product_id"
+                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                    new ItemProductIdColumn().Name.TextValue
                                 )
                             ),
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.products",
-                                    "product_id"
+                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
+                                    new ProductIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -93,20 +98,20 @@ public sealed class AggregateOverExpressionComboTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.users",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -125,14 +130,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_qty"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.products",
-                                "product_price"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
+                                new ProductPriceColumn().Name.TextValue
                             )
                         ),
                     ]
@@ -149,14 +154,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         ),
                     ]
@@ -173,14 +178,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         ),
                     ]
@@ -197,14 +202,14 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_score"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                     ]
@@ -223,8 +228,8 @@ public sealed class AggregateOverExpressionComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
@@ -233,8 +238,8 @@ public sealed class AggregateOverExpressionComboTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.orders",
-                                                "order_total"
+                                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(100.50)),
@@ -361,14 +366,14 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue"),
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -388,7 +393,7 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("revenue")!.Value
         );
 
@@ -406,9 +411,9 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 AggregateSelect(
                     new NumberAggregate(new AverageNumber(QtyTimesPrice())),
                     "meanLineValue"
@@ -416,7 +421,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -436,7 +441,7 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Average(x => x.Value));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("meanLineValue")!.Value
         );
 
@@ -453,9 +458,9 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 AggregateSelect(
                     new NumberAggregate(new MinNumber(QtyTimesPrice())),
                     "minLineValue"
@@ -467,7 +472,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -494,12 +499,12 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Max(x => x.Value));
 
         Dictionary<Guid, double> actualMin = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("minLineValue")!.Value
         );
 
         Dictionary<Guid, double> actualMax = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("maxLineValue")!.Value
         );
 
@@ -517,14 +522,14 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 CountSelect(QtyTimesPrice(), "lineCount"),
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -544,7 +549,7 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => (double)g.Count());
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("lineCount")!.Value
         );
 
@@ -561,7 +566,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue")],
             where: null,
             OrdersToItemsToProductsJoin(),
@@ -598,9 +603,9 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
+                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
                 AggregateSelect(
                     new NumberAggregate(new SumNumber(TotalPlusAge())),
                     "totalPlusAge"
@@ -608,7 +613,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
+            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -627,7 +632,7 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
 
         Dictionary<bool, double> actual = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Double("totalPlusAge")!.Value
         );
 
@@ -644,9 +649,9 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                NumberGroupKeySelect("schema_with_foreign_keys.users", "user_age"),
+                NumberGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue),
                 AggregateSelect(
                     new NumberAggregate(new AverageNumber(TotalPlusAge())),
                     "meanTotalPlusAge"
@@ -654,7 +659,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [new Field(new NumberField("schema_with_foreign_keys.users", "user_age"))],
+            [new Field(new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
@@ -673,7 +678,7 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Average(x => x.Value));
 
         Dictionary<double, double> actual = result.Rows.ToDictionary(
-            row => row.Double("user_age")!.Value,
+            row => row.Double(new UserAgeColumn().Name.TextValue)!.Value,
             row => row.Double("meanTotalPlusAge")!.Value
         );
 
@@ -693,15 +698,15 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
+                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
                 AggregateSelect(new NumberAggregate(new MinNumber(TotalMinusAge())), "minDiff"),
                 AggregateSelect(new NumberAggregate(new MaxNumber(TotalMinusAge())), "maxDiff"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
+            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -727,12 +732,12 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => g.Max(x => x.Value));
 
         Dictionary<bool, double> actualMin = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Double("minDiff")!.Value
         );
 
         Dictionary<bool, double> actualMax = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Double("maxDiff")!.Value
         );
 
@@ -748,14 +753,14 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                StringGroupKeySelect("schema_with_foreign_keys.orders", "order_status"),
+                StringGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue),
                 CountSelect(TotalMinusAge(), "diffCount"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [StringGroupKeyField("schema_with_foreign_keys.orders", "order_status")],
+            [StringGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -770,7 +775,7 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => (double)g.Count());
 
         Dictionary<string, double> actual = result.Rows.ToDictionary(
-            row => row["order_status"]!,
+            row => row[new OrderStatusColumn().Name.TextValue]!,
             row => row.Double("diffCount")!.Value
         );
 
@@ -787,7 +792,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [AggregateSelect(new NumberAggregate(new AverageNumber(TotalMinusAge())), "meanDiff")],
             where: null,
             [OrdersToUsersJoin()],
@@ -823,9 +828,9 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 AggregateSelect(
                     new NumberAggregate(new SumNumber(TotalDividedByScore())),
                     "sumRatio"
@@ -834,7 +839,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -865,12 +870,12 @@ public sealed class AggregateOverExpressionComboTests
             .ToDictionary(g => g.Key, g => SqlCount(g.Select(x => x.Ratio)));
 
         Dictionary<Guid, double?> actualSum = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("sumRatio")
         );
 
         Dictionary<Guid, double> actualCount = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("ratioCount")!.Value
         );
 
@@ -892,7 +897,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [AggregateSelect(new NumberAggregate(new MinNumber(TotalDividedByScore())), "minRatio")],
             where: null,
             [OrdersToUsersJoin()],
@@ -929,7 +934,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [AggregateSelect(new NumberAggregate(new MaxNumber(TotalDividedByScore())), "maxRatio")],
             where: null,
             [OrdersToUsersJoin()],
@@ -964,7 +969,7 @@ public sealed class AggregateOverExpressionComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 AggregateSelect(
                     new NumberAggregate(new SumNumber(TotalDividedByTotalMinusThreshold())),
@@ -990,14 +995,14 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue"),
             ],
             where: null,
             OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             new BooleanReturning(
                 new Comparison(
                     new NumberComparison(
@@ -1031,7 +1036,7 @@ public sealed class AggregateOverExpressionComboTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("order_user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.NotEmpty(expected);
@@ -1047,9 +1052,9 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
+                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
                 AggregateSelect(
                     new NumberAggregate(new AverageNumber(TotalMinusAge())),
                     "meanDiff"
@@ -1057,7 +1062,7 @@ public sealed class AggregateOverExpressionComboTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
+            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
             new BooleanReturning(
                 new Comparison(
                     new NumberComparison(
@@ -1089,7 +1094,7 @@ public sealed class AggregateOverExpressionComboTests
 
         HashSet<bool> actual =
         [
-            .. result.Rows.Select(row => row.Bool("user_active")!.Value),
+            .. result.Rows.Select(row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value),
         ];
 
         _ = Assert.Single(expected);
@@ -1105,14 +1110,14 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 CountSelect(TotalDividedByScore(), "ratioCount"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             new BooleanReturning(
                 new Equality(
                     new SingleValueEquality(
@@ -1150,7 +1155,7 @@ public sealed class AggregateOverExpressionComboTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("order_user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(2, expected.Count);

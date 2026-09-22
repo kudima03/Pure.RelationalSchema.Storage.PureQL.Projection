@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -35,7 +40,14 @@ public sealed class EachMixedFamilyComboTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.orders", "order_id")
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -46,7 +58,14 @@ public sealed class EachMixedFamilyComboTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.users", "user_id")
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue, new UserIdColumn().Name.TextValue)
                 )
             )
         );
@@ -68,7 +87,14 @@ public sealed class EachMixedFamilyComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -83,8 +109,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.users",
-                                                            "user_age"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -108,8 +141,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.users",
-                                                            "user_age"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -147,7 +187,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachOr(eachGreaterThan(eachSubtract(age, 10), 20),
@@ -160,7 +200,14 @@ public sealed class EachMixedFamilyComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -175,8 +222,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.users",
-                                                            "user_age"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -200,8 +254,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.users",
-                                                            "user_age"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -239,7 +300,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachNot(eachGreaterThan(eachMultiply(age, 3), 120)) - bare each-not at the
@@ -252,7 +313,14 @@ public sealed class EachMixedFamilyComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachNotOperator(
@@ -266,8 +334,15 @@ public sealed class EachMixedFamilyComboTests
                                             [
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        "schema_with_foreign_keys.users",
-                                                        "user_age"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new UsersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new UserAgeColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(3)),
@@ -302,7 +377,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachLessThan(eachDivide(total, 2), 100),
@@ -315,7 +390,14 @@ public sealed class EachMixedFamilyComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -330,8 +412,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -355,8 +445,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -394,7 +492,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachOr(eachNot(eachGreaterThan(eachAdd(total, 20), 150)),
@@ -407,7 +505,14 @@ public sealed class EachMixedFamilyComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -424,8 +529,16 @@ public sealed class EachMixedFamilyComboTests
                                                         [
                                                             new NumberArrayReturning(
                                                                 new NumberField(
-                                                                    "schema_with_foreign_keys.orders",
-                                                                    "order_total"
+                                                                    new JoinedString(
+                                                                        new DotString(),
+                                                                        [
+                                                                            new RelationalSchemaWithForeignKeys()
+                                                                                .Name,
+                                                                            new OrdersTable()
+                                                                                .Name,
+                                                                        ]
+                                                                    ).TextValue,
+                                                                    new OrderTotalColumn().Name.TextValue
                                                                 )
                                                             ),
                                                             new NumberReturning(
@@ -451,8 +564,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -490,7 +611,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // ===== Category 2: temporal add/diff feeding comparison feeding boolean-ops =====
@@ -506,7 +627,14 @@ public sealed class EachMixedFamilyComboTests
         DateOnly origin = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -519,8 +647,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "placed_on"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateReturning(new DateScalar(origin))
@@ -536,8 +671,15 @@ public sealed class EachMixedFamilyComboTests
                                     EachComparisonOperator.EachLessThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(60))
@@ -570,7 +712,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachEquality(eachDateAddDays(placed_on, 1) == target),
@@ -584,7 +726,14 @@ public sealed class EachMixedFamilyComboTests
         DateOnly target = new DateOnly(2024, 6, 2);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -596,8 +745,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateAddDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "placed_on"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1))
@@ -612,8 +768,15 @@ public sealed class EachMixedFamilyComboTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -646,7 +809,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachGreaterThanOrEqual(eachTimeAddSeconds(shift_start, 1800), 9:30),
@@ -661,7 +824,14 @@ public sealed class EachMixedFamilyComboTests
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -674,8 +844,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachTimeAddSeconds(
                                             new TimeArrayReturning(
                                                 new TimeField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "shift_start"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ShiftStartColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1800))
@@ -693,8 +870,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachTimeDiffSeconds(
                                             new TimeArrayReturning(
                                                 new TimeField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "shift_start"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ShiftStartColumn().Name.TextValue
                                                 )
                                             ),
                                             new TimeReturning(new TimeScalar(origin))
@@ -731,7 +915,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachOr(eachEquality(eachDateTimeAddSeconds(last_login, 3600) == target),
@@ -746,7 +930,14 @@ public sealed class EachMixedFamilyComboTests
         DateTime origin = new DateTime(2024, 6, 2, 0, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -758,8 +949,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateTimeAddSeconds(
                                             new DateTimeArrayReturning(
                                                 new DateTimeField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "last_login"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new LastLoginColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(3600))
@@ -777,8 +975,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateTimeDiffSeconds(
                                             new DateTimeArrayReturning(
                                                 new DateTimeField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "last_login"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new LastLoginColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateTimeReturning(
@@ -817,7 +1022,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // ===== Category 3: mixed equality + comparison, 3-5 levels, 2+ types =====
@@ -837,8 +1042,14 @@ public sealed class EachMixedFamilyComboTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            "schema_with_foreign_keys.users",
-                            "user_active"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -851,8 +1062,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_age"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(28))
@@ -865,8 +1082,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachLessThan,
                     new DateArrayReturning(
                         new DateField(
-                            "schema_with_foreign_keys.users",
-                            "signup_date"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new SignupDateColumn().Name.TextValue
                         )
                     ),
                     new DateReturning(new DateScalar(threshold))
@@ -875,7 +1098,14 @@ public sealed class EachMixedFamilyComboTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -910,7 +1140,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // 5-level tree mixing number/boolean/date leaves, AND-rooted:
@@ -932,8 +1162,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachGreaterThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_age"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(26))
@@ -945,8 +1181,14 @@ public sealed class EachMixedFamilyComboTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            "schema_with_foreign_keys.users",
-                            "user_active"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -959,8 +1201,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_age"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(30))
@@ -973,8 +1221,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachLessThan,
                     new DateArrayReturning(
                         new DateField(
-                            "schema_with_foreign_keys.users",
-                            "signup_date"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new SignupDateColumn().Name.TextValue
                         )
                     ),
                     new DateReturning(new DateScalar(threshold))
@@ -986,8 +1240,14 @@ public sealed class EachMixedFamilyComboTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            "schema_with_foreign_keys.users",
-                            "user_active"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(false))
@@ -1021,7 +1281,14 @@ public sealed class EachMixedFamilyComboTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator([leftBranch, rightBranch])
@@ -1058,7 +1325,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < userRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "user_id"));
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachAnd(order_user_id == Cara.id, placed_on >= 2024-06-05),
@@ -1075,7 +1342,14 @@ public sealed class EachMixedFamilyComboTests
         DateOnly threshold = new DateOnly(2024, 6, 5);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -1088,8 +1362,15 @@ public sealed class EachMixedFamilyComboTests
                                             new EachUuidEquality(
                                                 new UuidArrayReturning(
                                                     new UuidField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "order_user_id"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderUserIdColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new UuidReturning(
@@ -1105,8 +1386,15 @@ public sealed class EachMixedFamilyComboTests
                                                     .EachGreaterThanOrEqual,
                                                 new DateArrayReturning(
                                                     new DateField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "placed_on"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new PlacedOnColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new DateReturning(
@@ -1123,8 +1411,15 @@ public sealed class EachMixedFamilyComboTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -1159,7 +1454,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // ===== Category 5: operand-shape variety (field / literal / nested each) =====
@@ -1174,7 +1469,14 @@ public sealed class EachMixedFamilyComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -1185,8 +1487,15 @@ public sealed class EachMixedFamilyComboTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberArrayReturning(
@@ -1205,8 +1514,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -1247,7 +1564,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachOr(["shipped", junk...] (broadcast) == status,
@@ -1262,7 +1579,14 @@ public sealed class EachMixedFamilyComboTests
         DateOnly threshold = new DateOnly(2024, 7, 4);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -1284,8 +1608,15 @@ public sealed class EachMixedFamilyComboTests
                                     ),
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1299,8 +1630,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateAddDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "placed_on"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(30))
@@ -1336,7 +1674,7 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // ===== Crossover: numeric arithmetic + temporal diff under one AND =====
@@ -1352,7 +1690,14 @@ public sealed class EachMixedFamilyComboTests
         DateOnly origin = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -1367,8 +1712,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -1390,8 +1743,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "placed_on"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateReturning(new DateScalar(origin))
@@ -1428,6 +1788,6 @@ public sealed class EachMixedFamilyComboTests
 
         Assert.NotEmpty(expected);
         Assert.True(expected.Length < orderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, "order_id"));
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 }

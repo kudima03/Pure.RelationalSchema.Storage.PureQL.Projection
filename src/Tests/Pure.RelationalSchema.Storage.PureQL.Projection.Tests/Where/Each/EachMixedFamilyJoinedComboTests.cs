@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -32,7 +37,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.orders", "order_id")
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -44,8 +56,14 @@ public sealed class EachMixedFamilyJoinedComboTests
             new ArrayReturning(
                 new StringArrayReturning(
                     new StringField(
-                        "schema_with_foreign_keys.users",
-                        "user_name"
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue,
+                        new UserNameColumn().Name.TextValue
                     )
                 )
             )
@@ -56,18 +74,37 @@ public sealed class EachMixedFamilyJoinedComboTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.users",
+            new JoinedString(
+                new DotString(),
+                [
+                    new RelationalSchemaWithForeignKeys().Name,
+                    new UsersTable().Name,
+                ]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
-                            new UuidField("schema_with_foreign_keys.users", "user_id")
+                            new UuidField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue, new UserIdColumn().Name.TextValue)
                         )
                     )
                 )
@@ -83,14 +120,26 @@ public sealed class EachMixedFamilyJoinedComboTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         ),
                     ]
@@ -110,7 +159,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -147,7 +203,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 
@@ -168,7 +224,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -183,14 +246,29 @@ public sealed class EachMixedFamilyJoinedComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.users",
-                                                            "user_age"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                 ]
@@ -206,8 +284,15 @@ public sealed class EachMixedFamilyJoinedComboTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -243,7 +328,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 
@@ -263,7 +348,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -273,8 +365,15 @@ public sealed class EachMixedFamilyJoinedComboTests
                                 new EachBooleanEquality(
                                     new BooleanArrayReturning(
                                         new BooleanField(
-                                            "schema_with_foreign_keys.users",
-                                            "user_active"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new UsersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new UserActiveColumn().Name.TextValue
                                         )
                                     ),
                                     new BooleanReturning(new BooleanScalar(false))
@@ -289,14 +388,28 @@ public sealed class EachMixedFamilyJoinedComboTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "placed_on"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "signup_date"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new SignupDateColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -335,7 +448,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 
@@ -358,7 +471,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -371,8 +491,15 @@ public sealed class EachMixedFamilyJoinedComboTests
                                             new EachBooleanEquality(
                                                 new BooleanArrayReturning(
                                                     new BooleanField(
-                                                        "schema_with_foreign_keys.users",
-                                                        "user_active"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new UsersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new UserActiveColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new BooleanReturning(
@@ -402,8 +529,15 @@ public sealed class EachMixedFamilyJoinedComboTests
                                         new EachStringEquality(
                                             new StringArrayReturning(
                                                 new StringField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "order_status"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new OrderStatusColumn().Name.TextValue
                                                 )
                                             ),
                                             new StringReturning(
@@ -445,7 +579,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 
@@ -469,20 +603,38 @@ public sealed class EachMixedFamilyJoinedComboTests
 
         Join usersToOrders = new Join(
             JoinType.Left,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(
+                new DotString(),
+                [
+                    new RelationalSchemaWithForeignKeys().Name,
+                    new OrdersTable().Name,
+                ]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -491,7 +643,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserNameSelect()],
             new BooleanArrayReturning(
                 new EachComparison(
@@ -503,14 +662,28 @@ public sealed class EachMixedFamilyJoinedComboTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.users",
-                                                "user_age"
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys()
+                                                            .Name,
+                                                        new UsersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new UserAgeColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                "schema_with_foreign_keys.orders",
-                                                "order_total"
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys()
+                                                            .Name,
+                                                        new OrdersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                     ]
@@ -547,7 +720,7 @@ public sealed class EachMixedFamilyJoinedComboTests
                 .OrderBy(name => name),
         ];
 
-        string?[] actual = [.. result.Column("user_name").OrderBy(n => n)];
+        string?[] actual = [.. result.Column(new UserNameColumn().Name.TextValue).OrderBy(n => n)];
 
         Assert.NotEmpty(expected);
         // Eve and Fay place no orders; their NULL total must never
@@ -570,7 +743,14 @@ public sealed class EachMixedFamilyJoinedComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -580,8 +760,15 @@ public sealed class EachMixedFamilyJoinedComboTests
                                 new EachBooleanEquality(
                                     new BooleanArrayReturning(
                                         new BooleanField(
-                                            "schema_with_foreign_keys.users",
-                                            "user_active"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new UsersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new UserActiveColumn().Name.TextValue
                                         )
                                     ),
                                     new BooleanReturning(new BooleanScalar(true))
@@ -628,7 +815,7 @@ public sealed class EachMixedFamilyJoinedComboTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 

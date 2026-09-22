@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -22,14 +27,23 @@ public sealed class AliasCoverageTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     ),
@@ -39,8 +53,14 @@ public sealed class AliasCoverageTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -50,8 +70,14 @@ public sealed class AliasCoverageTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -65,9 +91,9 @@ public sealed class AliasCoverageTests
         );
 
         Assert.Equal(["id", "state", "amount"], result.ColumnNames);
-        Assert.DoesNotContain("order_id", result.ColumnNames);
-        Assert.DoesNotContain("order_status", result.ColumnNames);
-        Assert.DoesNotContain("order_total", result.ColumnNames);
+        Assert.DoesNotContain(new OrderIdColumn().Name.TextValue, result.ColumnNames);
+        Assert.DoesNotContain(new OrderStatusColumn().Name.TextValue, result.ColumnNames);
+        Assert.DoesNotContain(new OrderTotalColumn().Name.TextValue, result.ColumnNames);
     }
 
     [Fact]
@@ -78,18 +104,27 @@ public sealed class AliasCoverageTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
-                    "order_total"
+                    new OrderTotalColumn().Name.TextValue
                 ),
             ]
         );
@@ -98,10 +133,10 @@ public sealed class AliasCoverageTests
             new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(["order_total"], result.ColumnNames);
+        Assert.Equal([new OrderTotalColumn().Name.TextValue], result.ColumnNames);
 
         string?[] expected = [.. orderRows.Select(order => order.OrderStatus)];
-        string?[] actual = [.. result.Column("order_total")];
+        string?[] actual = [.. result.Column(new OrderTotalColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }

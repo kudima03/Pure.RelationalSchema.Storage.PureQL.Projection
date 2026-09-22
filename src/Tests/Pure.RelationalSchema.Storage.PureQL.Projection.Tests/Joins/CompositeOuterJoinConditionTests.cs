@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -27,14 +32,26 @@ public sealed class CompositeOuterJoinConditionTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.users",
-                            "user_id"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserIdColumn().Name.TextValue
                         )
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_user_id"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -50,8 +67,14 @@ public sealed class CompositeOuterJoinConditionTests
                     EachComparisonOperator.EachGreaterThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(threshold))
@@ -66,21 +89,33 @@ public sealed class CompositeOuterJoinConditionTests
     )
     {
         return new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
                 ),
             ],
             where: null,
-            [new Join(joinType, "schema_with_foreign_keys.orders", onCondition)],
+            [new Join(joinType, new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, onCondition)],
             groupBy: null,
             having: null,
             orderBy: null,
@@ -133,7 +168,7 @@ public sealed class CompositeOuterJoinConditionTests
             Assert.Equal(
                 expectedAppearances,
                 result
-                    .Column("user_name")
+                    .Column(new UserNameColumn().Name.TextValue)
                     .Count(name => name == user.UserName)
             );
         }
@@ -159,8 +194,14 @@ public sealed class CompositeOuterJoinConditionTests
                                 new EachNumberEquality(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(

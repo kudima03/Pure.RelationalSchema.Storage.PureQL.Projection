@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -23,14 +28,23 @@ public sealed class OrderByTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -44,8 +58,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -62,7 +82,7 @@ public sealed class OrderByTests
             orderRows.OrderBy(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Double("order_total"))]
+            [.. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue))]
         );
     }
 
@@ -74,14 +94,23 @@ public sealed class OrderByTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -95,8 +124,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -113,7 +148,7 @@ public sealed class OrderByTests
             orderRows.OrderByDescending(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Double("order_total"))]
+            [.. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue))]
         );
     }
 
@@ -125,14 +160,23 @@ public sealed class OrderByTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -146,8 +190,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            "schema_with_foreign_keys.users",
-                            "user_name"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserNameColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -164,7 +214,7 @@ public sealed class OrderByTests
             userRows.OrderBy(user => user.UserName)
                 .Select(user => user.UserName)
                 .ToArray(),
-            result.Column("user_name").ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
         );
     }
 
@@ -176,14 +226,23 @@ public sealed class OrderByTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -197,8 +256,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new DateField(
-                            "schema_with_foreign_keys.users",
-                            "signup_date"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new SignupDateColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -215,7 +280,7 @@ public sealed class OrderByTests
             userRows.OrderByDescending(user => user.SignupDate)
                 .Select(user => (DateOnly?)user.SignupDate)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Date("signup_date"))]
+            [.. result.Rows.Select(row => row.Date(new SignupDateColumn().Name.TextValue))]
         );
     }
 
@@ -227,14 +292,23 @@ public sealed class OrderByTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -248,8 +322,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new DateTimeField(
-                            "schema_with_foreign_keys.users",
-                            "last_login"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new LastLoginColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -266,7 +346,7 @@ public sealed class OrderByTests
             userRows.OrderBy(user => user.LastLogin)
                 .Select(user => (DateTime?)user.LastLogin)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.DateTime("last_login"))]
+            [.. result.Rows.Select(row => row.DateTime(new LastLoginColumn().Name.TextValue))]
         );
     }
 
@@ -278,14 +358,23 @@ public sealed class OrderByTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -299,8 +388,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new TimeField(
-                            "schema_with_foreign_keys.users",
-                            "shift_start"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new ShiftStartColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -317,7 +412,7 @@ public sealed class OrderByTests
             userRows.OrderBy(user => user.ShiftStart)
                 .Select(user => (TimeOnly?)user.ShiftStart)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Time("shift_start"))]
+            [.. result.Rows.Select(row => row.Time(new ShiftStartColumn().Name.TextValue))]
         );
     }
 
@@ -329,14 +424,23 @@ public sealed class OrderByTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -350,8 +454,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new UuidField(
-                            "schema_with_foreign_keys.users",
-                            "user_id"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserIdColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -368,7 +478,7 @@ public sealed class OrderByTests
             userRows.OrderBy(user => user.UserId)
                 .Select(user => (Guid?)user.UserId)
                 .ToArray(),
-            [.. result.Rows.Select(row => row.Uuid("user_id"))]
+            [.. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue))]
         );
     }
 
@@ -380,14 +490,23 @@ public sealed class OrderByTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -401,8 +520,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_age"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -410,8 +535,14 @@ public sealed class OrderByTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            "schema_with_foreign_keys.users",
-                            "user_name"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserNameColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -429,7 +560,7 @@ public sealed class OrderByTests
                 .ThenBy(user => user.UserName)
                 .Select(user => user.UserName)
                 .ToArray(),
-            result.Column("user_name").ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
         );
     }
 }

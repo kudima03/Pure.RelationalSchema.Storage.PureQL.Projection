@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -32,7 +37,14 @@ public sealed class NestedEachTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.orders", "order_id")
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -47,7 +59,14 @@ public sealed class NestedEachTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -58,8 +77,15 @@ public sealed class NestedEachTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(100))
@@ -71,8 +97,15 @@ public sealed class NestedEachTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -108,7 +141,14 @@ public sealed class NestedEachTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -120,8 +160,15 @@ public sealed class NestedEachTests
                                         new EachStringEquality(
                                             new StringArrayReturning(
                                                 new StringField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "order_status"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new OrderStatusColumn().Name.TextValue
                                                 )
                                             ),
                                             new StringReturning(
@@ -138,8 +185,15 @@ public sealed class NestedEachTests
                                     EachComparisonOperator.EachLessThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(0))
@@ -181,8 +235,14 @@ public sealed class NestedEachTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(200))
@@ -194,8 +254,14 @@ public sealed class NestedEachTests
                 new EachStringEquality(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     new StringReturning(new StringScalar("pending"))
@@ -207,8 +273,14 @@ public sealed class NestedEachTests
                 new EachStringEquality(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     new StringReturning(new StringScalar("cancelled"))
@@ -217,7 +289,14 @@ public sealed class NestedEachTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -260,7 +339,14 @@ public sealed class NestedEachTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -275,8 +361,16 @@ public sealed class NestedEachTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -298,8 +392,15 @@ public sealed class NestedEachTests
                                             new EachStringEquality(
                                                 new StringArrayReturning(
                                                     new StringField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "order_status"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderStatusColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new StringReturning(
@@ -314,8 +415,15 @@ public sealed class NestedEachTests
                                                 EachComparisonOperator.EachLessThan,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "order_total"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderTotalColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(60))
@@ -364,8 +472,14 @@ public sealed class NestedEachTests
                     EachComparisonOperator.EachGreaterThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(90))
@@ -377,8 +491,14 @@ public sealed class NestedEachTests
                 new EachStringEquality(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     new StringReturning(new StringScalar("shipped"))
@@ -391,8 +511,14 @@ public sealed class NestedEachTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(300))
@@ -406,8 +532,14 @@ public sealed class NestedEachTests
                         new EachStringEquality(
                             new StringArrayReturning(
                                 new StringField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_status"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderStatusColumn().Name.TextValue
                                 )
                             ),
                             new StringReturning(new StringScalar("cancelled"))
@@ -418,7 +550,14 @@ public sealed class NestedEachTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -501,8 +640,14 @@ public sealed class NestedEachTests
                     EachComparisonOperator.EachGreaterThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(100))
@@ -514,8 +659,14 @@ public sealed class NestedEachTests
                 new EachStringEquality(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     new StringReturning(new StringScalar("pending"))
@@ -528,8 +679,14 @@ public sealed class NestedEachTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(300))
@@ -541,8 +698,14 @@ public sealed class NestedEachTests
                 new EachStringEquality(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     new StringReturning(new StringScalar("cancelled"))
@@ -555,8 +718,14 @@ public sealed class NestedEachTests
                     EachComparisonOperator.EachLessThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(100))
@@ -568,8 +737,14 @@ public sealed class NestedEachTests
                 new EachStringEquality(
                     new StringArrayReturning(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     new StringReturning(new StringScalar("shipped"))
@@ -599,7 +774,14 @@ public sealed class NestedEachTests
         );
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator([leftBranch, rightBranch])
@@ -637,7 +819,7 @@ public sealed class NestedEachTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 
@@ -657,7 +839,14 @@ public sealed class NestedEachTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -671,8 +860,15 @@ public sealed class NestedEachTests
                                                 EachComparisonOperator.EachGreaterThan,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        "schema_with_foreign_keys.users",
-                                                        "user_age"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new UsersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new UserAgeColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(28))
@@ -684,8 +880,15 @@ public sealed class NestedEachTests
                                             new EachStringEquality(
                                                 new StringArrayReturning(
                                                     new StringField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "order_status"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderStatusColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new StringReturning(
@@ -704,8 +907,15 @@ public sealed class NestedEachTests
                                         new EachBooleanEquality(
                                             new BooleanArrayReturning(
                                                 new BooleanField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "user_active"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new UserActiveColumn().Name.TextValue
                                                 )
                                             ),
                                             new BooleanReturning(new BooleanScalar(false))
@@ -720,20 +930,40 @@ public sealed class NestedEachTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new UsersTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys()
+                                                    .Name,
+                                                new OrdersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys()
+                                                    .Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -767,7 +997,7 @@ public sealed class NestedEachTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid("order_id")!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 
@@ -786,7 +1016,14 @@ public sealed class NestedEachTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -800,8 +1037,15 @@ public sealed class NestedEachTests
                                                 EachComparisonOperator.EachGreaterThan,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "order_total"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderTotalColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(
@@ -816,8 +1060,15 @@ public sealed class NestedEachTests
                                                 EachComparisonOperator.EachLessThan,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        "schema_with_foreign_keys.orders",
-                                                        "order_total"
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderTotalColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(
@@ -834,8 +1085,15 @@ public sealed class NestedEachTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -869,7 +1127,14 @@ public sealed class NestedEachTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -880,8 +1145,15 @@ public sealed class NestedEachTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_total"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(0))
@@ -893,8 +1165,15 @@ public sealed class NestedEachTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_status"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("nonexistent"))
@@ -907,15 +1186,28 @@ public sealed class NestedEachTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new UsersTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachComparison(
                             new EachNumberComparison(
                                 EachComparisonOperator.EachGreaterThan,
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_age"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys()
+                                                    .Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserAgeColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(9999))

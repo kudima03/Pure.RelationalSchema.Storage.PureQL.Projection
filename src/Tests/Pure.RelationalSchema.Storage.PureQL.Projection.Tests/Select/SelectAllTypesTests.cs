@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -22,14 +27,23 @@ public sealed class SelectAllTypesTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -38,8 +52,14 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -48,8 +68,14 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -58,8 +84,14 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -68,8 +100,14 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -78,8 +116,14 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -88,8 +132,14 @@ public sealed class SelectAllTypesTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -102,22 +152,22 @@ public sealed class SelectAllTypesTests
         );
 
         Assert.Equal(userRows.Count, result.Count);
-        Assert.Contains("user_id", result.ColumnNames);
-        Assert.Contains("user_name", result.ColumnNames);
-        Assert.Contains("user_age", result.ColumnNames);
-        Assert.Contains("user_active", result.ColumnNames);
-        Assert.Contains("signup_date", result.ColumnNames);
-        Assert.Contains("last_login", result.ColumnNames);
-        Assert.Contains("shift_start", result.ColumnNames);
+        Assert.Contains(new UserIdColumn().Name.TextValue, result.ColumnNames);
+        Assert.Contains(new UserNameColumn().Name.TextValue, result.ColumnNames);
+        Assert.Contains(new UserAgeColumn().Name.TextValue, result.ColumnNames);
+        Assert.Contains(new UserActiveColumn().Name.TextValue, result.ColumnNames);
+        Assert.Contains(new SignupDateColumn().Name.TextValue, result.ColumnNames);
+        Assert.Contains(new LastLoginColumn().Name.TextValue, result.ColumnNames);
+        Assert.Contains(new ShiftStartColumn().Name.TextValue, result.ColumnNames);
 
         UserRecord first = userRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.UserId, row.Uuid("user_id"));
-        Assert.Equal(first.UserName, row["user_name"]);
-        Assert.Equal(first.UserAge, row.Double("user_age"));
-        Assert.Equal(first.UserActive, row.Bool("user_active"));
-        Assert.Equal(first.SignupDate, row.Date("signup_date"));
-        Assert.Equal(first.LastLogin, row.DateTime("last_login"));
-        Assert.Equal(first.ShiftStart, row.Time("shift_start"));
+        Assert.Equal(first.UserId, row.Uuid(new UserIdColumn().Name.TextValue));
+        Assert.Equal(first.UserName, row[new UserNameColumn().Name.TextValue]);
+        Assert.Equal(first.UserAge, row.Double(new UserAgeColumn().Name.TextValue));
+        Assert.Equal(first.UserActive, row.Bool(new UserActiveColumn().Name.TextValue));
+        Assert.Equal(first.SignupDate, row.Date(new SignupDateColumn().Name.TextValue));
+        Assert.Equal(first.LastLogin, row.DateTime(new LastLoginColumn().Name.TextValue));
+        Assert.Equal(first.ShiftStart, row.Time(new ShiftStartColumn().Name.TextValue));
     }
 }

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -37,14 +42,20 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_qty"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         )
                     )
@@ -54,7 +65,10 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.orders",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachAndOperator(
                             [
@@ -63,14 +77,20 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
                                         new EachUuidEquality(
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    "schema_with_foreign_keys.order_items",
-                                                    "item_order_id"
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                                    new ItemOrderIdColumn().Name.TextValue
                                                 )
                                             ),
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "order_id"
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                                    new OrderIdColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -82,14 +102,20 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
                                             EachComparisonOperator.EachLessThanOrEqual,
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    "schema_with_foreign_keys.order_items",
-                                                    "item_qty"
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                                    new ItemQtyColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "order_total"
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                                    new OrderTotalColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -137,14 +163,20 @@ public sealed class EachDateTimeComparisonCrossSchemaJoinConditionTests
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -154,19 +186,28 @@ public sealed class EachDateTimeComparisonCrossSchemaJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    "audit.logins",
+                    new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachComparison(
                             new EachDateTimeComparison(
                                 EachComparisonOperator.EachGreaterThan,
                                 new DateTimeArrayReturning(
                                     new DateTimeField(
-                                        "schema_with_foreign_keys.users",
-                                        "last_login"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new LastLoginColumn().Name.TextValue
                                     )
                                 ),
                                 new DateTimeArrayReturning(
-                                    new DateTimeField("audit.logins", "login_at")
+                                    new DateTimeField(new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue, new LoginAtColumn().Name.TextValue)
                                 )
                             )
                         )
@@ -211,14 +252,20 @@ public sealed class CrossSchemaOuterJoinTests
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -228,18 +275,27 @@ public sealed class CrossSchemaOuterJoinTests
             [
                 new Join(
                     JoinType.Left,
-                    "audit.logins",
+                    new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
-                                    new UuidField("audit.logins", "login_user_id")
+                                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue, new LoginUserIdColumn().Name.TextValue)
                                 )
                             )
                         )
@@ -264,16 +320,16 @@ public sealed class CrossSchemaOuterJoinTests
         // Cara and Dan have no logins and must each still appear exactly once.
         Assert.Equal(
             1,
-            result.Column("user_name").Count(name => name == "Cara")
+            result.Column(new UserNameColumn().Name.TextValue).Count(name => name == "Cara")
         );
         Assert.Equal(
             1,
-            result.Column("user_name").Count(name => name == "Dan")
+            result.Column(new UserNameColumn().Name.TextValue).Count(name => name == "Dan")
         );
         // Ann has two logins and must appear once per matched login.
         Assert.Equal(
             2,
-            result.Column("user_name").Count(name => name == "Ann")
+            result.Column(new UserNameColumn().Name.TextValue).Count(name => name == "Ann")
         );
     }
 }
@@ -292,14 +348,20 @@ public sealed class JoinThenOrderByTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -309,20 +371,29 @@ public sealed class JoinThenOrderByTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -336,8 +407,11 @@ public sealed class JoinThenOrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -359,7 +433,7 @@ public sealed class JoinThenOrderByTests
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double("order_total")),
+            .. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);
@@ -384,14 +458,20 @@ public sealed class JoinThenPaginationTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -401,20 +481,29 @@ public sealed class JoinThenPaginationTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -439,7 +528,7 @@ public sealed class JoinThenPaginationTests
 
         Guid?[] actual =
         [
-            .. result.Rows.Select(row => row.Uuid("order_id")),
+            .. result.Rows.Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);
@@ -460,14 +549,20 @@ public sealed class JoinWhereOrderByBridgeTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -479,8 +574,11 @@ public sealed class JoinWhereOrderByBridgeTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(50))
@@ -490,20 +588,29 @@ public sealed class JoinWhereOrderByBridgeTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.orders",
-                                        "order_user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -517,8 +624,11 @@ public sealed class JoinWhereOrderByBridgeTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -541,7 +651,7 @@ public sealed class JoinWhereOrderByBridgeTests
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double("order_total")),
+            .. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);

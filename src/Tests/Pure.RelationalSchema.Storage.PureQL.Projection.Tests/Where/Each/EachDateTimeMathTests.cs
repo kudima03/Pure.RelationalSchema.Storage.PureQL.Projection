@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -31,14 +36,20 @@ public sealed class EachDateTimeMathTests
         DateOnly expectedAfterShift = new DateOnly(2024, 6, 2);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -51,8 +62,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateAddDays(
                                 new DateArrayReturning(
                                     new DateField(
-                                        "schema_with_foreign_keys.orders",
-                                        "placed_on"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                        new PlacedOnColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(1))
@@ -88,14 +102,20 @@ public sealed class EachDateTimeMathTests
         DateOnly origin = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -109,8 +129,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateDiffDays(
                                 new DateArrayReturning(
                                     new DateField(
-                                        "schema_with_foreign_keys.orders",
-                                        "placed_on"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                        new PlacedOnColumn().Name.TextValue
                                     )
                                 ),
                                 new DateReturning(new DateScalar(origin))
@@ -148,14 +171,20 @@ public sealed class EachDateTimeMathTests
         TimeOnly expectedAfterShift = new TimeOnly(10, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -168,8 +197,11 @@ public sealed class EachDateTimeMathTests
                             new EachTimeAddSeconds(
                                 new TimeArrayReturning(
                                     new TimeField(
-                                        "schema_with_foreign_keys.users",
-                                        "shift_start"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new ShiftStartColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(3600))
@@ -207,14 +239,20 @@ public sealed class EachDateTimeMathTests
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -228,8 +266,11 @@ public sealed class EachDateTimeMathTests
                             new EachTimeDiffSeconds(
                                 new TimeArrayReturning(
                                     new TimeField(
-                                        "schema_with_foreign_keys.users",
-                                        "shift_start"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new ShiftStartColumn().Name.TextValue
                                     )
                                 ),
                                 new TimeReturning(new TimeScalar(origin))
@@ -267,14 +308,20 @@ public sealed class EachDateTimeMathTests
         DateTime expectedAfterShift = new DateTime(2024, 6, 1, 9, 30, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -287,8 +334,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateTimeAddSeconds(
                                 new DateTimeArrayReturning(
                                     new DateTimeField(
-                                        "schema_with_foreign_keys.users",
-                                        "last_login"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new LastLoginColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(3600))
@@ -326,14 +376,20 @@ public sealed class EachDateTimeMathTests
         DateTime origin = new DateTime(2024, 6, 2, 0, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -347,8 +403,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateTimeDiffSeconds(
                                 new DateTimeArrayReturning(
                                     new DateTimeField(
-                                        "schema_with_foreign_keys.users",
-                                        "last_login"
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new LastLoginColumn().Name.TextValue
                                     )
                                 ),
                                 new DateTimeReturning(new DateTimeScalar(origin))

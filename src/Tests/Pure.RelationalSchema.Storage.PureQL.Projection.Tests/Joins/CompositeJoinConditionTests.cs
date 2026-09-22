@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -27,14 +32,23 @@ public sealed class CompositeJoinConditionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_qty"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         )
                     )
@@ -44,7 +58,13 @@ public sealed class CompositeJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.order_items",
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new OrderItemsTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachAndOperator(
                             [
@@ -53,14 +73,26 @@ public sealed class CompositeJoinConditionTests
                                         new EachUuidEquality(
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    "schema_with_foreign_keys.order_items",
-                                                    "item_order_id"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys().Name,
+                                                            new OrderItemsTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ItemOrderIdColumn().Name.TextValue
                                                 )
                                             ),
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "order_id"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys().Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new OrderIdColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -72,8 +104,14 @@ public sealed class CompositeJoinConditionTests
                                             EachComparisonOperator.EachGreaterThan,
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    "schema_with_foreign_keys.order_items",
-                                                    "item_qty"
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys().Name,
+                                                            new OrderItemsTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ItemQtyColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1))

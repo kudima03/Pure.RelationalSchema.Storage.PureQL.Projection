@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -29,14 +34,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -45,8 +59,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -61,11 +81,11 @@ public sealed class SelectExpansionTests
         Assert.Equal(userRows.Count, result.Count);
         Assert.Equal(
             [.. userRows.Select(user => (bool?)user.UserActive)],
-            [.. result.Rows.Select(row => row.Bool("user_active"))]
+            [.. result.Rows.Select(row => row.Bool(new UserActiveColumn().Name.TextValue))]
         );
         Assert.Equal(
             [.. userRows.Select(user => (TimeOnly?)user.ShiftStart)],
-            [.. result.Rows.Select(row => row.Time("shift_start"))]
+            [.. result.Rows.Select(row => row.Time(new ShiftStartColumn().Name.TextValue))]
         );
     }
 
@@ -77,14 +97,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         )
                     )
@@ -93,8 +122,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_at"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         )
                     )
@@ -109,11 +144,11 @@ public sealed class SelectExpansionTests
         Assert.Equal(orderRows.Count, result.Count);
         Assert.Equal(
             [.. orderRows.Select(order => (DateOnly?)order.PlacedOn)],
-            [.. result.Rows.Select(row => row.Date("placed_on"))]
+            [.. result.Rows.Select(row => row.Date(new PlacedOnColumn().Name.TextValue))]
         );
         Assert.Equal(
             [.. orderRows.Select(order => (DateTime?)order.PlacedAt)],
-            [.. result.Rows.Select(row => row.DateTime("placed_at"))]
+            [.. result.Rows.Select(row => row.DateTime(new PlacedAtColumn().Name.TextValue))]
         );
     }
 
@@ -125,14 +160,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -141,8 +185,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -151,8 +201,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -167,15 +223,15 @@ public sealed class SelectExpansionTests
         Assert.Equal(orderRows.Count, result.Count);
         Assert.Equal(
             [.. orderRows.Select(order => (Guid?)order.OrderId)],
-            [.. result.Rows.Select(row => row.Uuid("order_id"))]
+            [.. result.Rows.Select(row => row.Uuid(new OrderIdColumn().Name.TextValue))]
         );
         Assert.Equal(
             [.. orderRows.Select(order => order.OrderStatus)],
-            result.Column("order_status")
+            result.Column(new OrderStatusColumn().Name.TextValue)
         );
         Assert.Equal(
             [.. orderRows.Select(order => (double?)order.OrderTotal)],
-            [.. result.Rows.Select(row => row.Double("order_total"))]
+            [.. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue))]
         );
     }
 
@@ -187,14 +243,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -203,8 +268,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -213,8 +284,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -223,8 +300,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -233,8 +316,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_at"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         )
                     )
@@ -243,8 +332,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.orders",
-                                "placed_on"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         )
                     )
@@ -262,24 +357,24 @@ public sealed class SelectExpansionTests
         // materialized row cells.
         Assert.Equal(
             [
-                "order_id",
-                "order_user_id",
-                "order_total",
-                "order_status",
-                "placed_at",
-                "placed_on",
+                new OrderIdColumn().Name.TextValue,
+                new OrderUserIdColumn().Name.TextValue,
+                new OrderTotalColumn().Name.TextValue,
+                new OrderStatusColumn().Name.TextValue,
+                new PlacedAtColumn().Name.TextValue,
+                new PlacedOnColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
         OrderRecord first = orderRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.OrderId, row.Uuid("order_id"));
-        Assert.Equal(first.OrderUserId, row.Uuid("order_user_id"));
-        Assert.Equal(first.OrderTotal, row.Double("order_total"));
-        Assert.Equal(first.OrderStatus, row["order_status"]);
-        Assert.Equal(first.PlacedAt, row.DateTime("placed_at"));
-        Assert.Equal(first.PlacedOn, row.Date("placed_on"));
+        Assert.Equal(first.OrderId, row.Uuid(new OrderIdColumn().Name.TextValue));
+        Assert.Equal(first.OrderUserId, row.Uuid(new OrderUserIdColumn().Name.TextValue));
+        Assert.Equal(first.OrderTotal, row.Double(new OrderTotalColumn().Name.TextValue));
+        Assert.Equal(first.OrderStatus, row[new OrderStatusColumn().Name.TextValue]);
+        Assert.Equal(first.PlacedAt, row.DateTime(new PlacedAtColumn().Name.TextValue));
+        Assert.Equal(first.PlacedOn, row.Date(new PlacedOnColumn().Name.TextValue));
     }
 
     [Fact]
@@ -290,14 +385,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                "schema_with_foreign_keys.users",
-                                "shift_start"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -306,8 +410,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                "schema_with_foreign_keys.users",
-                                "last_login"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -316,8 +426,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                "schema_with_foreign_keys.users",
-                                "signup_date"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -326,8 +442,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -336,8 +458,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -346,8 +474,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -356,8 +490,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -371,21 +511,21 @@ public sealed class SelectExpansionTests
         Assert.Equal(userRows.Count, result.Count);
         Assert.Equal(
             [
-                "shift_start",
-                "last_login",
-                "signup_date",
-                "user_active",
-                "user_age",
-                "user_name",
-                "user_id",
+                new ShiftStartColumn().Name.TextValue,
+                new LastLoginColumn().Name.TextValue,
+                new SignupDateColumn().Name.TextValue,
+                new UserActiveColumn().Name.TextValue,
+                new UserAgeColumn().Name.TextValue,
+                new UserNameColumn().Name.TextValue,
+                new UserIdColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
         UserRecord first = userRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.ShiftStart, row.Time("shift_start"));
-        Assert.Equal(first.UserId, row.Uuid("user_id"));
+        Assert.Equal(first.ShiftStart, row.Time(new ShiftStartColumn().Name.TextValue));
+        Assert.Equal(first.UserId, row.Uuid(new UserIdColumn().Name.TextValue));
     }
 
     [Fact]
@@ -396,14 +536,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -412,8 +561,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -422,8 +577,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -440,18 +601,18 @@ public sealed class SelectExpansionTests
         // any accidental ordering-by-schema.
         Assert.Equal(
             [
-                "order_status",
-                "order_id",
-                "order_total",
+                new OrderStatusColumn().Name.TextValue,
+                new OrderIdColumn().Name.TextValue,
+                new OrderTotalColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
         OrderRecord first = orderRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.OrderStatus, row["order_status"]);
-        Assert.Equal(first.OrderId, row.Uuid("order_id"));
-        Assert.Equal(first.OrderTotal, row.Double("order_total"));
+        Assert.Equal(first.OrderStatus, row[new OrderStatusColumn().Name.TextValue]);
+        Assert.Equal(first.OrderId, row.Uuid(new OrderIdColumn().Name.TextValue));
+        Assert.Equal(first.OrderTotal, row.Double(new OrderTotalColumn().Name.TextValue));
     }
 
     [Fact]
@@ -462,14 +623,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -478,8 +648,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -488,8 +664,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -502,18 +684,18 @@ public sealed class SelectExpansionTests
 
         Assert.Equal(
             [
-                "user_age",
-                "user_id",
-                "user_active",
+                new UserAgeColumn().Name.TextValue,
+                new UserIdColumn().Name.TextValue,
+                new UserActiveColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
         UserRecord first = userRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.UserAge, row.Double("user_age"));
-        Assert.Equal(first.UserId, row.Uuid("user_id"));
-        Assert.Equal(first.UserActive, row.Bool("user_active"));
+        Assert.Equal(first.UserAge, row.Double(new UserAgeColumn().Name.TextValue));
+        Assert.Equal(first.UserId, row.Uuid(new UserIdColumn().Name.TextValue));
+        Assert.Equal(first.UserActive, row.Bool(new UserActiveColumn().Name.TextValue));
     }
 
     [Fact]
@@ -524,14 +706,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -541,8 +732,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -572,14 +769,23 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -588,8 +794,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -602,12 +814,12 @@ public sealed class SelectExpansionTests
         ProjectionResult result = new ProjectionResult(projection);
 
         Assert.Equal(
-            ["order_status", "status_alias"],
+            [new OrderStatusColumn().Name.TextValue, "status_alias"],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
         string?[] expected = [.. orderRows.Select(order => order.OrderStatus)];
-        Assert.Equal(expected, result.Column("order_status"));
+        Assert.Equal(expected, result.Column(new OrderStatusColumn().Name.TextValue));
         Assert.Equal(expected, result.Column("status_alias"));
     }
 
@@ -625,14 +837,23 @@ public sealed class SelectExpansionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -641,8 +862,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -670,8 +897,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     ),
@@ -680,7 +913,10 @@ public sealed class SelectExpansionTests
             );
         }
 
-        Query query = new Query(new FromExpression("schema_with_foreign_keys.users"), selectExpressions);
+        Query query = new Query(new FromExpression(new JoinedString(
+            new DotString(),
+            [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+        ).TextValue), selectExpressions);
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -716,8 +952,14 @@ public sealed class SelectExpansionTests
                         new ArrayReturning(
                             new StringArrayReturning(
                                 new StringField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_status"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderStatusColumn().Name.TextValue
                                 )
                             )
                         ),
@@ -727,8 +969,14 @@ public sealed class SelectExpansionTests
                         new ArrayReturning(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_total"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderTotalColumn().Name.TextValue
                                 )
                             )
                         ),
@@ -737,7 +985,10 @@ public sealed class SelectExpansionTests
             );
         }
 
-        Query query = new Query(new FromExpression("schema_with_foreign_keys.orders"), selectExpressions);
+        Query query = new Query(new FromExpression(new JoinedString(
+            new DotString(),
+            [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+        ).TextValue), selectExpressions);
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -780,7 +1031,10 @@ public sealed class SelectExpansionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -830,7 +1084,10 @@ public sealed class SelectExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -839,8 +1096,14 @@ public sealed class SelectExpansionTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "schema_with_foreign_keys.orders",
-                                            "order_id"
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -853,8 +1116,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -866,8 +1135,14 @@ public sealed class SelectExpansionTests
             [
                 new Field(
                     new NullField(
-                        "schema_with_foreign_keys.orders",
-                        "order_status"
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],

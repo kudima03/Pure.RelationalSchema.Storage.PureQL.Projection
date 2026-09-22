@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -31,20 +36,35 @@ public sealed class PaginationExpansionTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.products",
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_product_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemProductIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.products",
-                                "product_id"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new ProductsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ProductIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -61,14 +81,23 @@ public sealed class PaginationExpansionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.orders",
-                                "order_status"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -79,8 +108,14 @@ public sealed class PaginationExpansionTests
             [
                 new Field(
                     new StringField(
-                        "schema_with_foreign_keys.orders",
-                        "order_status"
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],
@@ -89,8 +124,14 @@ public sealed class PaginationExpansionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            "schema_with_foreign_keys.orders",
-                            "order_status"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -112,7 +153,7 @@ public sealed class PaginationExpansionTests
         ];
 
         string[] expected = [.. distinctGroups.Skip(1).Take(1)];
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         // The window addresses the 3 grouped rows, not the 6 source orders.
         Assert.True(distinctGroups.Length < orderRows.Count);
@@ -127,14 +168,23 @@ public sealed class PaginationExpansionTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.users",
-                                "user_age"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -143,8 +193,14 @@ public sealed class PaginationExpansionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -158,8 +214,14 @@ public sealed class PaginationExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.users",
-                            "user_age"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -167,8 +229,14 @@ public sealed class PaginationExpansionTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            "schema_with_foreign_keys.users",
-                            "user_active"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -197,8 +265,8 @@ public sealed class PaginationExpansionTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row.Double("user_age")!.Value,
-                    row.Bool("user_active")!.Value
+                    row.Double(new UserAgeColumn().Name.TextValue)!.Value,
+                    row.Bool(new UserActiveColumn().Name.TextValue)!.Value
                 )
             ),
         ];
@@ -214,14 +282,23 @@ public sealed class PaginationExpansionTests
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_qty"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         )
                     )
@@ -233,8 +310,14 @@ public sealed class PaginationExpansionTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_qty"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(1))
@@ -248,8 +331,14 @@ public sealed class PaginationExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.order_items",
-                            "item_qty"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrderItemsTable().Name,
+                                ]
+                            ).TextValue,
+                            new ItemQtyColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -275,7 +364,7 @@ public sealed class PaginationExpansionTests
         double[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Double("item_qty")!.Value
+                row.Double(new ItemQtyColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -299,14 +388,23 @@ public sealed class PaginationExpansionTests
         Query BuildQuery()
         {
             return new Query(
-                new FromExpression("schema_with_foreign_keys.orders"),
+                new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
                 [
                     new SelectExpression(
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_id"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -315,8 +413,14 @@ public sealed class PaginationExpansionTests
                         new ArrayReturning(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    "schema_with_foreign_keys.orders",
-                                    "order_total"
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderTotalColumn().Name.TextValue
                                 )
                             )
                         )
@@ -330,8 +434,14 @@ public sealed class PaginationExpansionTests
                     new OrderByItem(
                         new Field(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         SortDirection.Asc
@@ -352,11 +462,11 @@ public sealed class PaginationExpansionTests
 
         Guid[] firstRunIds =
         [
-            .. firstRun.Rows.Select(row => row.Uuid("order_id")!.Value),
+            .. firstRun.Rows.Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value),
         ];
         Guid[] secondRunIds =
         [
-            .. secondRun.Rows.Select(row => row.Uuid("order_id")!.Value),
+            .. secondRun.Rows.Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(expected, firstRunIds);
@@ -379,14 +489,23 @@ public sealed class PaginationExpansionTests
         // clamps skip into [0, int.MaxValue] before calling Skip, so a negative
         // skip behaves exactly like skip = 0 rather than throwing or wrapping.
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -400,8 +519,14 @@ public sealed class PaginationExpansionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            "schema_with_foreign_keys.orders",
-                            "order_total"
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -423,7 +548,7 @@ public sealed class PaginationExpansionTests
 
         Assert.Equal(
             expected,
-            [.. result.Rows.Select(row => row.Double("order_total"))]
+            [.. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue))]
         );
     }
 
@@ -437,14 +562,23 @@ public sealed class PaginationExpansionTests
         // zero or a negative value clamps to 0, so Take(0) yields an empty
         // page rather than throwing or returning every remaining row.
         Query zeroTakeQuery = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -459,14 +593,23 @@ public sealed class PaginationExpansionTests
         );
 
         Query negativeTakeQuery = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.orders",
-                                "order_total"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )

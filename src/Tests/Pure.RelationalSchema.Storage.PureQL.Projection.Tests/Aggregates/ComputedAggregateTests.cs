@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -28,20 +33,20 @@ public sealed class ComputedAggregateTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.products",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_product_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemProductIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.products",
-                                "product_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
+                                new ProductIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -54,20 +59,20 @@ public sealed class ComputedAggregateTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.orders",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -84,14 +89,14 @@ public sealed class ComputedAggregateTests
                     [
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_qty"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         ),
                         new NumberArrayReturning(
                             new NumberField(
-                                "schema_with_foreign_keys.products",
-                                "product_price"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
+                                new ProductPriceColumn().Name.TextValue
                             )
                         ),
                     ]
@@ -119,14 +124,14 @@ public sealed class ComputedAggregateTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_order_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -145,8 +150,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.order_items",
-                        "item_order_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                        new ItemOrderIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -169,7 +174,7 @@ public sealed class ComputedAggregateTests
             );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("item_order_id")!.Value,
+            row => row.Uuid(new ItemOrderIdColumn().Name.TextValue)!.Value,
             row => row.Double("revenue")!.Value
         );
 
@@ -185,14 +190,14 @@ public sealed class ComputedAggregateTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_order_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -211,8 +216,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.order_items",
-                        "item_order_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                        new ItemOrderIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -235,7 +240,7 @@ public sealed class ComputedAggregateTests
             );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("item_order_id")!.Value,
+            row => row.Uuid(new ItemOrderIdColumn().Name.TextValue)!.Value,
             row => row.Double("meanLineValue")!.Value
         );
 
@@ -251,14 +256,14 @@ public sealed class ComputedAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -272,14 +277,14 @@ public sealed class ComputedAggregateTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.orders",
-                                                    "placed_on"
+                                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "signup_date"
+                                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                                    new SignupDateColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -296,8 +301,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.users",
-                        "user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -321,7 +326,7 @@ public sealed class ComputedAggregateTests
             .ToDictionary(group => group.Key, group => group.Max(pair => pair.Span));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("user_id")!.Value,
+            row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value,
             row => row.Double("maxSpanDays")!.Value
         );
 
@@ -337,14 +342,14 @@ public sealed class ComputedAggregateTests
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                "schema_with_foreign_keys.users",
-                                "user_active"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -358,8 +363,8 @@ public sealed class ComputedAggregateTests
                                         new EachTimeDiffSeconds(
                                             new TimeArrayReturning(
                                                 new TimeField(
-                                                    "schema_with_foreign_keys.users",
-                                                    "shift_start"
+                                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                                    new ShiftStartColumn().Name.TextValue
                                                 )
                                             ),
                                             new TimeReturning(new TimeScalar(origin))
@@ -377,8 +382,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new BooleanField(
-                        "schema_with_foreign_keys.users",
-                        "user_active"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserActiveColumn().Name.TextValue
                     )
                 ),
             ],
@@ -399,7 +404,7 @@ public sealed class ComputedAggregateTests
             );
 
         Dictionary<bool, double> actual = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Double("minShiftGapSeconds")!.Value
         );
 
@@ -414,14 +419,14 @@ public sealed class ComputedAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -437,8 +442,8 @@ public sealed class ComputedAggregateTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            "schema_with_foreign_keys.orders",
-                                                            "order_total"
+                                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -460,8 +465,8 @@ public sealed class ComputedAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -479,7 +484,7 @@ public sealed class ComputedAggregateTests
             .ToDictionary(group => group.Key, group => (double)group.Count());
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("rowCount")!.Value
         );
 

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -29,21 +34,21 @@ public sealed class PostAggregationPipelineComboTests
     private static Field OrderUserIdField()
     {
         return new Field(
-            new UuidField("schema_with_foreign_keys.orders", "order_user_id")
+            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)
         );
     }
 
     private static Field OrderStatusField()
     {
         return new Field(
-            new StringField("schema_with_foreign_keys.orders", "order_status")
+            new StringField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)
         );
     }
 
     private static Field UserActiveField()
     {
         return new Field(
-            new BooleanField("schema_with_foreign_keys.users", "user_active")
+            new BooleanField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)
         );
     }
 
@@ -53,8 +58,8 @@ public sealed class PostAggregationPipelineComboTests
             new ArrayReturning(
                 new UuidArrayReturning(
                     new UuidField(
-                        "schema_with_foreign_keys.orders",
-                        "order_user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 )
             )
@@ -67,8 +72,8 @@ public sealed class PostAggregationPipelineComboTests
             new ArrayReturning(
                 new StringArrayReturning(
                     new StringField(
-                        "schema_with_foreign_keys.orders",
-                        "order_status"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 )
             )
@@ -81,8 +86,8 @@ public sealed class PostAggregationPipelineComboTests
             new ArrayReturning(
                 new BooleanArrayReturning(
                     new BooleanField(
-                        "schema_with_foreign_keys.users",
-                        "user_active"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserActiveColumn().Name.TextValue
                     )
                 )
             )
@@ -92,14 +97,14 @@ public sealed class PostAggregationPipelineComboTests
     private static NumberArrayReturning OrderTotals()
     {
         return new NumberArrayReturning(
-            new NumberField("schema_with_foreign_keys.orders", "order_total")
+            new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderTotalColumn().Name.TextValue)
         );
     }
 
     private static NumberArrayReturning UserAges()
     {
         return new NumberArrayReturning(
-            new NumberField("schema_with_foreign_keys.users", "user_age")
+            new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue)
         );
     }
 
@@ -110,8 +115,8 @@ public sealed class PostAggregationPipelineComboTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            "schema_with_foreign_keys.orders",
-                            "order_id"
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                            new OrderIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -175,7 +180,7 @@ public sealed class PostAggregationPipelineComboTests
     private static OrderByItem AliasNumberOrderBy(
         string alias,
         SortDirection direction,
-        string entity = "schema_with_foreign_keys.orders"
+        string entity
     )
     {
         return new OrderByItem(
@@ -226,7 +231,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderUserIdSelect(), SumTotalSelect("totalSum")],
             where: null,
             join: null,
@@ -251,7 +256,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -266,7 +271,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderUserIdSelect(), SumTotalSelect("totalSum")],
             where: null,
             join: null,
@@ -291,7 +296,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -306,13 +311,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), SumTotalSelect("statusSum")],
             where: null,
             join: null,
             [OrderStatusField()],
             having: null,
-            [AliasNumberOrderBy("statusSum", SortDirection.Asc)],
+            [AliasNumberOrderBy("statusSum", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             pagination: null
         );
 
@@ -328,7 +333,7 @@ public sealed class PostAggregationPipelineComboTests
                 .Select(group => group.Key),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }
@@ -341,13 +346,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), SumTotalSelect("statusSum")],
             where: null,
             join: null,
             [OrderStatusField()],
             having: null,
-            [AliasNumberOrderBy("statusSum", SortDirection.Desc)],
+            [AliasNumberOrderBy("statusSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             pagination: null
         );
 
@@ -363,7 +368,7 @@ public sealed class PostAggregationPipelineComboTests
                 .Select(group => group.Key),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }
@@ -378,13 +383,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderUserIdSelect(), OrderCountSelect("orderCount"), MaxTotalSelect("maxTotal")],
             where: null,
             join: null,
             [OrderUserIdField()],
             having: null,
-            [AliasNumberOrderBy("maxTotal", SortDirection.Desc)],
+            [AliasNumberOrderBy("maxTotal", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             pagination: null
         );
 
@@ -403,7 +408,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -423,14 +428,14 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderUserIdSelect(), OrderCountSelect("orderCount")],
             where: null,
             join: null,
             [OrderUserIdField()],
             having: null,
             [
-                AliasNumberOrderBy("orderCount", SortDirection.Desc),
+                AliasNumberOrderBy("orderCount", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
                 new OrderByItem(OrderUserIdField(), SortDirection.Asc),
             ],
             pagination: null
@@ -452,7 +457,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -469,7 +474,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 OrderUserIdSelect(),
                 OrderCountSelect("orderCount"),
@@ -480,8 +485,8 @@ public sealed class PostAggregationPipelineComboTests
             [OrderUserIdField()],
             having: null,
             [
-                AliasNumberOrderBy("orderCount", SortDirection.Asc),
-                AliasNumberOrderBy("totalSum", SortDirection.Desc),
+                AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
+                AliasNumberOrderBy("totalSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             ],
             pagination: null
         );
@@ -502,7 +507,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -520,7 +525,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 OrderUserIdSelect(),
                 OrderCountSelect("orderCount"),
@@ -531,8 +536,8 @@ public sealed class PostAggregationPipelineComboTests
             [OrderUserIdField()],
             having: null,
             [
-                AliasNumberOrderBy("orderCount", SortDirection.Asc),
-                AliasNumberOrderBy("totalSum", SortDirection.Desc),
+                AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
+                AliasNumberOrderBy("totalSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
                 new OrderByItem(OrderUserIdField(), SortDirection.Asc),
             ],
             pagination: null
@@ -555,7 +560,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -572,13 +577,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderUserIdSelect(), SumTotalSelect("totalSum")],
             where: null,
             join: null,
             [OrderUserIdField()],
             SumTotalCompare(ComparisonOperator.GreaterThan, 150),
-            [AliasNumberOrderBy("totalSum", SortDirection.Asc)],
+            [AliasNumberOrderBy("totalSum", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             pagination: null
         );
 
@@ -598,7 +603,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -614,7 +619,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), OrderCountSelect("orderCount")],
             where: null,
             join: null,
@@ -637,7 +642,7 @@ public sealed class PostAggregationPipelineComboTests
                 .Select(group => group.Key),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }
@@ -655,7 +660,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderCountSelect("orderCount")],
             where: null,
             join: null,
@@ -700,13 +705,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderCountSelect("orderCount")],
             where: null,
             join: null,
             [OrderUserIdField()],
             having: null,
-            [AliasNumberOrderBy("orderCount", SortDirection.Asc)],
+            [AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             pagination: null,
             distinct: true
         );
@@ -740,13 +745,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderCountSelect("orderCount")],
             where: null,
             join: null,
             [OrderUserIdField()],
             having: null,
-            [AliasNumberOrderBy("orderCount", SortDirection.Desc)],
+            [AliasNumberOrderBy("orderCount", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             pagination: null,
             distinct: true
         );
@@ -784,7 +789,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), OrderCountSelect("orderCount")],
             where: null,
             join: null,
@@ -806,7 +811,7 @@ public sealed class PostAggregationPipelineComboTests
                 .Select(group => group.Key),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(3, expected.Length);
         Assert.Equal(expected, actual);
@@ -819,7 +824,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), OrderCountSelect("orderCount")],
             where: null,
             join: null,
@@ -844,7 +849,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), OrderCountSelect("orderCount")],
             where: null,
             join: null,
@@ -867,7 +872,7 @@ public sealed class PostAggregationPipelineComboTests
                 .Skip(1),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         Assert.Equal(2, expected.Length);
         Assert.Equal(expected, actual);
@@ -883,13 +888,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderUserIdSelect(), SumTotalSelect("totalSum")],
             where: null,
             join: null,
             [OrderUserIdField()],
             OrderCountCompare(ComparisonOperator.GreaterThanOrEqual, 1),
-            [AliasNumberOrderBy("totalSum", SortDirection.Desc)],
+            [AliasNumberOrderBy("totalSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             new ModelPagination(1, 2)
         );
 
@@ -911,7 +916,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -932,13 +937,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderCountSelect("orderCount")],
             where: null,
             join: null,
             [OrderUserIdField()],
             OrderCountCompare(ComparisonOperator.GreaterThanOrEqual, 1),
-            [AliasNumberOrderBy("orderCount", SortDirection.Asc)],
+            [AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             new ModelPagination(0, 1),
             distinct: true
         );
@@ -979,13 +984,13 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderStatusSelect(), SumTotalSelect("statusSum")],
             where: null,
             join: null,
             [OrderStatusField()],
             SumTotalCompare(ComparisonOperator.GreaterThan, 100),
-            [AliasNumberOrderBy("statusSum", SortDirection.Desc)],
+            [AliasNumberOrderBy("statusSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
             new ModelPagination(1, 5),
             distinct: true
         );
@@ -1010,7 +1015,7 @@ public sealed class PostAggregationPipelineComboTests
                 .Take(5),
         ];
 
-        string?[] actual = [.. result.Column("order_status")];
+        string?[] actual = [.. result.Column(new OrderStatusColumn().Name.TextValue)];
 
         _ = Assert.Single(expected);
         Assert.Equal(expected, actual);
@@ -1027,7 +1032,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 OrderUserIdSelect(),
                 OrderCountSelect("orderCount"),
@@ -1038,8 +1043,8 @@ public sealed class PostAggregationPipelineComboTests
             [OrderUserIdField()],
             SumTotalCompare(ComparisonOperator.GreaterThanOrEqual, 150),
             [
-                AliasNumberOrderBy("orderCount", SortDirection.Desc),
-                AliasNumberOrderBy("totalSum", SortDirection.Asc),
+                AliasNumberOrderBy("orderCount", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
+                AliasNumberOrderBy("totalSum", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             ],
             new ModelPagination(0, 2),
             distinct: true
@@ -1070,7 +1075,7 @@ public sealed class PostAggregationPipelineComboTests
         Guid[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid("order_user_id")!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -1088,7 +1093,7 @@ public sealed class PostAggregationPipelineComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [UserActiveSelect(), MaxAgeSelect("maxAge")],
             where: null,
             join: null,
@@ -1098,7 +1103,7 @@ public sealed class PostAggregationPipelineComboTests
                 AliasNumberOrderBy(
                     "maxAge",
                     SortDirection.Desc,
-                    "schema_with_foreign_keys.users"
+                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue
                 ),
             ],
             pagination: null
@@ -1119,7 +1124,7 @@ public sealed class PostAggregationPipelineComboTests
         bool[] actual =
         [
             .. result.Rows.Select(row =>
-                row.Bool("user_active")!.Value
+                row.Bool(new UserActiveColumn().Name.TextValue)!.Value
             ),
         ];
 

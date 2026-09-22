@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -27,7 +32,10 @@ public sealed class DateArrayEqualitySequenceTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField("schema_with_foreign_keys.orders", "order_id")
+                    new UuidField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -43,7 +51,10 @@ public sealed class DateArrayEqualitySequenceTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -94,7 +105,10 @@ public sealed class DateArrayEqualitySequenceTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -145,7 +159,10 @@ public sealed class DateArrayEqualitySequenceTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -206,7 +223,10 @@ public sealed class DateArrayEqualitySequenceTests
         ];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -214,8 +234,11 @@ public sealed class DateArrayEqualitySequenceTests
                         new DateArrayEquality(
                             new DateArrayReturning(
                                 new DateField(
-                                    "schema_with_foreign_keys.orders",
-                                    "placed_on"
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                    new PlacedOnColumn().Name.TextValue
                                 )
                             ),
                             new DateArrayReturning(
@@ -253,7 +276,10 @@ public sealed class DateArrayEqualitySequenceTests
         ];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -264,8 +290,11 @@ public sealed class DateArrayEqualitySequenceTests
                             ),
                             new DateArrayReturning(
                                 new DateField(
-                                    "schema_with_foreign_keys.orders",
-                                    "placed_on"
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                    new PlacedOnColumn().Name.TextValue
                                 )
                             )
                         )

@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -38,20 +43,20 @@ public sealed class AggregateOverExpressionComboTemporalTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.users",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.orders",
-                                "order_user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -67,10 +72,10 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new NumberArrayReturning(
             new EachDateDiffDays(
                 new DateArrayReturning(
-                    new DateField("schema_with_foreign_keys.orders", "placed_on")
+                    new DateField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new PlacedOnColumn().Name.TextValue)
                 ),
                 new DateArrayReturning(
-                    new DateField("schema_with_foreign_keys.users", "signup_date")
+                    new DateField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new SignupDateColumn().Name.TextValue)
                 )
             )
         );
@@ -81,7 +86,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new NumberArrayReturning(
             new EachTimeDiffSeconds(
                 new TimeArrayReturning(
-                    new TimeField("schema_with_foreign_keys.users", "shift_start")
+                    new TimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new ShiftStartColumn().Name.TextValue)
                 ),
                 new TimeReturning(new TimeScalar(origin))
             )
@@ -93,10 +98,10 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new NumberArrayReturning(
             new EachDateTimeDiffSeconds(
                 new DateTimeArrayReturning(
-                    new DateTimeField("schema_with_foreign_keys.orders", "placed_at")
+                    new DateTimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new PlacedAtColumn().Name.TextValue)
                 ),
                 new DateTimeArrayReturning(
-                    new DateTimeField("schema_with_foreign_keys.users", "last_login")
+                    new DateTimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new LastLoginColumn().Name.TextValue)
                 )
             )
         );
@@ -109,7 +114,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new DateArrayReturning(
             new EachDateAddDays(
                 new DateArrayReturning(
-                    new DateField("schema_with_foreign_keys.users", "signup_date")
+                    new DateField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new SignupDateColumn().Name.TextValue)
                 ),
                 new NumberReturning(new NumberScalar(days))
             )
@@ -121,7 +126,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new TimeArrayReturning(
             new EachTimeAddSeconds(
                 new TimeArrayReturning(
-                    new TimeField("schema_with_foreign_keys.users", "shift_start")
+                    new TimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new ShiftStartColumn().Name.TextValue)
                 ),
                 new NumberReturning(new NumberScalar(seconds))
             )
@@ -133,7 +138,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         return new DateTimeArrayReturning(
             new EachDateTimeAddSeconds(
                 new DateTimeArrayReturning(
-                    new DateTimeField("schema_with_foreign_keys.orders", "placed_at")
+                    new DateTimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new PlacedAtColumn().Name.TextValue)
                 ),
                 new NumberReturning(new NumberScalar(seconds))
             )
@@ -249,9 +254,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 NumberAggregateSelect(
                     new NumberAggregate(new SumNumber(PlacedOnMinusSignupDate())),
                     "totalSpanDays"
@@ -259,7 +264,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -282,7 +287,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Span));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("totalSpanDays")!.Value
         );
 
@@ -298,9 +303,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                StringGroupKeySelect("schema_with_foreign_keys.orders", "order_status"),
+                StringGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue),
                 NumberAggregateSelect(
                     new NumberAggregate(new AverageNumber(PlacedOnMinusSignupDate())),
                     "meanSpanDays"
@@ -308,7 +313,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [StringGroupKeyField("schema_with_foreign_keys.orders", "order_status")],
+            [StringGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -331,7 +336,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Average(x => x.Span));
 
         Dictionary<string, double> actual = result.Rows.ToDictionary(
-            row => row["order_status"]!,
+            row => row[new OrderStatusColumn().Name.TextValue]!,
             row => row.Double("meanSpanDays")!.Value
         );
 
@@ -348,9 +353,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
+                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
                 NumberAggregateSelect(
                     new NumberAggregate(new MinNumber(PlacedOnMinusSignupDate())),
                     "minSpanDays"
@@ -362,7 +367,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
+            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -391,12 +396,12 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Max(x => x.Span));
 
         Dictionary<bool, double> actualMin = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Double("minSpanDays")!.Value
         );
 
         Dictionary<bool, double> actualMax = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Double("maxSpanDays")!.Value
         );
 
@@ -413,14 +418,14 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                NumberGroupKeySelect("schema_with_foreign_keys.users", "user_age"),
+                NumberGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue),
                 CountSelect(PlacedOnMinusSignupDate(), "spanCount"),
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [new Field(new NumberField("schema_with_foreign_keys.users", "user_age"))],
+            [new Field(new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
@@ -439,7 +444,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => (double)g.Count());
 
         Dictionary<double, double> actual = result.Rows.ToDictionary(
-            row => row.Double("user_age")!.Value,
+            row => row.Double(new UserAgeColumn().Name.TextValue)!.Value,
             row => row.Double("spanCount")!.Value
         );
 
@@ -458,7 +463,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 NumberAggregateSelect(
                     new NumberAggregate(new SumNumber(ShiftStartMinusOrigin(origin))),
@@ -486,9 +491,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 NumberAggregateSelect(
                     new NumberAggregate(new AverageNumber(PlacedAtMinusLastLogin())),
                     "meanGapSeconds"
@@ -496,7 +501,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -519,7 +524,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Average(x => x.Gap));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("meanGapSeconds")!.Value
         );
 
@@ -536,9 +541,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
-                BoolGroupKeySelect("schema_with_foreign_keys.users", "user_active"),
+                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
                 DateAggregateSelect(
                     new DateAggregate(new MaxDate(SignupDatePlusDays(30))),
                     "latestProjectedDate"
@@ -546,7 +551,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             join: null,
-            [BoolGroupKeyField("schema_with_foreign_keys.users", "user_active")],
+            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -561,7 +566,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Max(user => user.SignupDate.AddDays(30)));
 
         Dictionary<bool, DateOnly> actual = result.Rows.ToDictionary(
-            row => row.Bool("user_active")!.Value,
+            row => row.Bool(new UserActiveColumn().Name.TextValue)!.Value,
             row => row.Date("latestProjectedDate")!.Value
         );
 
@@ -578,9 +583,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                StringGroupKeySelect("schema_with_foreign_keys.orders", "order_status"),
+                StringGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue),
                 DateAggregateSelect(
                     new DateAggregate(new MinDate(SignupDatePlusDays(30))),
                     "earliestProjectedDate"
@@ -588,7 +593,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [StringGroupKeyField("schema_with_foreign_keys.orders", "order_status")],
+            [StringGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -607,7 +612,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             .ToDictionary(g => g.Key, g => g.Min(x => x.Projected));
 
         Dictionary<string, DateOnly> actual = result.Rows.ToDictionary(
-            row => row["order_status"]!,
+            row => row[new OrderStatusColumn().Name.TextValue]!,
             row => row.Date("earliestProjectedDate")!.Value
         );
 
@@ -623,7 +628,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 TimeAggregateSelect(
                     new TimeAggregate(new MaxTime(ShiftStartPlusSeconds(3600))),
@@ -652,9 +657,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 DateTimeAggregateSelect(
                     new DateTimeAggregate(new MinDateTime(PlacedAtPlusSeconds(1800))),
                     "earliestProjectedInstant"
@@ -662,7 +667,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             join: null,
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             having: null,
             orderBy: null,
             pagination: null
@@ -680,7 +685,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             );
 
         Dictionary<Guid, DateTime> actual = result.Rows.ToDictionary(
-            row => row.Uuid("order_user_id")!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.DateTime("earliestProjectedInstant")!.Value
         );
 
@@ -698,9 +703,9 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.orders"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
-                UuidGroupKeySelect("schema_with_foreign_keys.orders", "order_user_id"),
+                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
                 NumberAggregateSelect(
                     new NumberAggregate(new MaxNumber(PlacedOnMinusSignupDate())),
                     "maxSpanDays"
@@ -708,7 +713,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             ],
             where: null,
             [OrdersToUsersJoin()],
-            [UuidGroupKeyField("schema_with_foreign_keys.orders", "order_user_id")],
+            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
             new BooleanReturning(
                 new Comparison(
                     new NumberComparison(
@@ -744,7 +749,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
 
         HashSet<Guid> actual =
         [
-            .. result.Rows.Select(row => row.Uuid("order_user_id")!.Value),
+            .. result.Rows.Select(row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value),
         ];
 
         Assert.Equal(2, expected.Count);
@@ -762,7 +767,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 DateAggregateSelect(
                     new DateAggregate(new AverageDate(SignupDatePlusDays(30))),

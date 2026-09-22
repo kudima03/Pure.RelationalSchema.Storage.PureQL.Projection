@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -23,20 +28,20 @@ public sealed class CrossSchemaJoinAggregateTests
     {
         return new Join(
             JoinType.Inner,
-            "audit.logins",
+            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "audit.logins",
-                                "login_user_id"
+                                new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -53,14 +58,14 @@ public sealed class CrossSchemaJoinAggregateTests
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.users",
-                                "user_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -72,8 +77,8 @@ public sealed class CrossSchemaJoinAggregateTests
                                 new MaxDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            "audit.logins",
-                                            "login_at"
+                                            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                            new LoginAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -89,8 +94,8 @@ public sealed class CrossSchemaJoinAggregateTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            "audit.logins",
-                                            "login_id"
+                                            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -105,8 +110,8 @@ public sealed class CrossSchemaJoinAggregateTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.users",
-                        "user_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -131,7 +136,7 @@ public sealed class CrossSchemaJoinAggregateTests
             );
 
         Dictionary<Guid, (DateTime, double)> actual = result.Rows.ToDictionary(
-            row => row.Uuid("user_id")!.Value,
+            row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value,
             row =>
                 (
                     row.DateTime("lastLoginAt")!.Value,

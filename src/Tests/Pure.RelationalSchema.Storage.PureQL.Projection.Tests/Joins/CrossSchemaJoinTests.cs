@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -24,14 +29,23 @@ public sealed class CrossSchemaJoinTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.users"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -41,20 +55,35 @@ public sealed class CrossSchemaJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    "audit.logins",
+                    new JoinedString(
+                        new DotString(),
+                        [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "audit.logins",
-                                        "login_user_id"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new AuditRelationalSchema().Name,
+                                                new LoginsTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new LoginUserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -83,7 +112,7 @@ public sealed class CrossSchemaJoinTests
 
         string?[] actual =
         [
-            .. result.Column("user_name").OrderBy(name => name),
+            .. result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name),
         ];
 
         Assert.Equal(expected.Length, result.Count);
@@ -97,14 +126,23 @@ public sealed class CrossSchemaJoinTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
         Query query = new Query(
-            new FromExpression("audit.logins"),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new AuditRelationalSchema().Name, new LoginsTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                "schema_with_foreign_keys.users",
-                                "user_name"
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -114,20 +152,38 @@ public sealed class CrossSchemaJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    "schema_with_foreign_keys.users",
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new UsersTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "audit.logins",
-                                        "login_user_id"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new AuditRelationalSchema().Name,
+                                                new LoginsTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new LoginUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "schema_with_foreign_keys.users",
-                                        "user_id"
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )

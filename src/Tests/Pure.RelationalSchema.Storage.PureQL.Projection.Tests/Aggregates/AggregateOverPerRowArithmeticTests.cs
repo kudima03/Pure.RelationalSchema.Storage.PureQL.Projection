@@ -1,3 +1,8 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
@@ -23,20 +28,20 @@ public sealed class AggregateOverPerRowArithmeticTests
     {
         return new Join(
             JoinType.Inner,
-            "schema_with_foreign_keys.products",
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_product_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemProductIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.products",
-                                "product_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
+                                new ProductIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -58,14 +63,14 @@ public sealed class AggregateOverPerRowArithmeticTests
                                         [
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    "schema_with_foreign_keys.order_items",
-                                                    "item_qty"
+                                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                                    new ItemQtyColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    "schema_with_foreign_keys.products",
-                                                    "product_price"
+                                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
+                                                    new ProductPriceColumn().Name.TextValue
                                                 )
                                             ),
                                         ]
@@ -99,14 +104,14 @@ public sealed class AggregateOverPerRowArithmeticTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                "schema_with_foreign_keys.order_items",
-                                "item_order_id"
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -118,8 +123,8 @@ public sealed class AggregateOverPerRowArithmeticTests
             [
                 new Field(
                     new UuidField(
-                        "schema_with_foreign_keys.order_items",
-                        "item_order_id"
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                        new ItemOrderIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -142,7 +147,7 @@ public sealed class AggregateOverPerRowArithmeticTests
             );
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid("item_order_id")!.Value,
+            row => row.Uuid(new ItemOrderIdColumn().Name.TextValue)!.Value,
             row => row.Double("revenue")!.Value
         );
 
@@ -158,7 +163,7 @@ public sealed class AggregateOverPerRowArithmeticTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression("schema_with_foreign_keys.order_items"),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue),
             [SumOfQuantityTimesPrice("revenue")],
             where: null,
             [ItemsToProductsJoin()],
