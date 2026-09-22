@@ -1,3 +1,4 @@
+using Pure.Primitives.String;
 using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.Schema;
@@ -57,7 +58,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new SingleTableRelationalSchema().Name, new String("nonexistent_table")]
                 ).TextValue
             ),
@@ -67,7 +68,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new SingleTableRelationalSchema().Name,
                                         new String("nonexistent_table"),
@@ -105,7 +106,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new SingleTableRelationalSchema().Name, new SingleColumnTable().Name]
                 ).TextValue
             ),
@@ -115,7 +116,7 @@ public sealed class NegativePathTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new SingleTableRelationalSchema().Name,
                                         new SingleColumnTable().Name,
@@ -132,7 +133,7 @@ public sealed class NegativePathTests
                 new Join(
                     JoinType.Inner,
                     new JoinedString(
-                        new String("."),
+                        new DotString(),
                         [
                             new SingleTableRelationalSchema().Name,
                             new String("nonexistent_join_table"),
@@ -144,7 +145,7 @@ public sealed class NegativePathTests
                                 new UuidArrayReturning(
                                     new UuidField(
                                         new JoinedString(
-                                            new String("."),
+                                            new DotString(),
                                             [
                                                 new SingleTableRelationalSchema().Name,
                                                 new SingleColumnTable().Name,
@@ -156,7 +157,7 @@ public sealed class NegativePathTests
                                 new UuidArrayReturning(
                                     new UuidField(
                                         new JoinedString(
-                                            new String("."),
+                                            new DotString(),
                                             [
                                                 new SingleTableRelationalSchema().Name,
                                                 new String("nonexistent_join_table"),
@@ -204,7 +205,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue
             ),
@@ -214,7 +215,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -249,7 +250,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
                 ).TextValue
             ),
@@ -259,7 +260,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -276,7 +277,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -296,7 +297,7 @@ public sealed class NegativePathTests
                 new Field(
                     new StringField(
                         new JoinedString(
-                            new String("."),
+                            new DotString(),
                             [
                                 new RelationalSchemaWithForeignKeys().Name,
                                 new OrdersTable().Name,
@@ -335,7 +336,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
                 ).TextValue
             ),
@@ -345,7 +346,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -367,7 +368,7 @@ public sealed class NegativePathTests
                                     new UuidArrayReturning(
                                         new UuidField(
                                             new JoinedString(
-                                                new String("."),
+                                                new DotString(),
                                                 [
                                                     new RelationalSchemaWithForeignKeys().Name,
                                                     new OrdersTable().Name,
@@ -412,7 +413,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
                 ).TextValue
             ),
@@ -422,7 +423,7 @@ public sealed class NegativePathTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -440,7 +441,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -484,7 +485,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
                 ).TextValue
             ),
@@ -494,7 +495,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -513,7 +514,7 @@ public sealed class NegativePathTests
                         new NumberArrayReturning(
                             new NumberField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -621,7 +622,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
                 ).TextValue
             ),
@@ -631,7 +632,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new OrdersTable().Name,
@@ -654,7 +655,7 @@ public sealed class NegativePathTests
                                         new NumberArrayReturning(
                                             new NumberField(
                                                 new JoinedString(
-                                                    new String("."),
+                                                    new DotString(),
                                                     [
                                                         new RelationalSchemaWithForeignKeys()
                                                             .Name,
@@ -701,7 +702,7 @@ public sealed class NegativePathTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue
             ),
@@ -711,7 +712,7 @@ public sealed class NegativePathTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -733,7 +734,7 @@ public sealed class NegativePathTests
                     new Field(
                         new StringField(
                             new JoinedString(
-                                new String("."),
+                                new DotString(),
                                 [
                                     new RelationalSchemaWithForeignKeys().Name,
                                     new UsersTable().Name,

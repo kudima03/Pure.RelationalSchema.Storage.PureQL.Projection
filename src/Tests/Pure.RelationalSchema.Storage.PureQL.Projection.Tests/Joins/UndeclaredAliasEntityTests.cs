@@ -1,3 +1,4 @@
+using Pure.Primitives.String;
 using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
 using Pure.RelationalSchema.Samples.Schemas;
@@ -10,7 +11,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
 using PureQL.CSharp.Model.Fields;
-using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -37,7 +37,7 @@ public sealed class UndeclaredAliasEntityTests
         return new Join(
             JoinType.Inner,
             new JoinedString(
-                new String("."),
+                new DotString(),
                 [new RelationalSchemaWithIndexes().Name, new TableWithSingleIndex().Name]
             ).TextValue,
             new BooleanArrayReturning(
@@ -46,7 +46,7 @@ public sealed class UndeclaredAliasEntityTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithIndexes().Name,
                                         new TableWithIndexes().Name,
@@ -58,7 +58,7 @@ public sealed class UndeclaredAliasEntityTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithIndexes().Name,
                                         new TableWithSingleIndex().Name,
@@ -81,7 +81,7 @@ public sealed class UndeclaredAliasEntityTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
                 ).TextValue,
                 "need"
@@ -92,7 +92,7 @@ public sealed class UndeclaredAliasEntityTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithIndexes().Name,
                                         new TableWithIndexes().Name,
@@ -109,7 +109,7 @@ public sealed class UndeclaredAliasEntityTests
                 new Join(
                     JoinType.Inner,
                     new JoinedString(
-                        new String("."),
+                        new DotString(),
                         [
                             new RelationalSchemaWithIndexes().Name,
                             new TableWithSingleIndex().Name,
@@ -121,7 +121,7 @@ public sealed class UndeclaredAliasEntityTests
                                 new UuidArrayReturning(
                                     new UuidField(
                                         new JoinedString(
-                                            new String("."),
+                                            new DotString(),
                                             [
                                                 new RelationalSchemaWithIndexes().Name,
                                                 new TableWithIndexes().Name,
@@ -157,7 +157,7 @@ public sealed class UndeclaredAliasEntityTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
                 ).TextValue,
                 "need"
@@ -195,7 +195,7 @@ public sealed class UndeclaredAliasEntityTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue,
                 "u"
@@ -237,7 +237,7 @@ public sealed class UndeclaredAliasEntityTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
                 ).TextValue,
                 "need"

@@ -1,3 +1,4 @@
+using Pure.Primitives.String;
 using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
 using Pure.RelationalSchema.Samples.Schemas;
@@ -10,7 +11,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
 using PureQL.CSharp.Model.Fields;
-using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
@@ -33,7 +33,7 @@ public sealed class PackageFixtureRoundTripTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue
             ),
@@ -43,7 +43,7 @@ public sealed class PackageFixtureRoundTripTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -59,7 +59,7 @@ public sealed class PackageFixtureRoundTripTests
                         new DateArrayReturning(
                             new DateField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -75,7 +75,7 @@ public sealed class PackageFixtureRoundTripTests
                         new DateTimeArrayReturning(
                             new DateTimeField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -91,7 +91,7 @@ public sealed class PackageFixtureRoundTripTests
                         new TimeArrayReturning(
                             new TimeField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -130,7 +130,7 @@ public sealed class PackageFixtureRoundTripTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue
             ),
@@ -140,7 +140,7 @@ public sealed class PackageFixtureRoundTripTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -156,7 +156,7 @@ public sealed class PackageFixtureRoundTripTests
                         new NumberArrayReturning(
                             new NumberField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -197,7 +197,7 @@ public sealed class PackageFixtureRoundTripTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue
             ),
@@ -207,7 +207,7 @@ public sealed class PackageFixtureRoundTripTests
                         new NumberArrayReturning(
                             new NumberField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -225,7 +225,7 @@ public sealed class PackageFixtureRoundTripTests
                 new Field(
                     new NumberField(
                         new JoinedString(
-                            new String("."),
+                            new DotString(),
                             [
                                 new RelationalSchemaWithForeignKeys().Name,
                                 new UsersTable().Name,
@@ -268,7 +268,7 @@ public sealed class PackageFixtureRoundTripTests
         Query query = new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
                 ).TextValue
             ),
@@ -278,7 +278,7 @@ public sealed class PackageFixtureRoundTripTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithForeignKeys().Name,
                                         new UsersTable().Name,
@@ -295,7 +295,7 @@ public sealed class PackageFixtureRoundTripTests
                 new Join(
                     JoinType.Inner,
                     new JoinedString(
-                        new String("."),
+                        new DotString(),
                         [new AuditRelationalSchema().Name, new LoginsTable().Name]
                     ).TextValue,
                     new BooleanArrayReturning(
@@ -304,7 +304,7 @@ public sealed class PackageFixtureRoundTripTests
                                 new UuidArrayReturning(
                                     new UuidField(
                                         new JoinedString(
-                                            new String("."),
+                                            new DotString(),
                                             [
                                                 new RelationalSchemaWithForeignKeys().Name,
                                                 new UsersTable().Name,
@@ -316,7 +316,7 @@ public sealed class PackageFixtureRoundTripTests
                                 new UuidArrayReturning(
                                     new UuidField(
                                         new JoinedString(
-                                            new String("."),
+                                            new DotString(),
                                             [
                                                 new AuditRelationalSchema().Name,
                                                 new LoginsTable().Name,

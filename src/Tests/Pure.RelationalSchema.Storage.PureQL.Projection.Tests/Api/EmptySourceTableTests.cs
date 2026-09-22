@@ -1,3 +1,4 @@
+using Pure.Primitives.String;
 using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
 using Pure.RelationalSchema.Samples.Schemas;
@@ -8,7 +9,6 @@ using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
-using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
@@ -28,7 +28,7 @@ public sealed class EmptySourceTableTests
         return new Query(
             new FromExpression(
                 new JoinedString(
-                    new String("."),
+                    new DotString(),
                     [
                         new RelationalSchemaWithoutForeignKeys().Name,
                         new TableWithoutIndexes().Name,
@@ -41,7 +41,7 @@ public sealed class EmptySourceTableTests
                         new UuidArrayReturning(
                             new UuidField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithoutForeignKeys().Name,
                                         new TableWithoutIndexes().Name,
@@ -57,7 +57,7 @@ public sealed class EmptySourceTableTests
                         new StringArrayReturning(
                             new StringField(
                                 new JoinedString(
-                                    new String("."),
+                                    new DotString(),
                                     [
                                         new RelationalSchemaWithoutForeignKeys().Name,
                                         new TableWithoutIndexes().Name,
