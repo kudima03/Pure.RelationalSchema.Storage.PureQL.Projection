@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -21,17 +29,24 @@ public sealed class JoinOnUuidLiteralTests
     [Fact]
     public void InnerJoinOnNeverMatchingUuidLiteralReturnsNoRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -42,14 +57,20 @@ public sealed class JoinOnUuidLiteralTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidReturning(new UuidScalar(Guid.Empty))
@@ -65,7 +86,7 @@ public sealed class JoinOnUuidLiteralTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -74,19 +95,28 @@ public sealed class JoinOnUuidLiteralTests
     [Fact]
     public void InnerJoinOnMatchingUuidLiteralKeepsOnlySatisfyingLeftRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Guid annId = db.UserRows[0].UserId;
+        Guid annId = userRows[0].UserId;
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -97,14 +127,20 @@ public sealed class JoinOnUuidLiteralTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidReturning(new UuidScalar(annId))
@@ -120,20 +156,20 @@ public sealed class JoinOnUuidLiteralTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // The condition constrains only the left side, so each satisfying
         // order pairs with every user row.
         int expected =
-            db.OrderRows.Count(order => order.OrderUserId == annId)
-            * db.UserRows.Count;
+            orderRows.Count(order => order.OrderUserId == annId)
+            * userRows.Count;
 
         Assert.Equal(expected, result.Count);
 
         double[] expectedTotals =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(order => order.OrderUserId == annId)
                 .Select(order => order.OrderTotal)
                 .OrderBy(total => total),
@@ -151,17 +187,25 @@ public sealed class JoinOnUuidLiteralTests
     [Fact]
     public void LeftJoinOnNeverMatchingUuidLiteralPadsEveryLeftRowOnce()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -171,8 +215,11 @@ public sealed class JoinOnUuidLiteralTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     ),
@@ -183,14 +230,20 @@ public sealed class JoinOnUuidLiteralTests
             [
                 new Join(
                     JoinType.Left,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidReturning(new UuidScalar(Guid.Empty))
@@ -206,10 +259,10 @@ public sealed class JoinOnUuidLiteralTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
         Assert.All(result.Rows, row => Assert.Equal(string.Empty, row["customer"]));
     }
 }

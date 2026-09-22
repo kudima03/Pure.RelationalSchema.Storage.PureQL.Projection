@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachArithmetics;
@@ -20,17 +28,25 @@ public sealed class EachArithmeticTests
     [Fact]
     public void EachAddShiftsFieldBeforeComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -46,8 +62,11 @@ public sealed class EachArithmeticTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(10)),
@@ -67,11 +86,11 @@ public sealed class EachArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderTotal + 10 > 110),
+            orderRows.Count(order => order.OrderTotal + 10 > 110),
             result.Count
         );
     }
@@ -79,17 +98,25 @@ public sealed class EachArithmeticTests
     [Fact]
     public void EachSubtractShiftsFieldBeforeEquality()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -104,8 +131,11 @@ public sealed class EachArithmeticTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(0.5)),
@@ -125,11 +155,11 @@ public sealed class EachArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderTotal - 0.5 == 100),
+            orderRows.Count(order => order.OrderTotal - 0.5 == 100),
             result.Count
         );
     }
@@ -137,17 +167,25 @@ public sealed class EachArithmeticTests
     [Fact]
     public void EachMultiplyScalesFieldBeforeComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -163,8 +201,11 @@ public sealed class EachArithmeticTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(2)),
@@ -184,11 +225,11 @@ public sealed class EachArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderTotal * 2 > 400),
+            orderRows.Count(order => order.OrderTotal * 2 > 400),
             result.Count
         );
     }
@@ -196,17 +237,25 @@ public sealed class EachArithmeticTests
     [Fact]
     public void EachDivideScalesFieldBeforeComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -222,8 +271,11 @@ public sealed class EachArithmeticTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(2)),
@@ -243,11 +295,11 @@ public sealed class EachArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderTotal / 2 < 40),
+            orderRows.Count(order => order.OrderTotal / 2 < 40),
             result.Count
         );
     }

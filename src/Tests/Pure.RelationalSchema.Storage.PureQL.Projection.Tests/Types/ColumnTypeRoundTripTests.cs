@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -16,17 +24,30 @@ public sealed class ColumnTypeRoundTripTests
     [Fact]
     public void UuidColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -35,29 +56,42 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (Guid?)user.UserId).ToArray(),
-            [.. result.Rows.Select(row => row.Uuid(SampleDatabase.Users.Id))]
+            userRows.Select(user => (Guid?)user.UserId).ToArray(),
+            [.. result.Rows.Select(row => row.Uuid(new UserIdColumn().Name.TextValue))]
         );
     }
 
     [Fact]
     public void StringColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -66,29 +100,42 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => user.UserName).ToArray(),
-            result.Column(SampleDatabase.Users.Name).ToArray()
+            userRows.Select(user => user.UserName).ToArray(),
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
         );
     }
 
     [Fact]
     public void DoubleColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -97,29 +144,42 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (double?)user.UserAge).ToArray(),
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Users.Age))]
+            userRows.Select(user => (double?)user.UserAge).ToArray(),
+            [.. result.Rows.Select(row => row.Double(new UserAgeColumn().Name.TextValue))]
         );
     }
 
     [Fact]
     public void BoolColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -128,29 +188,46 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (bool?)user.UserActive).ToArray(),
-            [.. result.Rows.Select(row => row.Bool(SampleDatabase.Users.Active))]
+            userRows.Select(user => (bool?)user.UserActive).ToArray(),
+            [
+                .. result.Rows.Select(
+                    row => row.Bool(new UserActiveColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
     [Fact]
     public void DateColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.SignupDate
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -159,29 +236,46 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (DateOnly?)user.SignupDate).ToArray(),
-            [.. result.Rows.Select(row => row.Date(SampleDatabase.Users.SignupDate))]
+            userRows.Select(user => (DateOnly?)user.SignupDate).ToArray(),
+            [
+                .. result.Rows.Select(
+                    row => row.Date(new SignupDateColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
     [Fact]
     public void DateTimeColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -190,29 +284,46 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (DateTime?)user.LastLogin).ToArray(),
-            [.. result.Rows.Select(row => row.DateTime(SampleDatabase.Users.LastLogin))]
+            userRows.Select(user => (DateTime?)user.LastLogin).ToArray(),
+            [
+                .. result.Rows.Select(
+                    row => row.DateTime(new LastLoginColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
     [Fact]
     public void TimeColumnRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -221,12 +332,16 @@ public sealed class ColumnTypeRoundTripTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Select(user => (TimeOnly?)user.ShiftStart).ToArray(),
-            [.. result.Rows.Select(row => row.Time(SampleDatabase.Users.ShiftStart))]
+            userRows.Select(user => (TimeOnly?)user.ShiftStart).ToArray(),
+            [
+                .. result.Rows.Select(
+                    row => row.Time(new ShiftStartColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 }

@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -17,10 +25,14 @@ public sealed class AggregateTests
     [Fact]
     public void SumAggregateProjectsPerGroupTotal()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -29,8 +41,14 @@ public sealed class AggregateTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -42,17 +60,20 @@ public sealed class AggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [new Field(new UuidField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderUserIdColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedGroups = db.OrderRows
+        int expectedGroups = orderRows
             .Select(order => order.OrderUserId)
             .Distinct()
             .Count();
@@ -63,10 +84,14 @@ public sealed class AggregateTests
     [Fact]
     public void CountAggregateProjectsPerGroupRowCount()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -75,8 +100,14 @@ public sealed class AggregateTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -88,17 +119,20 @@ public sealed class AggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [new Field(new UuidField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderUserIdColumn().Name.TextValue))],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedGroups = db.OrderRows
+        int expectedGroups = orderRows
             .Select(order => order.OrderUserId)
             .Distinct()
             .Count();

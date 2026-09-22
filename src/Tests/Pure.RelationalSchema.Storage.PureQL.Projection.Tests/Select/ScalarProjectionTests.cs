@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -19,10 +27,15 @@ public sealed class ScalarProjectionTests
     [Fact]
     public void NumberScalarProjectsConstantOnEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -34,17 +47,19 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.All(result.Rows, row => Assert.Equal(5, row.Double("version")));
     }
 
     [Fact]
     public void AllSevenScalarTypesProjectTypedConstants()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Guid marker = new Guid("0f8fad5b-d9cb-469f-a165-70867728950e");
         DateOnly release = new DateOnly(2024, 12, 31);
@@ -52,7 +67,10 @@ public sealed class ScalarProjectionTests
         TimeOnly cutoff = new TimeOnly(17, 30, 15);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -100,10 +118,10 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.All(
             result.Rows,
             row =>
@@ -122,10 +140,15 @@ public sealed class ScalarProjectionTests
     [Fact]
     public void ScalarAlongsideFieldColumnRepeatsPerRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -137,8 +160,14 @@ public sealed class ScalarProjectionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -147,17 +176,17 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
 
-        for (int i = 0; i < db.UserRows.Count; i++)
+        for (int i = 0; i < userRows.Count; i++)
         {
             Assert.Equal("v2", result.Row(i)["release"]);
             Assert.Equal(
-                db.UserRows[i].UserName,
-                result.Row(i)[SampleDatabase.Users.Name]
+                userRows[i].UserName,
+                result.Row(i)[new UserNameColumn().Name.TextValue]
             );
         }
     }
@@ -165,10 +194,15 @@ public sealed class ScalarProjectionTests
     [Fact]
     public void ScalarWithoutAliasProjectsEmptyNamedColumn()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -179,10 +213,10 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.Contains(string.Empty, result.ColumnNames);
         Assert.All(result.Rows, row => Assert.Equal(7, row.Double(string.Empty)));
     }
@@ -190,10 +224,15 @@ public sealed class ScalarProjectionTests
     [Fact]
     public void ScalarUnderWhereRepeatsOnlyOnFilteredRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -204,8 +243,14 @@ public sealed class ScalarProjectionTests
             ],
             new BooleanArrayReturning(
                 new BooleanField(
-                    SampleDatabase.Users.Entity,
-                    SampleDatabase.Users.Active
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new UsersTable().Name,
+                        ]
+                    ).TextValue,
+                    new UserActiveColumn().Name.TextValue
                 )
             ),
             join: null,
@@ -216,20 +261,24 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count(user => user.UserActive), result.Count);
+        Assert.Equal(userRows.Count(user => user.UserActive), result.Count);
         Assert.All(result.Rows, row => Assert.Equal("active-user", row["tag"]));
     }
 
     [Fact]
     public void DistinctCollapsesIdenticalScalarOnlyRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -248,7 +297,7 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
@@ -258,10 +307,14 @@ public sealed class ScalarProjectionTests
     [Fact]
     public void ScalarWithPaginationProjectsConstantOnPagedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -279,7 +332,7 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(2, result.Count);
@@ -289,10 +342,15 @@ public sealed class ScalarProjectionTests
     [Fact]
     public void NegativeFractionalNumberScalarRoundTrips()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Products.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -304,20 +362,25 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.ProductRows.Count, result.Count);
+        Assert.Equal(productRows.Count, result.Count);
         Assert.All(result.Rows, row => Assert.Equal(-12.75, row.Double("adjustment")));
     }
 
     [Fact]
     public void ScalarProjectsConstantOnEveryJoinedRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -329,8 +392,14 @@ public sealed class ScalarProjectionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -340,20 +409,38 @@ public sealed class ScalarProjectionTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new UsersTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new OrdersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -368,20 +455,25 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
         Assert.All(result.Rows, row => Assert.Equal("joined", row["source"]));
     }
 
     [Fact]
     public void FalseBooleanScalarRoundTripsDistinctFromEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -393,10 +485,10 @@ public sealed class ScalarProjectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.All(result.Rows, row => Assert.Equal(false, row.Bool("flag")));
     }
 }

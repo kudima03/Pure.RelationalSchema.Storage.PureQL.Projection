@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.ArrayScalars;
@@ -32,7 +40,14 @@ public sealed class EachMixedFamilyComboTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -43,7 +58,14 @@ public sealed class EachMixedFamilyComboTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue, new UserIdColumn().Name.TextValue)
                 )
             )
         );
@@ -60,10 +82,19 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachAndOfShiftedAgeAboveThresholdAndDoubledAgeBelowThresholdKeepsBoth()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -78,8 +109,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Users.Entity,
-                                                            SampleDatabase.Users.Age
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -103,8 +141,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Users.Entity,
-                                                            SampleDatabase.Users.Age
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -129,20 +174,20 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u => u.UserAge + 5 > 30 && u.UserAge * 2 < 100)
                 .Select(u => u.UserId)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachOr(eachGreaterThan(eachSubtract(age, 10), 20),
@@ -150,10 +195,19 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachOrOfLoweredAgeAboveThresholdAndHalvedAgeAtMostThresholdKeepsEither()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -168,8 +222,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Users.Entity,
-                                                            SampleDatabase.Users.Age
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -193,8 +254,15 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Users.Entity,
-                                                            SampleDatabase.Users.Age
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new UsersTable().Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new UserAgeColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -219,20 +287,20 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u => u.UserAge - 10 > 20 || u.UserAge / 2 <= 13)
                 .Select(u => u.UserId)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachNot(eachGreaterThan(eachMultiply(age, 3), 120)) - bare each-not at the
@@ -240,10 +308,19 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachNotOfTripledAgeAboveThresholdExcludesHighArithmeticRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachNotOperator(
@@ -257,8 +334,15 @@ public sealed class EachMixedFamilyComboTests
                                             [
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        SampleDatabase.Users.Entity,
-                                                        SampleDatabase.Users.Age
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new UsersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new UserAgeColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(3)),
@@ -280,20 +364,20 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u => !(u.UserAge * 3 > 120))
                 .Select(u => u.UserId)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachLessThan(eachDivide(total, 2), 100),
@@ -301,10 +385,19 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachAndOfDividedTotalBelowThresholdAndAddedTotalAboveThresholdOverOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -319,8 +412,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -344,8 +445,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -370,20 +479,20 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o => o.OrderTotal / 2 < 100 && o.OrderTotal + 20 > 90)
                 .Select(o => o.OrderId)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachOr(eachNot(eachGreaterThan(eachAdd(total, 20), 150)),
@@ -391,10 +500,19 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachOrOfNotAddedTotalAboveThresholdAndSubtractedTotalBelowThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -411,12 +529,16 @@ public sealed class EachMixedFamilyComboTests
                                                         [
                                                             new NumberArrayReturning(
                                                                 new NumberField(
-                                                                    SampleDatabase
-                                                                        .Orders
-                                                                        .Entity,
-                                                                    SampleDatabase
-                                                                        .Orders
-                                                                        .Total
+                                                                    new JoinedString(
+                                                                        new DotString(),
+                                                                        [
+                                                                            new RelationalSchemaWithForeignKeys()
+                                                                                .Name,
+                                                                            new OrdersTable()
+                                                                                .Name,
+                                                                        ]
+                                                                    ).TextValue,
+                                                                    new OrderTotalColumn().Name.TextValue
                                                                 )
                                                             ),
                                                             new NumberReturning(
@@ -442,8 +564,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -468,20 +598,20 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o => !(o.OrderTotal + 20 > 150) || o.OrderTotal - 30 < 175)
                 .Select(o => o.OrderId)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // ===== Category 2: temporal add/diff feeding comparison feeding boolean-ops =====
@@ -491,11 +621,20 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachOrOfDateDiffDaysAboveThresholdAndTotalBelowThresholdOverOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly origin = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -508,8 +647,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.PlacedOn
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateReturning(new DateScalar(origin))
@@ -525,8 +671,15 @@ public sealed class EachMixedFamilyComboTests
                                     EachComparisonOperator.EachLessThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(new NumberScalar(60))
@@ -544,12 +697,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                     o.PlacedOn.DayNumber - origin.DayNumber > 2 || o.OrderTotal < 60
                 )
@@ -558,8 +711,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachEquality(eachDateAddDays(placed_on, 1) == target),
@@ -567,11 +720,20 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachAndOfDateAddDaysEqualsTargetAndStatusEqualsShippedOverOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly target = new DateOnly(2024, 6, 2);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -583,8 +745,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateAddDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.PlacedOn
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1))
@@ -599,8 +768,15 @@ public sealed class EachMixedFamilyComboTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -618,12 +794,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                     o.PlacedOn.AddDays(1) == target && o.OrderStatus == "shipped"
                 )
@@ -632,8 +808,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachGreaterThanOrEqual(eachTimeAddSeconds(shift_start, 1800), 9:30),
@@ -641,12 +817,21 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachAndOfTimeAddSecondsAtLeastThresholdAndTimeDiffSecondsBelowThreshold()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly shiftedThreshold = new TimeOnly(9, 30, 0);
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -659,8 +844,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachTimeAddSeconds(
                                             new TimeArrayReturning(
                                                 new TimeField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.ShiftStart
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ShiftStartColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1800))
@@ -678,8 +870,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachTimeDiffSeconds(
                                             new TimeArrayReturning(
                                                 new TimeField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.ShiftStart
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ShiftStartColumn().Name.TextValue
                                                 )
                                             ),
                                             new TimeReturning(new TimeScalar(origin))
@@ -700,12 +899,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u =>
                     u.ShiftStart.Add(TimeSpan.FromSeconds(1800)) >= shiftedThreshold
                     && (u.ShiftStart - origin).TotalSeconds < 7200
@@ -715,8 +914,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachOr(eachEquality(eachDateTimeAddSeconds(last_login, 3600) == target),
@@ -724,12 +923,21 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachOrOfDateTimeAddSecondsEqualsTargetAndDateTimeDiffSecondsAboveZero()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime target = new DateTime(2024, 6, 1, 9, 30, 0);
         DateTime origin = new DateTime(2024, 6, 2, 0, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -741,8 +949,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateTimeAddSeconds(
                                             new DateTimeArrayReturning(
                                                 new DateTimeField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.LastLogin
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new LastLoginColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(3600))
@@ -760,8 +975,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateTimeDiffSeconds(
                                             new DateTimeArrayReturning(
                                                 new DateTimeField(
-                                                    SampleDatabase.Users.Entity,
-                                                    SampleDatabase.Users.LastLogin
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new UsersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new LastLoginColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateTimeReturning(
@@ -784,12 +1006,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u =>
                     u.LastLogin.AddSeconds(3600) == target
                     || (u.LastLogin - origin).TotalSeconds > 0
@@ -799,8 +1021,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // ===== Category 3: mixed equality + comparison, 3-5 levels, 2+ types =====
@@ -810,7 +1032,9 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void ThreeLevelTreeMixingBooleanNumberAndDateFiltersUsersByAllThree()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateOnly threshold = new DateOnly(2021, 1, 1);
 
         BooleanArrayReturning activeTrue = new BooleanArrayReturning(
@@ -818,8 +1042,14 @@ public sealed class EachMixedFamilyComboTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -832,8 +1062,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(28))
@@ -846,8 +1082,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachLessThan,
                     new DateArrayReturning(
                         new DateField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.SignupDate
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new SignupDateColumn().Name.TextValue
                         )
                     ),
                     new DateReturning(new DateScalar(threshold))
@@ -856,7 +1098,14 @@ public sealed class EachMixedFamilyComboTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -876,12 +1125,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u =>
                     u.UserActive && u.UserAge >= 28 && u.SignupDate < threshold
                 )
@@ -890,8 +1139,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // 5-level tree mixing number/boolean/date leaves, AND-rooted:
@@ -902,7 +1151,9 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void FiveLevelTreeMixingNumberBooleanAndDateAcrossOrAndNotFiltersUsers()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateOnly threshold = new DateOnly(2021, 1, 1);
 
         BooleanArrayReturning ageAbove26 = new BooleanArrayReturning(
@@ -911,8 +1162,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachGreaterThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(26))
@@ -924,8 +1181,14 @@ public sealed class EachMixedFamilyComboTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -938,8 +1201,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachGreaterThanOrEqual,
                     new NumberArrayReturning(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(30))
@@ -952,8 +1221,14 @@ public sealed class EachMixedFamilyComboTests
                     EachComparisonOperator.EachLessThan,
                     new DateArrayReturning(
                         new DateField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.SignupDate
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new SignupDateColumn().Name.TextValue
                         )
                     ),
                     new DateReturning(new DateScalar(threshold))
@@ -965,8 +1240,14 @@ public sealed class EachMixedFamilyComboTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(false))
@@ -1000,7 +1281,14 @@ public sealed class EachMixedFamilyComboTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new UsersTable().Name,
+                    ]
+                ).TextValue),
             [UserIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator([leftBranch, rightBranch])
@@ -1013,12 +1301,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(u =>
                 {
                     bool a = u.UserAge > 26;
@@ -1036,8 +1324,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.UserRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Users.Id));
+        Assert.True(expected.Length < userRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new UserIdColumn().Name.TextValue));
     }
 
     // eachAnd(eachAnd(order_user_id == Cara.id, placed_on >= 2024-06-05),
@@ -1046,12 +1334,22 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void ThreeLevelTreeMixingUuidDateAndStringFiltersOrdersByAllThree()
     {
-        SampleDatabase db = new SampleDatabase();
-        Guid caraId = db.UserRows.Single(u => u.UserName == "Cara").UserId;
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        Guid caraId = userRows.Single(u => u.UserName == "Cara").UserId;
         DateOnly threshold = new DateOnly(2024, 6, 5);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -1064,8 +1362,15 @@ public sealed class EachMixedFamilyComboTests
                                             new EachUuidEquality(
                                                 new UuidArrayReturning(
                                                     new UuidField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.UserId
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderUserIdColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new UuidReturning(
@@ -1081,8 +1386,15 @@ public sealed class EachMixedFamilyComboTests
                                                     .EachGreaterThanOrEqual,
                                                 new DateArrayReturning(
                                                     new DateField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.PlacedOn
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new PlacedOnColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new DateReturning(
@@ -1099,8 +1411,15 @@ public sealed class EachMixedFamilyComboTests
                                 new EachStringEquality(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     ),
                                     new StringReturning(new StringScalar("shipped"))
@@ -1118,12 +1437,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                     o.OrderUserId == caraId
                     && o.PlacedOn >= threshold
@@ -1134,8 +1453,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // ===== Category 5: operand-shape variety (field / literal / nested each) =====
@@ -1145,10 +1464,19 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachAndCombinesFieldLiteralArrayAndNestedArithmeticOperands()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -1159,8 +1487,15 @@ public sealed class EachMixedFamilyComboTests
                                     EachComparisonOperator.EachGreaterThan,
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberArrayReturning(
@@ -1179,8 +1514,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -1205,7 +1548,7 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // The literal array's second element (-1) is never used - only its
@@ -1213,15 +1556,15 @@ public sealed class EachMixedFamilyComboTests
         // EachBroadcastAndLiteralTests).
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o => o.OrderTotal > 90 && o.OrderTotal - 200 < 0)
                 .Select(o => o.OrderId)
                 .OrderBy(id => id),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // eachOr(["shipped", junk...] (broadcast) == status,
@@ -1230,11 +1573,20 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachOrCombinesLiteralStringArrayFieldAndNestedDateArithmeticOperands()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 7, 4);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachOrOperator(
@@ -1256,8 +1608,15 @@ public sealed class EachMixedFamilyComboTests
                                     ),
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys()
+                                                        .Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1271,8 +1630,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateAddDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.PlacedOn
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(30))
@@ -1293,12 +1659,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                     o.OrderStatus == "shipped" || o.PlacedOn.AddDays(30) > threshold
                 )
@@ -1307,8 +1673,8 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 
     // ===== Crossover: numeric arithmetic + temporal diff under one AND =====
@@ -1318,11 +1684,20 @@ public sealed class EachMixedFamilyComboTests
     [Fact]
     public void EachAndOfArithmeticComparisonAndDateDiffComparisonOverOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly origin = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanArrayReturning(
                 new EachAndOperator(
@@ -1337,8 +1712,16 @@ public sealed class EachMixedFamilyComboTests
                                                 [
                                                     new NumberArrayReturning(
                                                         new NumberField(
-                                                            SampleDatabase.Orders.Entity,
-                                                            SampleDatabase.Orders.Total
+                                                            new JoinedString(
+                                                                new DotString(),
+                                                                [
+                                                                    new RelationalSchemaWithForeignKeys()
+                                                                        .Name,
+                                                                    new OrdersTable()
+                                                                        .Name,
+                                                                ]
+                                                            ).TextValue,
+                                                            new OrderTotalColumn().Name.TextValue
                                                         )
                                                     ),
                                                     new NumberReturning(
@@ -1360,8 +1743,15 @@ public sealed class EachMixedFamilyComboTests
                                         new EachDateDiffDays(
                                             new DateArrayReturning(
                                                 new DateField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.PlacedOn
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new PlacedOnColumn().Name.TextValue
                                                 )
                                             ),
                                             new DateReturning(new DateScalar(origin))
@@ -1382,12 +1772,12 @@ public sealed class EachMixedFamilyComboTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(o =>
                     o.OrderTotal + 10 > 100
                     && o.PlacedOn.DayNumber - origin.DayNumber < 4
@@ -1397,7 +1787,7 @@ public sealed class EachMixedFamilyComboTests
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Length < db.OrderRows.Count);
-        Assert.Equal(expected, OrderedUuids(result, SampleDatabase.Orders.Id));
+        Assert.True(expected.Length < orderRows.Count);
+        Assert.Equal(expected, OrderedUuids(result, new OrderIdColumn().Name.TextValue));
     }
 }

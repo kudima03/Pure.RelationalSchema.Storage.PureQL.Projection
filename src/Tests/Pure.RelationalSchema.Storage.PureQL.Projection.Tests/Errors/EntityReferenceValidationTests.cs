@@ -1,4 +1,11 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Numeric;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -39,10 +46,13 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void SelectUnknownEntityFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
@@ -55,7 +65,7 @@ public sealed class EntityReferenceValidationTests
         );
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection(datasets, query)
         );
 
         Assert.Contains(UnknownEntity, exception.Message, System.StringComparison.Ordinal);
@@ -70,17 +80,26 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void WhereEachFieldUnknownEntityFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -104,7 +123,7 @@ public sealed class EntityReferenceValidationTests
         );
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection(datasets, query)
         );
 
         Assert.Contains(UnknownEntity, exception.Message, System.StringComparison.Ordinal);
@@ -121,17 +140,26 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void JoinOnEntityNeitherBaseNorJoinedFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -141,20 +169,38 @@ public sealed class EntityReferenceValidationTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Orders.Entity,
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new OrdersTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new UsersTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Products.Entity,
-                                        SampleDatabase.Products.Id
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithForeignKeys().Name,
+                                                new ProductsTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new ProductIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -169,11 +215,14 @@ public sealed class EntityReferenceValidationTests
         );
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection(datasets, query)
         );
 
         Assert.Contains(
-            SampleDatabase.Products.Entity,
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+            ).TextValue,
             exception.Message,
             System.StringComparison.Ordinal
         );
@@ -186,17 +235,26 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void GroupByUnknownEntityFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -214,7 +272,7 @@ public sealed class EntityReferenceValidationTests
         );
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection(datasets, query)
         );
 
         Assert.Contains(UnknownEntity, exception.Message, System.StringComparison.Ordinal);
@@ -230,17 +288,26 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void HavingAggregateArgumentUnknownEntityFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -251,8 +318,14 @@ public sealed class EntityReferenceValidationTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -278,7 +351,7 @@ public sealed class EntityReferenceValidationTests
         );
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection(datasets, query)
         );
 
         Assert.Contains(UnknownEntity, exception.Message, System.StringComparison.Ordinal);
@@ -293,17 +366,26 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void OrderByUnknownEntityFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -323,7 +405,7 @@ public sealed class EntityReferenceValidationTests
         );
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection(datasets, query)
         );
 
         Assert.Contains(UnknownEntity, exception.Message, System.StringComparison.Ordinal);
@@ -344,17 +426,26 @@ public sealed class EntityReferenceValidationTests
     [Fact]
     public void HavingAggregateOverUnknownFieldOnKnownEntityFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -365,8 +456,14 @@ public sealed class EntityReferenceValidationTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -379,7 +476,13 @@ public sealed class EntityReferenceValidationTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
                                             "not_a_column"
                                         )
                                     )
@@ -395,7 +498,7 @@ public sealed class EntityReferenceValidationTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains("not_a_column", exception.Message, System.StringComparison.Ordinal);

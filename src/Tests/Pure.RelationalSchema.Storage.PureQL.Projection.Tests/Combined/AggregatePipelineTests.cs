@@ -1,7 +1,14 @@
 using System.Globalization;
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -27,20 +34,20 @@ public sealed class AggregatePipelineTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -53,20 +60,20 @@ public sealed class AggregatePipelineTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Logins.Entity,
+            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Logins.Entity,
-                                SampleDatabase.Logins.UserId
+                                new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -78,17 +85,19 @@ public sealed class AggregatePipelineTests
     [Fact]
     public void WhereThenGroupByAggregatesOnlyFilteredRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -100,8 +109,8 @@ public sealed class AggregatePipelineTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -116,8 +125,8 @@ public sealed class AggregatePipelineTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         ),
                         new StringReturning(new StringScalar("shipped"))
@@ -128,8 +137,8 @@ public sealed class AggregatePipelineTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -139,16 +148,16 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.OrderRows
+        Dictionary<Guid, double> expected = orderRows
             .Where(order => order.OrderStatus == "shipped")
             .GroupBy(order => order.OrderUserId)
             .ToDictionary(group => group.Key, group => group.Sum(order => order.OrderTotal));
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Orders.UserId)!.Value,
+            row => row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value,
             row => row.Double("filteredSum")!.Value
         );
 
@@ -158,17 +167,20 @@ public sealed class AggregatePipelineTests
     [Fact]
     public void JoinThenGroupByProjectsAggregatePerJoinedGroup()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -180,8 +192,8 @@ public sealed class AggregatePipelineTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -196,8 +208,8 @@ public sealed class AggregatePipelineTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Name
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserNameColumn().Name.TextValue
                     )
                 ),
             ],
@@ -207,12 +219,12 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<string, double> expected = db.OrderRows
+        Dictionary<string, double> expected = orderRows
             .Join(
-                db.UserRows,
+                userRows,
                 order => order.OrderUserId,
                 user => user.UserId,
                 (order, user) => user.UserName
@@ -221,7 +233,7 @@ public sealed class AggregatePipelineTests
             .ToDictionary(group => group.Key, group => (double)group.Count());
 
         Dictionary<string, double> actual = result.Rows.ToDictionary(
-            row => row[SampleDatabase.Users.Name]!,
+            row => row[new UserNameColumn().Name.TextValue]!,
             row => row.Double("orderCount")!.Value
         );
 
@@ -231,17 +243,19 @@ public sealed class AggregatePipelineTests
     [Fact]
     public void CrossSchemaJoinThenGroupByCountsPerUser()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -253,8 +267,8 @@ public sealed class AggregatePipelineTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -269,8 +283,8 @@ public sealed class AggregatePipelineTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Id
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -280,15 +294,15 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, double> expected = db.LoginRows
+        Dictionary<Guid, double> expected = loginRows
             .GroupBy(login => login.LoginUserId)
             .ToDictionary(group => group.Key, group => (double)group.Count());
 
         Dictionary<Guid, double> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Users.Id)!.Value,
+            row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value,
             row => row.Double("loginCount")!.Value
         );
 
@@ -298,17 +312,19 @@ public sealed class AggregatePipelineTests
     [Fact]
     public void GroupByHavingOrderByPaginationComposeInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -320,8 +336,8 @@ public sealed class AggregatePipelineTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -336,8 +352,8 @@ public sealed class AggregatePipelineTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],
@@ -350,8 +366,8 @@ public sealed class AggregatePipelineTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -365,8 +381,8 @@ public sealed class AggregatePipelineTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -376,12 +392,12 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string Status, double Sum)[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderStatus)
                 .Where(group => group.Sum(order => order.OrderTotal) > 0)
                 .OrderBy(group => group.Key, StringComparer.Ordinal)
@@ -393,7 +409,7 @@ public sealed class AggregatePipelineTests
         (string Status, double Sum)[] actual =
         [
             .. result.Rows.Select(row =>
-                (row[SampleDatabase.Orders.Status]!, row.Double("statusSum")!.Value)
+                (row[new OrderStatusColumn().Name.TextValue]!, row.Double("statusSum")!.Value)
             ),
         ];
 
@@ -403,10 +419,12 @@ public sealed class AggregatePipelineTests
     [Fact]
     public void WholeSetAggregateOverFilteredRowsProjectsSingleRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -415,8 +433,8 @@ public sealed class AggregatePipelineTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -431,8 +449,8 @@ public sealed class AggregatePipelineTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         ),
                         new StringReturning(new StringScalar("shipped"))
@@ -447,10 +465,10 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double expected = db.OrderRows
+        double expected = orderRows
             .Where(order => order.OrderStatus == "shipped")
             .Sum(order => order.OrderTotal);
 
@@ -461,10 +479,12 @@ public sealed class AggregatePipelineTests
     [Fact]
     public void WholeSetCountProjectsSingleRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -473,8 +493,8 @@ public sealed class AggregatePipelineTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -487,20 +507,22 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("total"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("total"));
     }
 
     [Fact]
     public void WholeSetMinAndMaxStringProjectInOneRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -509,8 +531,8 @@ public sealed class AggregatePipelineTests
                                 new MinString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -526,8 +548,8 @@ public sealed class AggregatePipelineTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -540,13 +562,13 @@ public sealed class AggregatePipelineTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string expectedMin = db.OrderRows
+        string expectedMin = orderRows
             .Select(order => order.OrderStatus)
             .Min(StringComparer.Ordinal)!;
-        string expectedMax = db.OrderRows
+        string expectedMax = orderRows
             .Select(order => order.OrderStatus)
             .Max(StringComparer.Ordinal)!;
 
@@ -558,17 +580,19 @@ public sealed class AggregatePipelineTests
     [Fact]
     public async Task AsyncEnumerationYieldsGroupedAggregateRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -580,8 +604,8 @@ public sealed class AggregatePipelineTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -596,8 +620,8 @@ public sealed class AggregatePipelineTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -606,7 +630,7 @@ public sealed class AggregatePipelineTests
             pagination: null
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         Dictionary<Guid, double> actual = [];
         await foreach (IRow row in projection)
@@ -615,7 +639,7 @@ public sealed class AggregatePipelineTests
             double total = 0;
             foreach (KeyValuePair<IColumn, ICell> cell in row.Cells)
             {
-                if (cell.Key.Name.TextValue == SampleDatabase.Orders.UserId)
+                if (cell.Key.Name.TextValue == new OrderUserIdColumn().Name.TextValue)
                 {
                     userId = Guid.Parse(cell.Value.Value.TextValue);
                 }
@@ -631,7 +655,7 @@ public sealed class AggregatePipelineTests
             actual[userId] = total;
         }
 
-        Dictionary<Guid, double> expected = db.OrderRows
+        Dictionary<Guid, double> expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .ToDictionary(group => group.Key, group => group.Sum(order => order.OrderTotal));
 

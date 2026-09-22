@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Numeric;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -17,10 +25,12 @@ public sealed class NumericAggregateTests
     [Fact]
     public void AverageOfTotalPerUserProjectsGroupMean()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -29,8 +39,8 @@ public sealed class NumericAggregateTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -42,19 +52,26 @@ public sealed class NumericAggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => group.Average(order => order.OrderTotal))
                 .OrderBy(value => value),
         ];
@@ -71,10 +88,12 @@ public sealed class NumericAggregateTests
     [Fact]
     public void MinOfTotalPerUserProjectsGroupMinimum()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -83,8 +102,8 @@ public sealed class NumericAggregateTests
                                 new MinNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -96,19 +115,26 @@ public sealed class NumericAggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => group.Min(order => order.OrderTotal))
                 .OrderBy(value => value),
         ];
@@ -125,10 +151,12 @@ public sealed class NumericAggregateTests
     [Fact]
     public void MaxOfTotalPerUserProjectsGroupMaximum()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -137,8 +165,8 @@ public sealed class NumericAggregateTests
                                 new MaxNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -150,19 +178,26 @@ public sealed class NumericAggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => group.Max(order => order.OrderTotal))
                 .OrderBy(value => value),
         ];
@@ -179,10 +214,12 @@ public sealed class NumericAggregateTests
     [Fact]
     public void SumOfAllTotalsProjectsSingleWholeSetValue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -191,8 +228,8 @@ public sealed class NumericAggregateTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -205,12 +242,12 @@ public sealed class NumericAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
         Assert.Equal(
-            db.OrderRows.Sum(order => order.OrderTotal),
+            orderRows.Sum(order => order.OrderTotal),
             result.Row(0).Double("sum_total")
         );
     }

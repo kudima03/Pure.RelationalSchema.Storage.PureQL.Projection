@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -12,6 +20,14 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 // entity/alias nor any join entity is unresolvable and must fail fast
 // instead of silently degrading to bare-name resolution (issue #82). The
 // passing tests pin the spec-legal from-alias references.
+//
+// The colliding-"id" shape needed here comes from the centralized
+// Pure.RelationalSchema.Storage.Samples catalogue's
+// SchemaDataSetWithAmbiguousIds (schema "schema_with_indexes"):
+// table_with_indexes (id, tenant_id, name, created_at) references
+// table_with_single_index (id, name) via tenant_id -> id - the same
+// six-needs/four-specialties/one-unreferenced shape this repo's
+// CollidingNameDatabase used to hand-build, just under package names.
 [Trait("Clause", "Join")]
 [Trait("Feature", "AliasResolution")]
 public sealed class UndeclaredAliasEntityTests
@@ -20,20 +36,35 @@ public sealed class UndeclaredAliasEntityTests
     {
         return new Join(
             JoinType.Inner,
-            CollidingNameDatabase.Specialties.Entity,
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithIndexes().Name, new TableWithSingleIndex().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                CollidingNameDatabase.Needs.Entity,
-                                CollidingNameDatabase.Needs.SpecialtyId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithIndexes().Name,
+                                        new TableWithIndexes().Name,
+                                    ]
+                                ).TextValue,
+                                new TenantIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                CollidingNameDatabase.Specialties.Entity,
-                                CollidingNameDatabase.Specialties.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithIndexes().Name,
+                                        new TableWithSingleIndex().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
                             )
                         )
                     )
@@ -45,17 +76,29 @@ public sealed class UndeclaredAliasEntityTests
     [Fact]
     public void JoinOnConditionViaUndeclaredAliasFailsFast()
     {
-        CollidingNameDatabase db = new CollidingNameDatabase();
+        IStoredSchemaDataSet dataset = new SchemaDataSetWithAmbiguousIds();
 
         Query query = new Query(
-            new FromExpression(CollidingNameDatabase.Needs.Entity, "need"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
+                ).TextValue,
+                "need"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                CollidingNameDatabase.Needs.Entity,
-                                CollidingNameDatabase.Needs.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithIndexes().Name,
+                                        new TableWithIndexes().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
                             )
                         )
                     )
@@ -65,21 +108,30 @@ public sealed class UndeclaredAliasEntityTests
             [
                 new Join(
                     JoinType.Inner,
-                    CollidingNameDatabase.Specialties.Entity,
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithIndexes().Name,
+                            new TableWithSingleIndex().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        CollidingNameDatabase.Needs.Entity,
-                                        CollidingNameDatabase.Needs.SpecialtyId
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new RelationalSchemaWithIndexes().Name,
+                                                new TableWithIndexes().Name,
+                                            ]
+                                        ).TextValue,
+                                        new TenantIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
-                                    new UuidField(
-                                        "sp",
-                                        CollidingNameDatabase.Specialties.Id
-                                    )
+                                    new UuidField("sp", new IdColumn().Name.TextValue)
                                 )
                             )
                         )
@@ -93,22 +145,28 @@ public sealed class UndeclaredAliasEntityTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection([dataset], query)
         ));
     }
 
     [Fact]
     public void SelectOfCollidingColumnViaUndeclaredAliasFailsFast()
     {
-        CollidingNameDatabase db = new CollidingNameDatabase();
+        IStoredSchemaDataSet dataset = new SchemaDataSetWithAmbiguousIds();
 
         Query query = new Query(
-            new FromExpression(CollidingNameDatabase.Needs.Entity, "need"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
+                ).TextValue,
+                "need"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
-                            new UuidField("sp", CollidingNameDatabase.Specialties.Id)
+                            new UuidField("sp", new IdColumn().Name.TextValue)
                         )
                     ),
                     "specId"
@@ -123,22 +181,30 @@ public sealed class UndeclaredAliasEntityTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection([dataset], query)
         ));
     }
 
     [Fact]
     public void FromAliasFieldReferenceResolvesWithoutJoins()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity, "u"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                "u"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("u", SampleDatabase.Users.Name)
+                            new StringField("u", new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -146,32 +212,41 @@ public sealed class UndeclaredAliasEntityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.Select(user => user.UserName).OrderBy(name => name),
+            .. userRows.Select(user => user.UserName).OrderBy(name => name),
         ];
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue)
+                .OrderBy(name => name)
+                .ToArray()
         );
     }
 
     [Fact]
     public void FromAliasReferenceToCollidingColumnResolvesToTheBaseTable()
     {
-        CollidingNameDatabase db = new CollidingNameDatabase();
+        IStoredSchemaDataSet dataset = new SchemaDataSetWithAmbiguousIds();
+        IReadOnlyList<AmbiguousIdRecord> needRows = [.. new AmbiguousIdRecords()];
 
         Query query = new Query(
-            new FromExpression(CollidingNameDatabase.Needs.Entity, "need"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithIndexes().Name, new TableWithIndexes().Name]
+                ).TextValue,
+                "need"
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
-                            new UuidField("need", CollidingNameDatabase.Needs.Id)
+                            new UuidField("need", new IdColumn().Name.TextValue)
                         )
                     ),
                     "ownId"
@@ -186,13 +261,10 @@ public sealed class UndeclaredAliasEntityTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection([dataset], query)
         );
 
-        Guid[] expected =
-        [
-            .. db.NeedRows.Select(need => need.NeedId).OrderBy(id => id),
-        ];
+        Guid[] expected = [.. needRows.Select(need => need.Id).OrderBy(id => id)];
 
         Guid[] actual =
         [

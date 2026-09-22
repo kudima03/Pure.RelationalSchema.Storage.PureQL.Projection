@@ -1,5 +1,13 @@
 using System.Globalization;
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -13,12 +21,13 @@ using PureQL.CSharp.Model.Scalars;
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Types;
 
 // Three-valued (NULL) semantics across every clause: a NULL cell is stored as
-// empty text (SampleDatabase.Users.Score, NULL for Bob and Dan; see
-// SampleRecords.cs and CellText.From(double?)). This suite pins how the
-// translator actually treats NULL today in WHERE, each*, GROUP BY, aggregates,
-// DISTINCT and ORDER BY, plus separate coverage for numeric-extreme,
-// calendar-edge and UUID-casing round-trips (SampleDatabase.Users
-// PrecisionValue/EdgeDate/EdgeDateTime/EdgeTime columns).
+// empty text (the "user_score" column, NULL for Bob and Dan; see
+// Pure.RelationalSchema.Storage.Samples.Records.UserRecord). This suite pins
+// how the translator actually treats NULL today in WHERE, each*, GROUP BY,
+// aggregates, DISTINCT and ORDER BY, plus separate coverage for
+// numeric-extreme, calendar-edge and UUID-casing round-trips (the
+// user_precision_value/user_edge_date/user_edge_datetime/user_edge_time
+// columns).
 [Trait("Clause", "Types")]
 [Trait("Feature", "NullSemantics")]
 public sealed class NullSemanticsTests
@@ -34,18 +43,23 @@ public sealed class NullSemanticsTests
     [Fact]
     public void ScalarFieldEqualityExcludesRowsWhoseComparedCellIsNull()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
-                            )
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -56,14 +70,20 @@ public sealed class NullSemanticsTests
                         new NumberArrayEquality(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Age
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                    new UserAgeColumn().Name.TextValue
                                 )
                             ),
                             new NumberArrayReturning(
                                 new NumberField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.Score
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                    new UserScoreColumn().Name.TextValue
                                 )
                             )
                         )
@@ -78,13 +98,13 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score == user.UserAge)
+            .. userRows
+                .Where(user => user.UserScore == user.UserAge)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -92,7 +112,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -106,18 +126,23 @@ public sealed class NullSemanticsTests
     [Fact]
     public void EachEqualityExcludesRowsWhoseFieldCellIsNull()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
-                            )
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -127,8 +152,11 @@ public sealed class NullSemanticsTests
                     new EachNumberEquality(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(30))
@@ -143,13 +171,13 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score == 30)
+            .. userRows
+                .Where(user => user.UserScore == 30)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -157,7 +185,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(["Ann", "Cara"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -171,17 +199,25 @@ public sealed class NullSemanticsTests
     [Fact]
     public void GroupByNullKeyCollapsesAllNullRowsIntoOneGroup()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         )
                     )
@@ -193,8 +229,11 @@ public sealed class NullSemanticsTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Id
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                            new UserIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -209,8 +248,11 @@ public sealed class NullSemanticsTests
             [
                 new Field(
                     new NumberField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Score
+                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                        new UserScoreColumn().Name.TextValue
                     )
                 ),
             ],
@@ -220,11 +262,11 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedGroupCount = db.UserRows
-            .Select(user => user.Score)
+        int expectedGroupCount = userRows
+            .Select(user => user.UserScore)
             .Distinct()
             .Count();
 
@@ -233,7 +275,7 @@ public sealed class NullSemanticsTests
 
         ResultRow nullGroup = Assert.Single(
             result.Rows,
-            row => row[SampleDatabase.Users.Score] == string.Empty
+            row => row[new UserScoreColumn().Name.TextValue] == string.Empty
         );
         Assert.Equal(2.0, nullGroup.Double("n"));
     }
@@ -244,11 +286,13 @@ public sealed class NullSemanticsTests
     [Fact]
     public void NumericAggregatesIgnoreNullCellsWhenFoldingTheWholeSet()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         double[] nonNullScores =
         [
-            .. db.UserRows.Select(user => user.Score).OfType<double>(),
+            .. userRows.Select(user => user.UserScore).OfType<double>(),
         ];
 
         Assert.Equal(4, nonNullScores.Length);
@@ -256,7 +300,10 @@ public sealed class NullSemanticsTests
         Query SumAvgMinMaxQuery(string aggregateAlias, SelectExpression expression)
         {
             return new Query(
-                new FromExpression(SampleDatabase.Users.Entity),
+                new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
                 [expression]
             );
         }
@@ -270,12 +317,15 @@ public sealed class NullSemanticsTests
         }
 
         NumberArrayReturning scoreField = new NumberArrayReturning(
-            new NumberField(SampleDatabase.Users.Entity, SampleDatabase.Users.Score)
+            new NumberField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserScoreColumn().Name.TextValue)
         );
 
         ProjectionResult sumResult = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 SumAvgMinMaxQuery(
                     "sum_score",
                     SelectOf(new NumberAggregate(new SumNumber(scoreField)), "sum_score")
@@ -284,7 +334,7 @@ public sealed class NullSemanticsTests
         );
         ProjectionResult avgResult = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 SumAvgMinMaxQuery(
                     "avg_score",
                     SelectOf(new NumberAggregate(new AverageNumber(scoreField)), "avg_score")
@@ -293,7 +343,7 @@ public sealed class NullSemanticsTests
         );
         ProjectionResult minResult = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 SumAvgMinMaxQuery(
                     "min_score",
                     SelectOf(new NumberAggregate(new MinNumber(scoreField)), "min_score")
@@ -302,7 +352,7 @@ public sealed class NullSemanticsTests
         );
         ProjectionResult maxResult = new ProjectionResult(
             new PureQLProjection(
-                db.Datasets,
+                datasets,
                 SumAvgMinMaxQuery(
                     "max_score",
                     SelectOf(new NumberAggregate(new MaxNumber(scoreField)), "max_score")
@@ -323,17 +373,25 @@ public sealed class NullSemanticsTests
     [Fact]
     public void DistinctCollapsesMultipleNullRowsIntoOne()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         )
                     )
@@ -349,11 +407,11 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedDistinctCount = db.UserRows
-            .Select(user => user.Score)
+        int expectedDistinctCount = userRows
+            .Select(user => user.UserScore)
             .Distinct()
             .Count();
 
@@ -361,7 +419,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(expectedDistinctCount, result.Count);
         _ = Assert.Single(
             result.Rows,
-            row => row[SampleDatabase.Users.Score] == string.Empty
+            row => row[new UserScoreColumn().Name.TextValue] == string.Empty
         );
     }
 
@@ -378,18 +436,23 @@ public sealed class NullSemanticsTests
     [Fact]
     public void OrderByAscendingPlacesNullScoreCellsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
-                            )
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -402,8 +465,11 @@ public sealed class NullSemanticsTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Score
+                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                            new UserScoreColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -413,22 +479,25 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue)
-                .OrderBy(user => user.Score)
+            .. userRows
+                .Where(user => user.UserScore.HasValue)
+                .OrderBy(user => user.UserScore)
                 .Select(user => user.UserName),
-            .. db.UserRows
-                .Where(user => !user.Score.HasValue)
+            .. userRows
+                .Where(user => !user.UserScore.HasValue)
                 .Select(user => user.UserName),
         ];
 
         Assert.Equal(["Bob", "Dan"], expected[^2..]);
-        Assert.Equal(expected, result.Column(SampleDatabase.Users.Name).ToArray());
+        Assert.Equal(
+            expected,
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
+        );
     }
 
     // Descending companion: proves NULLS LAST holds in the direction where
@@ -439,18 +508,23 @@ public sealed class NullSemanticsTests
     [Fact]
     public void OrderByDescendingPlacesNullScoreCellsLast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
-                            )
+                            new StringField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue, new UserNameColumn().Name.TextValue)
                         )
                     )
                 ),
@@ -463,8 +537,11 @@ public sealed class NullSemanticsTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Score
+                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                            new UserScoreColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -474,7 +551,7 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // For a descending sort, NULLS LAST happens to coincide with what
@@ -484,38 +561,49 @@ public sealed class NullSemanticsTests
         // records still reflects the intentional contract here.
         string[] expected =
         [
-            .. db.UserRows
-                .OrderByDescending(user => user.Score)
+            .. userRows
+                .OrderByDescending(user => user.UserScore)
                 .Select(user => user.UserName),
         ];
 
         Assert.Equal(["Bob", "Dan"], expected[^2..]);
-        Assert.Equal(expected, result.Column(SampleDatabase.Users.Name).ToArray());
+        Assert.Equal(
+            expected,
+            result.Column(new UserNameColumn().Name.TextValue).ToArray()
+        );
     }
 
     // Numeric precision/extremes: double.MaxValue/MinValue, the smallest
     // representable positive/negative subnormal (double.Epsilon), a value
     // near the exponent limit (1e308) and a value with many significant
     // digits that would suffer rounding if formatted with anything less
-    // than a round-trippable format. CellText.From(double) uses plain
-    // ToString(InvariantCulture) - round-trippable by default since
-    // .NET Core 3.0 - and CellValueExtractor.GetDoubleValue parses it back
-    // with the same invariant culture, so every value below must survive
-    // the storage-text round trip exactly.
+    // than a round-trippable format. InvariantCellText's double formatting
+    // is round-trippable by default since .NET Core 3.0, and
+    // CellValueExtractor.GetDoubleValue parses it back with the same
+    // invariant culture, so every value below must survive the storage-text
+    // round trip exactly.
     [Fact]
     public void ExtremeAndPrecisionSensitiveDoublesRoundTripExactly()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.PrecisionValue
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserPrecisionValueColumn().Name.TextValue
                             )
                         )
                     )
@@ -524,18 +612,28 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            [.. db.UserRows.Select(user => (double?)user.PrecisionValue)],
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Users.PrecisionValue))]
+            [.. userRows.Select(user => (double?)user.UserPrecisionValue)],
+            [
+                .. result.Rows.Select(
+                    row => row.Double(new UserPrecisionValueColumn().Name.TextValue)
+                ),
+            ]
         );
-        Assert.Contains(double.MaxValue, db.UserRows.Select(user => user.PrecisionValue));
-        Assert.Contains(double.MinValue, db.UserRows.Select(user => user.PrecisionValue));
+        Assert.Contains(
+            double.MaxValue,
+            userRows.Select(user => user.UserPrecisionValue)
+        );
+        Assert.Contains(
+            double.MinValue,
+            userRows.Select(user => user.UserPrecisionValue)
+        );
         Assert.Contains(
             double.Epsilon,
-            db.UserRows.Select(user => user.PrecisionValue)
+            userRows.Select(user => user.UserPrecisionValue)
         );
     }
 
@@ -549,17 +647,25 @@ public sealed class NullSemanticsTests
     [Fact]
     public void CalendarEdgeValuesRoundTripAcrossDateDateTimeAndTime()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.EdgeDate
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -568,8 +674,11 @@ public sealed class NullSemanticsTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.EdgeDateTime
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeDateTimeColumn().Name.TextValue
                             )
                         )
                     )
@@ -578,8 +687,11 @@ public sealed class NullSemanticsTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.EdgeTime
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeTimeColumn().Name.TextValue
                             )
                         )
                     )
@@ -588,29 +700,44 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            [.. db.UserRows.Select(user => (DateOnly?)user.EdgeDate)],
-            [.. result.Rows.Select(row => row.Date(SampleDatabase.Users.EdgeDate))]
+            [.. userRows.Select(user => (DateOnly?)user.UserEdgeDate)],
+            [
+                .. result.Rows.Select(
+                    row => row.Date(new UserEdgeDateColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Equal(
-            [.. db.UserRows.Select(user => (DateTime?)user.EdgeDateTime)],
-            [.. result.Rows.Select(row => row.DateTime(SampleDatabase.Users.EdgeDateTime))]
+            [.. userRows.Select(user => (DateTime?)user.UserEdgeDateTime)],
+            [
+                .. result.Rows.Select(
+                    row => row.DateTime(new UserEdgeDateTimeColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Equal(
-            [.. db.UserRows.Select(user => (TimeOnly?)user.EdgeTime)],
-            [.. result.Rows.Select(row => row.Time(SampleDatabase.Users.EdgeTime))]
+            [.. userRows.Select(user => (TimeOnly?)user.UserEdgeTime)],
+            [
+                .. result.Rows.Select(
+                    row => row.Time(new UserEdgeTimeColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Contains(
             new DateOnly(2024, 2, 29),
-            db.UserRows.Select(user => user.EdgeDate)
+            userRows.Select(user => user.UserEdgeDate)
         );
-        Assert.Contains(new TimeOnly(0, 0, 0), db.UserRows.Select(user => user.EdgeTime));
+        Assert.Contains(
+            new TimeOnly(0, 0, 0),
+            userRows.Select(user => user.UserEdgeTime)
+        );
         Assert.Contains(
             new TimeOnly(23, 59, 59),
-            db.UserRows.Select(user => user.EdgeTime)
+            userRows.Select(user => user.UserEdgeTime)
         );
     }
 
@@ -618,22 +745,31 @@ public sealed class NullSemanticsTests
     // the same query with the current thread's culture switched to one
     // whose date/number formatting differs sharply from invariant (comma
     // decimal separator, day-first dates) and assert identical results.
-    // CellText/CellValueExtractor both fix CultureInfo.InvariantCulture
-    // explicitly, so ambient culture must have no effect.
+    // The package's InvariantCellText and this translator's
+    // CellValueExtractor both fix CultureInfo.InvariantCulture explicitly,
+    // so ambient culture must have no effect.
     [Fact]
     public void CalendarAndNumericRoundTripsAreUnaffectedByAmbientCulture()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.EdgeDateTime
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserEdgeDateTimeColumn().Name.TextValue
                             )
                         )
                     )
@@ -642,8 +778,11 @@ public sealed class NullSemanticsTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.PrecisionValue
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserPrecisionValueColumn().Name.TextValue
                             )
                         )
                     )
@@ -657,7 +796,7 @@ public sealed class NullSemanticsTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
-            result = new ProjectionResult(new PureQLProjection(db.Datasets, query));
+            result = new ProjectionResult(new PureQLProjection(datasets, query));
         }
         finally
         {
@@ -665,12 +804,20 @@ public sealed class NullSemanticsTests
         }
 
         Assert.Equal(
-            [.. db.UserRows.Select(user => (DateTime?)user.EdgeDateTime)],
-            [.. result.Rows.Select(row => row.DateTime(SampleDatabase.Users.EdgeDateTime))]
+            [.. userRows.Select(user => (DateTime?)user.UserEdgeDateTime)],
+            [
+                .. result.Rows.Select(
+                    row => row.DateTime(new UserEdgeDateTimeColumn().Name.TextValue)
+                ),
+            ]
         );
         Assert.Equal(
-            [.. db.UserRows.Select(user => (double?)user.PrecisionValue)],
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Users.PrecisionValue))]
+            [.. userRows.Select(user => (double?)user.UserPrecisionValue)],
+            [
+                .. result.Rows.Select(
+                    row => row.Double(new UserPrecisionValueColumn().Name.TextValue)
+                ),
+            ]
         );
     }
 
@@ -678,24 +825,30 @@ public sealed class NullSemanticsTests
     // same logical Guid as the equivalent lowercase text, and the two must
     // compare equal under the translator's own field-vs-field equality path
     // (Guid.TryParse is case-insensitive; CellValueExtractor.GetGuidValue
-    // relies on exactly that). A tiny bespoke one-table dataset is built
-    // here (not through SampleDatabase, which always formats UUIDs
-    // lowercase via Guid.ToString()) so the stored text itself differs only
-    // in casing between the two rows.
+    // relies on exactly that). UuidCasingSchemaDataSet stores the same
+    // logical Guid once with lowercase hex text and once with uppercase hex
+    // text, so the stored text itself differs only in casing between the
+    // two rows.
     [Fact]
     public void UppercaseAndLowercaseUuidTextCompareEqual()
     {
-        UuidCasingDatabase db = new UuidCasingDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets = [new UuidCasingSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(UuidCasingDatabase.Things.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithoutForeignKeys().Name, new TableWithoutIndexes().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                UuidCasingDatabase.Things.Entity,
-                                UuidCasingDatabase.Things.Label
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithoutForeignKeys().Name, new TableWithoutIndexes().Name]
+).TextValue,
+                                new NameColumn().Name.TextValue
                             )
                         )
                     )
@@ -706,11 +859,18 @@ public sealed class NullSemanticsTests
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                UuidCasingDatabase.Things.Entity,
-                                UuidCasingDatabase.Things.Id
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithoutForeignKeys().Name, new TableWithoutIndexes().Name]
+).TextValue,
+                                new IdColumn().Name.TextValue
                             )
                         ),
-                        new UuidReturning(new UuidScalar(UuidCasingDatabase.SharedId))
+                        new UuidReturning(
+                            new UuidScalar(
+                                new Guid("0f9e8d7c-6b5a-4938-8271-605f4e3d2c1b")
+                            )
+                        )
                     )
                 )
             ),
@@ -722,7 +882,7 @@ public sealed class NullSemanticsTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string?[] expectedLabels = ["lowercase", "uppercase"];
@@ -730,7 +890,7 @@ public sealed class NullSemanticsTests
         Assert.Equal(2, result.Count);
         Assert.Equal(
             expectedLabels,
-            result.Column(UuidCasingDatabase.Things.Label)
+            result.Column(new NameColumn().Name.TextValue)
                 .OrderBy(label => label, StringComparer.Ordinal)
                 .ToArray()
         );

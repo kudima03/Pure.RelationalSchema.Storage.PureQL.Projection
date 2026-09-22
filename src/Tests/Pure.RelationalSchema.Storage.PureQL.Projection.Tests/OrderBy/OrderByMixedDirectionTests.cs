@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.Fields;
@@ -13,17 +21,25 @@ public sealed class OrderByMixedDirectionTests
     [Fact]
     public void OrderByStatusAscThenTotalDescOrdersWithinEachStatus()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -32,8 +48,11 @@ public sealed class OrderByMixedDirectionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -47,8 +66,11 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -56,8 +78,11 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -67,12 +92,12 @@ public sealed class OrderByMixedDirectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, double?)[] expected =
         [
-            .. db.OrderRows.OrderBy(order => order.OrderStatus)
+            .. orderRows.OrderBy(order => order.OrderStatus)
                 .ThenByDescending(order => order.OrderTotal)
                 .Select(order => ((string?)order.OrderStatus, (double?)order.OrderTotal)),
         ];
@@ -81,8 +106,8 @@ public sealed class OrderByMixedDirectionTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row[SampleDatabase.Orders.Status],
-                    row.Double(SampleDatabase.Orders.Total)
+                    row[new OrderStatusColumn().Name.TextValue],
+                    row.Double(new OrderTotalColumn().Name.TextValue)
                 )
             ),
         ];
@@ -93,17 +118,25 @@ public sealed class OrderByMixedDirectionTests
     [Fact]
     public void OrderByActiveAscThenAgeDescOrdersWithinEachFlag()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -117,8 +150,11 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -126,8 +162,11 @@ public sealed class OrderByMixedDirectionTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Age
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                            new UserAgeColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -137,17 +176,17 @@ public sealed class OrderByMixedDirectionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows.OrderBy(user => user.UserActive)
+            .. userRows.OrderBy(user => user.UserActive)
                 .ThenByDescending(user => user.UserAge)
                 .Select(user => user.UserName),
         ];
 
-        string?[] actual = [.. result.Column(SampleDatabase.Users.Name)];
+        string?[] actual = [.. result.Column(new UserNameColumn().Name.TextValue)];
 
         Assert.Equal(expected, actual);
     }

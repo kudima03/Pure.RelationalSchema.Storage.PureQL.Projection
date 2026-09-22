@@ -1,4 +1,10 @@
-using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Arithmetics;
@@ -25,10 +31,14 @@ public sealed class ScalarUnsupportedTests
     [Fact]
     public void NumberParameterInSelectFailsFastWithoutBinding()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -40,17 +50,21 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 
     [Fact]
     public void SingleValueArithmeticWithParameterOperandInSelectFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -73,17 +87,21 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 
     [Fact]
     public void BooleanCompositeInSelectFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -103,17 +121,21 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 
     [Fact]
     public void ParameterAlongsideAggregateFailsFastInGroupMode()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -128,8 +150,14 @@ public sealed class ScalarUnsupportedTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -142,7 +170,7 @@ public sealed class ScalarUnsupportedTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 }

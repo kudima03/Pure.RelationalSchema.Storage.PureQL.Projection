@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -15,17 +23,27 @@ public sealed class MultiJoinTests
     [Fact]
     public void ChainedInnerJoinsEnrichEachItemWithOrderAndProduct()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -34,8 +52,11 @@ public sealed class MultiJoinTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Name
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                new ProductNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -45,20 +66,29 @@ public sealed class MultiJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.OrderItems.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.OrderItems.Entity,
-                                        SampleDatabase.OrderItems.OrderId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                        new ItemOrderIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Id
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -67,20 +97,29 @@ public sealed class MultiJoinTests
                 ),
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Products.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.OrderItems.Entity,
-                                        SampleDatabase.OrderItems.ProductId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                        new ItemProductIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Products.Entity,
-                                        SampleDatabase.Products.Id
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                        new ProductIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -95,15 +134,15 @@ public sealed class MultiJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (string?, string?)[] expected =
         [
             .. (
-                from item in db.OrderItemRows
-                join order in db.OrderRows on item.ItemOrderId equals order.OrderId
-                join product in db.ProductRows
+                from item in orderItemRows
+                join order in orderRows on item.ItemOrderId equals order.OrderId
+                join product in productRows
                     on item.ItemProductId equals product.ProductId
                 select ((string?)order.OrderStatus, (string?)product.ProductName)
             ).OrderBy(pair => pair.Item1).ThenBy(pair => pair.Item2),
@@ -114,8 +153,8 @@ public sealed class MultiJoinTests
             .. result
                 .Rows.Select(row =>
                     (
-                        row[SampleDatabase.Orders.Status],
-                        row[SampleDatabase.Products.Name]
+                        row[new OrderStatusColumn().Name.TextValue],
+                        row[new ProductNameColumn().Name.TextValue]
                     )
                 )
                 .OrderBy(pair => pair.Item1)

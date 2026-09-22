@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Date;
@@ -30,8 +38,14 @@ public sealed class HavingAggregateTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Id
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -42,7 +56,10 @@ public sealed class HavingAggregateTests
     private static NumberArrayReturning Totals()
     {
         return new NumberArrayReturning(
-            new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+            new NumberField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderTotalColumn().Name.TextValue)
         );
     }
 
@@ -68,8 +85,14 @@ public sealed class HavingAggregateTests
                 new MinString(
                     new StringArrayReturning(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     )
                 )
@@ -84,8 +107,14 @@ public sealed class HavingAggregateTests
                 new MaxDate(
                     new DateArrayReturning(
                         new DateField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.PlacedOn
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new PlacedOnColumn().Name.TextValue
                         )
                     )
                 )
@@ -99,14 +128,23 @@ public sealed class HavingAggregateTests
     )
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -118,8 +156,14 @@ public sealed class HavingAggregateTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -132,8 +176,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingSumGreaterThanKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -147,12 +192,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Sum(order => order.OrderTotal) > 150)
                 .Select(group => group.Key),
@@ -161,7 +206,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -171,8 +216,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingAverageLessThanOrEqualKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -186,12 +232,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Average(order => order.OrderTotal) <= 100.50)
                 .Select(group => group.Key),
@@ -200,7 +246,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -210,8 +256,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingMinStringComparisonKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -225,12 +272,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     string.CompareOrdinal(
@@ -244,7 +291,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -254,7 +301,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingMaxDateComparisonKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 4);
 
         Query query = OrdersGroupedByUser(
@@ -270,12 +319,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedOn) < threshold)
                 .Select(group => group.Key),
@@ -284,7 +333,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -294,8 +343,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingAndOfTwoAggregateComparisonsKeepsIntersection()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         BooleanReturning countGreaterThanOne = new BooleanReturning(
             new Comparison(
                 new NumberComparison(
@@ -324,12 +374,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     group.Count() > 1 && group.Sum(order => order.OrderTotal) > 150
@@ -340,7 +390,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -350,8 +400,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingOrOfTwoAggregateComparisonsKeepsUnion()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         BooleanReturning countGreaterThanOne = new BooleanReturning(
             new Comparison(
                 new NumberComparison(
@@ -380,12 +431,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     group.Count() > 1 || group.Sum(order => order.OrderTotal) > 150
@@ -396,7 +447,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -406,8 +457,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingNotInvertsAggregateComparison()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         BooleanReturning countGreaterThanOne = new BooleanReturning(
             new Comparison(
                 new NumberComparison(
@@ -425,12 +477,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Count() <= 1)
                 .Select(group => group.Key),
@@ -439,7 +491,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -449,8 +501,9 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingComparingTwoAggregatesOfSameGroupKeepsQualifyingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Comparison(
@@ -464,12 +517,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     group.Max(order => order.OrderTotal)
@@ -481,20 +534,21 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
-        Assert.True(expected.Count < db.OrderRows.Select(o => o.OrderUserId).Distinct().Count());
+        Assert.True(expected.Count < orderRows.Select(o => o.OrderUserId).Distinct().Count());
         Assert.Equal(expected, actual);
     }
 
     [Fact]
     public void HavingEqualityOverCountKeepsExactMatches()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -509,12 +563,12 @@ public sealed class HavingAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Count() == 2)
                 .Select(group => group.Key),
@@ -523,7 +577,7 @@ public sealed class HavingAggregateTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -534,14 +588,14 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingRejectingEveryGroupReturnsEmpty()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(new BooleanScalar(false))
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -550,17 +604,18 @@ public sealed class HavingAggregateTests
     [Fact]
     public void HavingAcceptingEveryGroupKeepsAllGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(new BooleanScalar(true))
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedGroups = db.OrderRows
+        int expectedGroups = orderRows
             .Select(order => order.OrderUserId)
             .Distinct()
             .Count();

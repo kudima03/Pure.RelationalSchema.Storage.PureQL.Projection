@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Date;
@@ -42,20 +50,29 @@ public sealed class NullThreeValuedLogicTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -72,17 +89,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachNumberGreaterThanExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -94,8 +119,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(20))
@@ -110,13 +138,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score > 20)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore > 20)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -124,7 +152,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -135,17 +163,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachNumberGreaterThanOrEqualExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -157,8 +193,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachGreaterThanOrEqual,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(28))
@@ -173,13 +212,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score >= 28)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore >= 28)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -187,7 +226,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -199,17 +238,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachNumberLessThanExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -221,8 +268,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachLessThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(29))
@@ -237,13 +287,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score < 29)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore < 29)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -251,7 +301,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -262,17 +312,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachNumberLessThanOrEqualExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -284,8 +342,11 @@ public sealed class NullThreeValuedLogicTests
                         EachComparisonOperator.EachLessThanOrEqual,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Score
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserScoreColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(10))
@@ -300,13 +361,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score <= 10)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore <= 10)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -314,7 +375,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -330,17 +391,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachAddWithNullScoreOperandExcludesRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -356,8 +425,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Score
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(1)),
@@ -377,13 +449,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue)
+            .. userRows
+                .Where(user => user.UserScore.HasValue)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -391,7 +463,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -403,17 +475,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachSubtractWithNullScoreOperandExcludesRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -429,8 +509,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Score
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(10)),
@@ -450,13 +533,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score - 10 > 15)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore - 10 > 15)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -464,7 +547,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -476,17 +559,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachMultiplyWithNullScoreOperandExcludesRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -502,8 +593,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Score
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(2)),
@@ -523,13 +617,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score * 2 > 50)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore * 2 > 50)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -537,7 +631,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -550,17 +644,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachDivideWithNullScoreOperandExcludesRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -576,8 +678,11 @@ public sealed class NullThreeValuedLogicTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Score
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(2)),
@@ -597,13 +702,13 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue)
+            .. userRows
+                .Where(user => user.UserScore.HasValue)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -611,7 +716,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Ann", "Cara", "Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -635,17 +740,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void NotOfScalarFieldEqualityStillExcludesNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -660,14 +773,20 @@ public sealed class NullThreeValuedLogicTests
                                     new NumberArrayEquality(
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Age
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserAgeColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Users.Entity,
-                                                SampleDatabase.Users.Score
+                                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                                new UserScoreColumn().Name.TextValue
                                             )
                                         )
                                     )
@@ -685,15 +804,15 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // SQL-correct: NOT(unknown) stays excluded for Bob/Dan; only Eve's
         // genuine mismatch (25 != 10) flips from false to true.
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score != user.UserAge)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore != user.UserAge)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -701,7 +820,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -716,17 +835,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void EachNotOfEachEqualityStillExcludesNullScoreRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -739,8 +866,11 @@ public sealed class NullThreeValuedLogicTests
                             new EachNumberEquality(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Score
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new UserScoreColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(30))
@@ -757,15 +887,15 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         // SQL-correct: NOT(unknown) stays excluded for Bob/Dan; Eve/Fay's
         // genuine mismatches (10 != 30, 28 != 30) flip from false to true.
         string[] expected =
         [
-            .. db.UserRows
-                .Where(user => user.Score.HasValue && user.Score != 30)
+            .. userRows
+                .Where(user => user.UserScore.HasValue && user.UserScore != 30)
                 .Select(user => user.UserName)
                 .OrderBy(name => name, StringComparer.Ordinal),
         ];
@@ -773,7 +903,7 @@ public sealed class NullThreeValuedLogicTests
         Assert.Equal(["Eve", "Fay"], expected);
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name)
+            result.Column(new UserNameColumn().Name.TextValue)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray()
         );
@@ -790,17 +920,25 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void HavingAverageIgnoresNullScoreAcrossMixedGroup()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -812,8 +950,11 @@ public sealed class NullThreeValuedLogicTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Score
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                            new UserScoreColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -828,8 +969,11 @@ public sealed class NullThreeValuedLogicTests
             [
                 new Field(
                     new BooleanField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Active
+                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                        new UserActiveColumn().Name.TextValue
                     )
                 ),
             ],
@@ -842,8 +986,11 @@ public sealed class NullThreeValuedLogicTests
                                 new AverageNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.Score
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                            new UserScoreColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -858,17 +1005,17 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double expectedAverage = db.UserRows
+        double expectedAverage = userRows
             .Where(user => user.UserActive)
-            .Select(user => user.Score)
+            .Select(user => user.UserScore)
             .OfType<double>()
             .Average();
 
         Assert.Equal(1, result.Count);
-        Assert.Equal("True", result.Row(0)[SampleDatabase.Users.Active]);
+        Assert.Equal("True", result.Row(0)[new UserActiveColumn().Name.TextValue]);
         Assert.Equal(expectedAverage, result.Row(0).Double("avg_score"));
     }
 
@@ -882,10 +1029,15 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void LeftJoinMinPlacedOnIgnoresPaddedNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -894,8 +1046,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MinDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new PlacedOnColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -914,10 +1069,10 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        DateOnly expected = db.OrderRows.Min(order => order.PlacedOn);
+        DateOnly expected = orderRows.Min(order => order.PlacedOn);
 
         Assert.Equal(1, result.Count);
         Assert.Equal(expected, result.Row(0).Date("min_placed_on"));
@@ -930,10 +1085,15 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void LeftJoinMaxPlacedAtIgnoresPaddedNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -942,8 +1102,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MaxDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedAt
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new PlacedAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -962,10 +1125,10 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        DateTime expected = db.OrderRows.Max(order => order.PlacedAt);
+        DateTime expected = orderRows.Max(order => order.PlacedAt);
 
         Assert.Equal(1, result.Count);
         Assert.Equal(expected, result.Row(0).DateTime("max_placed_at"));
@@ -982,10 +1145,15 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void LeftJoinMaxStatusIgnoresPaddedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -994,8 +1162,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1014,10 +1185,10 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string expected = db.OrderRows.Max(order => order.OrderStatus)!;
+        string expected = orderRows.Max(order => order.OrderStatus)!;
 
         Assert.Equal(1, result.Count);
         Assert.Equal(expected, result.Row(0)["max_status"]);
@@ -1035,10 +1206,15 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void LeftJoinMinStatusIgnoresPaddedNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1047,8 +1223,11 @@ public sealed class NullThreeValuedLogicTests
                                 new MinString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1067,10 +1246,10 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        string expected = db.OrderRows.Min(order => order.OrderStatus)!;
+        string expected = orderRows.Min(order => order.OrderStatus)!;
 
         Assert.Equal(1, result.Count);
         Assert.Equal(expected, result.Row(0)["min_status"]);
@@ -1083,10 +1262,15 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void LeftJoinCountOfNumericColumnIgnoresPaddedNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1095,8 +1279,11 @@ public sealed class NullThreeValuedLogicTests
                                 new ArrayReturning(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1115,11 +1302,11 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("total_count"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("total_count"));
     }
 
     // count(order_status) after users LEFT JOIN orders: the string-family
@@ -1134,10 +1321,15 @@ public sealed class NullThreeValuedLogicTests
     [Fact]
     public void LeftJoinCountOfStringColumnIgnoresPaddedNullRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -1146,8 +1338,11 @@ public sealed class NullThreeValuedLogicTests
                                 new ArrayReturning(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -1166,10 +1361,10 @@ public sealed class NullThreeValuedLogicTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count, result.Row(0).Double("status_count"));
+        Assert.Equal(orderRows.Count, result.Row(0).Double("status_count"));
     }
 }

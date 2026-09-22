@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Arithmetics;
@@ -21,17 +29,28 @@ public sealed class SelectExpansionTests
     [Fact]
     public void SelectBooleanAndTimeColumnsTogetherFromUsersProjectsBothCorrectly()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -40,8 +59,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -50,34 +75,45 @@ public sealed class SelectExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.Equal(
-            [.. db.UserRows.Select(user => (bool?)user.UserActive)],
-            [.. result.Rows.Select(row => row.Bool(SampleDatabase.Users.Active))]
+            [.. userRows.Select(user => (bool?)user.UserActive)],
+            [.. result.Rows.Select(row => row.Bool(new UserActiveColumn().Name.TextValue))]
         );
         Assert.Equal(
-            [.. db.UserRows.Select(user => (TimeOnly?)user.ShiftStart)],
-            [.. result.Rows.Select(row => row.Time(SampleDatabase.Users.ShiftStart))]
+            [.. userRows.Select(user => (TimeOnly?)user.ShiftStart)],
+            [.. result.Rows.Select(row => row.Time(new ShiftStartColumn().Name.TextValue))]
         );
     }
 
     [Fact]
     public void SelectDateAndDateTimeColumnsTogetherFromOrdersProjectsBothCorrectly()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         )
                     )
@@ -86,8 +122,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         )
                     )
@@ -96,34 +138,45 @@ public sealed class SelectExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
         Assert.Equal(
-            [.. db.OrderRows.Select(order => (DateOnly?)order.PlacedOn)],
-            [.. result.Rows.Select(row => row.Date(SampleDatabase.Orders.PlacedOn))]
+            [.. orderRows.Select(order => (DateOnly?)order.PlacedOn)],
+            [.. result.Rows.Select(row => row.Date(new PlacedOnColumn().Name.TextValue))]
         );
         Assert.Equal(
-            [.. db.OrderRows.Select(order => (DateTime?)order.PlacedAt)],
-            [.. result.Rows.Select(row => row.DateTime(SampleDatabase.Orders.PlacedAt))]
+            [.. orderRows.Select(order => (DateTime?)order.PlacedAt)],
+            [.. result.Rows.Select(row => row.DateTime(new PlacedAtColumn().Name.TextValue))]
         );
     }
 
     [Fact]
     public void SelectUuidStringAndDoubleColumnsTogetherFromOrdersProjectsAllThreeCorrectly()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -132,8 +185,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -142,8 +201,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -152,38 +217,49 @@ public sealed class SelectExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
         Assert.Equal(
-            [.. db.OrderRows.Select(order => (Guid?)order.OrderId)],
-            [.. result.Rows.Select(row => row.Uuid(SampleDatabase.Orders.Id))]
+            [.. orderRows.Select(order => (Guid?)order.OrderId)],
+            [.. result.Rows.Select(row => row.Uuid(new OrderIdColumn().Name.TextValue))]
         );
         Assert.Equal(
-            [.. db.OrderRows.Select(order => order.OrderStatus)],
-            result.Column(SampleDatabase.Orders.Status)
+            [.. orderRows.Select(order => order.OrderStatus)],
+            result.Column(new OrderStatusColumn().Name.TextValue)
         );
         Assert.Equal(
-            [.. db.OrderRows.Select(order => (double?)order.OrderTotal)],
-            [.. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total))]
+            [.. orderRows.Select(order => (double?)order.OrderTotal)],
+            [.. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue))]
         );
     }
 
     [Fact]
     public void SelectAllOrderColumnsProjectsEveryColumnOfTheTable()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -192,8 +268,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -202,8 +284,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -212,8 +300,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -222,8 +316,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedAt
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedAtColumn().Name.TextValue
                             )
                         )
                     )
@@ -232,8 +332,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.PlacedOn
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new PlacedOnColumn().Name.TextValue
                             )
                         )
                     )
@@ -241,50 +347,61 @@ public sealed class SelectExpansionTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
         ProjectionResult result = new ProjectionResult(projection);
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
         // Row-cell dictionaries do not preserve insertion order, so the
         // output-column order is asserted against the derived table schema
         // (backed by a plain, order-preserving sequence), not the
         // materialized row cells.
         Assert.Equal(
             [
-                SampleDatabase.Orders.Id,
-                SampleDatabase.Orders.UserId,
-                SampleDatabase.Orders.Total,
-                SampleDatabase.Orders.Status,
-                SampleDatabase.Orders.PlacedAt,
-                SampleDatabase.Orders.PlacedOn,
+                new OrderIdColumn().Name.TextValue,
+                new OrderUserIdColumn().Name.TextValue,
+                new OrderTotalColumn().Name.TextValue,
+                new OrderStatusColumn().Name.TextValue,
+                new PlacedAtColumn().Name.TextValue,
+                new PlacedOnColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
-        OrderRow first = db.OrderRows[0];
+        OrderRecord first = orderRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.OrderId, row.Uuid(SampleDatabase.Orders.Id));
-        Assert.Equal(first.OrderUserId, row.Uuid(SampleDatabase.Orders.UserId));
-        Assert.Equal(first.OrderTotal, row.Double(SampleDatabase.Orders.Total));
-        Assert.Equal(first.OrderStatus, row[SampleDatabase.Orders.Status]);
-        Assert.Equal(first.PlacedAt, row.DateTime(SampleDatabase.Orders.PlacedAt));
-        Assert.Equal(first.PlacedOn, row.Date(SampleDatabase.Orders.PlacedOn));
+        Assert.Equal(first.OrderId, row.Uuid(new OrderIdColumn().Name.TextValue));
+        Assert.Equal(first.OrderUserId, row.Uuid(new OrderUserIdColumn().Name.TextValue));
+        Assert.Equal(first.OrderTotal, row.Double(new OrderTotalColumn().Name.TextValue));
+        Assert.Equal(first.OrderStatus, row[new OrderStatusColumn().Name.TextValue]);
+        Assert.Equal(first.PlacedAt, row.DateTime(new PlacedAtColumn().Name.TextValue));
+        Assert.Equal(first.PlacedOn, row.Date(new PlacedOnColumn().Name.TextValue));
     }
 
     [Fact]
     public void SelectAllUserColumnsInReverseDeclaredOrderProjectsEveryColumn()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new TimeArrayReturning(
                             new TimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.ShiftStart
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ShiftStartColumn().Name.TextValue
                             )
                         )
                     )
@@ -293,8 +410,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateTimeArrayReturning(
                             new DateTimeField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.LastLogin
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new LastLoginColumn().Name.TextValue
                             )
                         )
                     )
@@ -303,8 +426,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new DateArrayReturning(
                             new DateField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.SignupDate
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new SignupDateColumn().Name.TextValue
                             )
                         )
                     )
@@ -313,8 +442,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -323,8 +458,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -333,8 +474,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -343,8 +490,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -352,43 +505,54 @@ public sealed class SelectExpansionTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
         ProjectionResult result = new ProjectionResult(projection);
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.Equal(
             [
-                SampleDatabase.Users.ShiftStart,
-                SampleDatabase.Users.LastLogin,
-                SampleDatabase.Users.SignupDate,
-                SampleDatabase.Users.Active,
-                SampleDatabase.Users.Age,
-                SampleDatabase.Users.Name,
-                SampleDatabase.Users.Id,
+                new ShiftStartColumn().Name.TextValue,
+                new LastLoginColumn().Name.TextValue,
+                new SignupDateColumn().Name.TextValue,
+                new UserActiveColumn().Name.TextValue,
+                new UserAgeColumn().Name.TextValue,
+                new UserNameColumn().Name.TextValue,
+                new UserIdColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
-        UserRow first = db.UserRows[0];
+        UserRecord first = userRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.ShiftStart, row.Time(SampleDatabase.Users.ShiftStart));
-        Assert.Equal(first.UserId, row.Uuid(SampleDatabase.Users.Id));
+        Assert.Equal(first.ShiftStart, row.Time(new ShiftStartColumn().Name.TextValue));
+        Assert.Equal(first.UserId, row.Uuid(new UserIdColumn().Name.TextValue));
     }
 
     [Fact]
     public void SelectExpressionOrderOverridesDeclaredColumnOrderForOrders()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -397,8 +561,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -407,8 +577,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -416,7 +592,7 @@ public sealed class SelectExpansionTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
         ProjectionResult result = new ProjectionResult(projection);
 
         // The declared table order is Id, UserId, Total, Status, ...; the
@@ -425,34 +601,45 @@ public sealed class SelectExpansionTests
         // any accidental ordering-by-schema.
         Assert.Equal(
             [
-                SampleDatabase.Orders.Status,
-                SampleDatabase.Orders.Id,
-                SampleDatabase.Orders.Total,
+                new OrderStatusColumn().Name.TextValue,
+                new OrderIdColumn().Name.TextValue,
+                new OrderTotalColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
-        OrderRow first = db.OrderRows[0];
+        OrderRecord first = orderRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.OrderStatus, row[SampleDatabase.Orders.Status]);
-        Assert.Equal(first.OrderId, row.Uuid(SampleDatabase.Orders.Id));
-        Assert.Equal(first.OrderTotal, row.Double(SampleDatabase.Orders.Total));
+        Assert.Equal(first.OrderStatus, row[new OrderStatusColumn().Name.TextValue]);
+        Assert.Equal(first.OrderId, row.Uuid(new OrderIdColumn().Name.TextValue));
+        Assert.Equal(first.OrderTotal, row.Double(new OrderTotalColumn().Name.TextValue));
     }
 
     [Fact]
     public void SelectExpressionOrderOverridesDeclaredColumnOrderForUsers()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     )
@@ -461,8 +648,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -471,8 +664,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -480,39 +679,50 @@ public sealed class SelectExpansionTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
         ProjectionResult result = new ProjectionResult(projection);
 
         Assert.Equal(
             [
-                SampleDatabase.Users.Age,
-                SampleDatabase.Users.Id,
-                SampleDatabase.Users.Active,
+                new UserAgeColumn().Name.TextValue,
+                new UserIdColumn().Name.TextValue,
+                new UserActiveColumn().Name.TextValue,
             ],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
-        UserRow first = db.UserRows[0];
+        UserRecord first = userRows[0];
         ResultRow row = result.Row(0);
-        Assert.Equal(first.UserAge, row.Double(SampleDatabase.Users.Age));
-        Assert.Equal(first.UserId, row.Uuid(SampleDatabase.Users.Id));
-        Assert.Equal(first.UserActive, row.Bool(SampleDatabase.Users.Active));
+        Assert.Equal(first.UserAge, row.Double(new UserAgeColumn().Name.TextValue));
+        Assert.Equal(first.UserId, row.Uuid(new UserIdColumn().Name.TextValue));
+        Assert.Equal(first.UserActive, row.Bool(new UserActiveColumn().Name.TextValue));
     }
 
     [Fact]
     public void DuplicateFieldWithDifferentAliasesProjectsBothColumnsIndependently()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -522,8 +732,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -532,7 +748,7 @@ public sealed class SelectExpansionTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
         ProjectionResult result = new ProjectionResult(projection);
 
         Assert.Equal(
@@ -540,7 +756,7 @@ public sealed class SelectExpansionTests
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
-        string?[] expected = [.. db.OrderRows.Select(order => order.OrderStatus)];
+        string?[] expected = [.. orderRows.Select(order => order.OrderStatus)];
         Assert.Equal(expected, result.Column("state_a"));
         Assert.Equal(expected, result.Column("state_b"));
     }
@@ -548,17 +764,28 @@ public sealed class SelectExpansionTests
     [Fact]
     public void DuplicateFieldOnceBareOnceAliasedProjectsBothColumnsIndependently()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -567,8 +794,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -577,16 +810,16 @@ public sealed class SelectExpansionTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
         ProjectionResult result = new ProjectionResult(projection);
 
         Assert.Equal(
-            [SampleDatabase.Orders.Status, "status_alias"],
+            [new OrderStatusColumn().Name.TextValue, "status_alias"],
             [.. projection.TableSchema.Columns.Select(column => column.Name.TextValue)]
         );
 
-        string?[] expected = [.. db.OrderRows.Select(order => order.OrderStatus)];
-        Assert.Equal(expected, result.Column(SampleDatabase.Orders.Status));
+        string?[] expected = [.. orderRows.Select(order => order.OrderStatus)];
+        Assert.Equal(expected, result.Column(new OrderStatusColumn().Name.TextValue));
         Assert.Equal(expected, result.Column("status_alias"));
     }
 
@@ -600,17 +833,27 @@ public sealed class SelectExpansionTests
         // not a silently-wrong result, so only the fact that it throws is
         // pinned - not a specific exception type, since the collision is
         // detected deep inside a third-party dictionary implementation.
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -619,8 +862,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -629,14 +878,16 @@ public sealed class SelectExpansionTests
         );
 
         _ = Assert.ThrowsAny<Exception>(() =>
-            new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            new ProjectionResult(new PureQLProjection(datasets, query))
         );
     }
 
     [Fact]
     public void WideProjectionWithTwentyAliasedExpressionsFromUsersProjectsAllColumns()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         List<SelectExpression> selectExpressions = [];
         for (int i = 0; i < 20; i++)
@@ -646,8 +897,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     ),
@@ -656,17 +913,20 @@ public sealed class SelectExpansionTests
             );
         }
 
-        Query query = new Query(new FromExpression(SampleDatabase.Users.Entity), selectExpressions);
+        Query query = new Query(new FromExpression(new JoinedString(
+            new DotString(),
+            [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+        ).TextValue), selectExpressions);
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.UserRows.Count, result.Count);
+        Assert.Equal(userRows.Count, result.Count);
         Assert.Equal(20, result.ColumnNames.Count);
         Assert.Equal(20, result.ColumnNames.Distinct().Count());
 
-        string?[] expected = [.. db.UserRows.Select(user => user.UserName)];
+        string?[] expected = [.. userRows.Select(user => user.UserName)];
         for (int i = 0; i < 20; i++)
         {
             Assert.Equal(
@@ -679,7 +939,9 @@ public sealed class SelectExpansionTests
     [Fact]
     public void WideProjectionWithEighteenAliasedExpressionsFromOrdersProjectsAllColumns()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         List<SelectExpression> selectExpressions = [];
         for (int i = 0; i < 18; i++)
@@ -690,8 +952,14 @@ public sealed class SelectExpansionTests
                         new ArrayReturning(
                             new StringArrayReturning(
                                 new StringField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Status
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderStatusColumn().Name.TextValue
                                 )
                             )
                         ),
@@ -701,8 +969,14 @@ public sealed class SelectExpansionTests
                         new ArrayReturning(
                             new NumberArrayReturning(
                                 new NumberField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Total
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderTotalColumn().Name.TextValue
                                 )
                             )
                         ),
@@ -711,19 +985,22 @@ public sealed class SelectExpansionTests
             );
         }
 
-        Query query = new Query(new FromExpression(SampleDatabase.Orders.Entity), selectExpressions);
+        Query query = new Query(new FromExpression(new JoinedString(
+            new DotString(),
+            [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+        ).TextValue), selectExpressions);
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
         Assert.Equal(18, result.ColumnNames.Count);
         Assert.Equal(18, result.ColumnNames.Distinct().Count());
 
-        string?[] expectedStatus = [.. db.OrderRows.Select(order => order.OrderStatus)];
+        string?[] expectedStatus = [.. orderRows.Select(order => order.OrderStatus)];
         double?[] expectedTotal =
-            [.. db.OrderRows.Select(order => (double?)order.OrderTotal)];
+            [.. orderRows.Select(order => (double?)order.OrderTotal)];
 
         for (int i = 0; i < 18; i++)
         {
@@ -750,10 +1027,14 @@ public sealed class SelectExpansionTests
     [Fact]
     public void AliasRenamesComputedArithmeticColumn()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -774,7 +1055,7 @@ public sealed class SelectExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(["sum"], result.ColumnNames);
@@ -798,10 +1079,15 @@ public sealed class SelectExpansionTests
     [Trait("Status", "KnownGap")]
     public void GroupByNullFieldKeyProjectsNullNotAnArbitraryRowValue()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -810,8 +1096,14 @@ public sealed class SelectExpansionTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -824,8 +1116,14 @@ public sealed class SelectExpansionTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -837,8 +1135,14 @@ public sealed class SelectExpansionTests
             [
                 new Field(
                     new NullField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],
@@ -848,11 +1152,11 @@ public sealed class SelectExpansionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
-        Assert.Equal(db.OrderRows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), result.Row(0)["cnt"]);
+        Assert.Equal(orderRows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), result.Row(0)["cnt"]);
         Assert.Null(result.Row(0)["grouped_status"]);
     }
 }

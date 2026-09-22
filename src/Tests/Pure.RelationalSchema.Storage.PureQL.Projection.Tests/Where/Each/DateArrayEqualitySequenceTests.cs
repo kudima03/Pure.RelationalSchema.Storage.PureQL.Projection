@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayEqualities;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -24,7 +32,10 @@ public sealed class DateArrayEqualitySequenceTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -35,10 +46,15 @@ public sealed class DateArrayEqualitySequenceTests
     [Fact]
     public void WholeDateArrayEqualityOfTwoEqualLiteralArraysKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -74,10 +90,10 @@ public sealed class DateArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     // Two literal arrays with the same length but a different order:
@@ -85,10 +101,14 @@ public sealed class DateArrayEqualitySequenceTests
     [Fact]
     public void WholeDateArrayEqualityOfTwoReorderedLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -124,7 +144,7 @@ public sealed class DateArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -135,10 +155,14 @@ public sealed class DateArrayEqualitySequenceTests
     [Fact]
     public void WholeDateArrayEqualityOfDifferentLengthLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -173,7 +197,7 @@ public sealed class DateArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -189,15 +213,20 @@ public sealed class DateArrayEqualitySequenceTests
     [Fact]
     public void WholeDateArrayEqualityOfFieldAgainstLiteralFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         DateOnly[] reversedPlacedOn =
         [
-            .. db.OrderRows.Select(order => order.PlacedOn).Reverse(),
+            .. orderRows.Select(order => order.PlacedOn).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -205,8 +234,11 @@ public sealed class DateArrayEqualitySequenceTests
                         new DateArrayEquality(
                             new DateArrayReturning(
                                 new DateField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.PlacedOn
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                    new PlacedOnColumn().Name.TextValue
                                 )
                             ),
                             new DateArrayReturning(
@@ -224,7 +256,7 @@ public sealed class DateArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -234,15 +266,20 @@ public sealed class DateArrayEqualitySequenceTests
     [Fact]
     public void WholeDateArrayEqualityOfLiteralAgainstFieldFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         DateOnly[] reversedPlacedOn =
         [
-            .. db.OrderRows.Select(order => order.PlacedOn).Reverse(),
+            .. orderRows.Select(order => order.PlacedOn).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -253,8 +290,11 @@ public sealed class DateArrayEqualitySequenceTests
                             ),
                             new DateArrayReturning(
                                 new DateField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.PlacedOn
+                                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                    new PlacedOnColumn().Name.TextValue
                                 )
                             )
                         )
@@ -269,7 +309,7 @@ public sealed class DateArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

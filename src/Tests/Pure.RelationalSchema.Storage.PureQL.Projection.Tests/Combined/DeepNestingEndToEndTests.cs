@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -29,18 +37,18 @@ public sealed class DeepNestingEndToEndTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Users.Entity,
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
-                            new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserIdColumn().Name.TextValue)
                         )
                     )
                 )
@@ -52,17 +60,17 @@ public sealed class DeepNestingEndToEndTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.OrderItems.Entity,
+            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
-                            new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderIdColumn().Name.TextValue)
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -76,7 +84,7 @@ public sealed class DeepNestingEndToEndTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.OrderItems.Entity, SampleDatabase.OrderItems.Id)
+                    new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue, new ItemIdColumn().Name.TextValue)
                 )
             )
         );
@@ -88,8 +96,8 @@ public sealed class DeepNestingEndToEndTests
             new ArrayReturning(
                 new NumberArrayReturning(
                     new NumberField(
-                        SampleDatabase.OrderItems.Entity,
-                        SampleDatabase.OrderItems.Qty
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                        new ItemQtyColumn().Name.TextValue
                     )
                 )
             )
@@ -101,7 +109,7 @@ public sealed class DeepNestingEndToEndTests
         return new SelectExpression(
             new ArrayReturning(
                 new NumberArrayReturning(
-                    new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+                    new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderTotalColumn().Name.TextValue)
                 )
             )
         );
@@ -163,14 +171,14 @@ public sealed class DeepNestingEndToEndTests
     private static NumberArrayReturning TotalField()
     {
         return new NumberArrayReturning(
-            new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+            new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderTotalColumn().Name.TextValue)
         );
     }
 
     private static StringArrayReturning StatusField()
     {
         return new StringArrayReturning(
-            new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)
+            new StringField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)
         );
     }
 
@@ -397,7 +405,7 @@ public sealed class DeepNestingEndToEndTests
     private static Field OrderIdKey()
     {
         return new Field(
-            new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderIdColumn().Name.TextValue)
         );
     }
 
@@ -406,7 +414,7 @@ public sealed class DeepNestingEndToEndTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -419,8 +427,8 @@ public sealed class DeepNestingEndToEndTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.OrderItems.Entity,
-                            SampleDatabase.OrderItems.Id
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                            new ItemIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -435,8 +443,8 @@ public sealed class DeepNestingEndToEndTests
                 new SumNumber(
                     new NumberArrayReturning(
                         new NumberField(
-                            SampleDatabase.OrderItems.Entity,
-                            SampleDatabase.OrderItems.Qty
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                            new ItemQtyColumn().Name.TextValue
                         )
                     )
                 )
@@ -538,7 +546,7 @@ public sealed class DeepNestingEndToEndTests
     )
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [OrderIdFieldSelect(), QtySumSelect(), ItemCountSelect()],
             where,
             [OrdersToUsersJoin(), OrdersToItemsJoin()],
@@ -559,10 +567,14 @@ public sealed class DeepNestingEndToEndTests
     [Fact]
     public void MultiJoinFiveLevelScalarTreeOrderByMultiKeyThenPaginateReturnsWindow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [ItemIdSelect(), ItemQtySelect(), OrderTotalSelect()],
             ScalarFiveLevelAlwaysTrueTree(),
             [OrdersToUsersJoin(), OrdersToItemsJoin()],
@@ -572,8 +584,8 @@ public sealed class DeepNestingEndToEndTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -581,8 +593,8 @@ public sealed class DeepNestingEndToEndTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.OrderItems.Entity,
-                            SampleDatabase.OrderItems.Qty
+                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
+                            new ItemQtyColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -592,15 +604,15 @@ public sealed class DeepNestingEndToEndTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         (Guid ItemId, double Qty, double Total)[] expected =
         [
             .. (
-                from order in db.OrderRows
-                join user in db.UserRows on order.OrderUserId equals user.UserId
-                join item in db.OrderItemRows on order.OrderId equals item.ItemOrderId
+                from order in orderRows
+                join user in userRows on order.OrderUserId equals user.UserId
+                join item in orderItemRows on order.OrderId equals item.ItemOrderId
                 select (order, item)
             )
                 .OrderBy(row => row.order.OrderTotal)
@@ -614,9 +626,9 @@ public sealed class DeepNestingEndToEndTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row.Uuid(SampleDatabase.OrderItems.Id)!.Value,
-                    row.Double(SampleDatabase.OrderItems.Qty)!.Value,
-                    row.Double(SampleDatabase.Orders.Total)!.Value
+                    row.Uuid(new ItemIdColumn().Name.TextValue)!.Value,
+                    row.Double(new ItemQtyColumn().Name.TextValue)!.Value,
+                    row.Double(new OrderTotalColumn().Name.TextValue)!.Value
                 )
             ),
         ];
@@ -632,7 +644,11 @@ public sealed class DeepNestingEndToEndTests
     [Fact]
     public void AllClausesComposeWithFiveLevelEachTreeAndThreeLevelHaving()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = FullPipelineQuery(
             EachFiveLevelTreeOverOrderFields(),
@@ -641,10 +657,10 @@ public sealed class DeepNestingEndToEndTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        bool EachTreePredicate(OrderRow order)
+        bool EachTreePredicate(OrderRecord order)
         {
             bool a = order.OrderTotal > 100;
             bool b = order.OrderStatus == "pending";
@@ -660,9 +676,9 @@ public sealed class DeepNestingEndToEndTests
         (Guid OrderId, double QtySum, double ItemCount)[] expected =
         [
             .. (
-                from order in db.OrderRows
-                join user in db.UserRows on order.OrderUserId equals user.UserId
-                join item in db.OrderItemRows on order.OrderId equals item.ItemOrderId
+                from order in orderRows
+                join user in userRows on order.OrderUserId equals user.UserId
+                join item in orderItemRows on order.OrderId equals item.ItemOrderId
                 where EachTreePredicate(order)
                 select (order, item)
             )
@@ -683,7 +699,7 @@ public sealed class DeepNestingEndToEndTests
         [
             .. result.Rows.Select(row =>
                 (
-                    row.Uuid(SampleDatabase.Orders.Id)!.Value,
+                    row.Uuid(new OrderIdColumn().Name.TextValue)!.Value,
                     row.Double("qtySum")!.Value,
                     row.Double("itemCount")!.Value
                 )
@@ -702,7 +718,8 @@ public sealed class DeepNestingEndToEndTests
     [Fact]
     public void DeMorganEquivalentFiveLevelEachTreeProducesIdenticalPipelineResult()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query queryA = FullPipelineQuery(
             EachFiveLevelTreeOverOrderFields(),
@@ -716,10 +733,10 @@ public sealed class DeepNestingEndToEndTests
         );
 
         ProjectionResult resultA = new ProjectionResult(
-            new PureQLProjection(db.Datasets, queryA)
+            new PureQLProjection(datasets, queryA)
         );
         ProjectionResult resultB = new ProjectionResult(
-            new PureQLProjection(db.Datasets, queryB)
+            new PureQLProjection(datasets, queryB)
         );
 
         static (Guid, double, double)[] Rows(ProjectionResult result)
@@ -728,7 +745,7 @@ public sealed class DeepNestingEndToEndTests
             [
                 .. result.Rows.Select(row =>
                     (
-                        row.Uuid(SampleDatabase.Orders.Id)!.Value,
+                        row.Uuid(new OrderIdColumn().Name.TextValue)!.Value,
                         row.Double("qtySum")!.Value,
                         row.Double("itemCount")!.Value
                     )
@@ -761,7 +778,8 @@ public sealed class DeepNestingEndToEndTests
     [Fact]
     public void FiveLevelEachTreeUnsatisfiableForEveryRowIsEmptyAfterWhere()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = FullPipelineQuery(
             EachFiveLevelUnsatisfiableTree(),
@@ -770,7 +788,7 @@ public sealed class DeepNestingEndToEndTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -784,7 +802,8 @@ public sealed class DeepNestingEndToEndTests
     [Fact]
     public void FiveLevelEachTreeWithAlwaysFalseHavingIsEmptyAfterHaving()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query nonEmptyGroupsQuery = FullPipelineQuery(
             EachFiveLevelTreeOverOrderFields(),
@@ -798,10 +817,10 @@ public sealed class DeepNestingEndToEndTests
         );
 
         ProjectionResult nonEmptyGroups = new ProjectionResult(
-            new PureQLProjection(db.Datasets, nonEmptyGroupsQuery)
+            new PureQLProjection(datasets, nonEmptyGroupsQuery)
         );
         ProjectionResult emptyAfterHaving = new ProjectionResult(
-            new PureQLProjection(db.Datasets, emptyAfterHavingQuery)
+            new PureQLProjection(datasets, emptyAfterHavingQuery)
         );
 
         Assert.Equal(2, nonEmptyGroups.Count);
@@ -815,7 +834,8 @@ public sealed class DeepNestingEndToEndTests
     [Fact]
     public void FiveLevelEachTreeWithOutOfRangePaginationIsEmptyAfterPagination()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query unpagedQuery = FullPipelineQuery(
             EachFiveLevelTreeOverOrderFields(),
@@ -829,10 +849,10 @@ public sealed class DeepNestingEndToEndTests
         );
 
         ProjectionResult unpaged = new ProjectionResult(
-            new PureQLProjection(db.Datasets, unpagedQuery)
+            new PureQLProjection(datasets, unpagedQuery)
         );
         ProjectionResult pastEnd = new ProjectionResult(
-            new PureQLProjection(db.Datasets, pastEndQuery)
+            new PureQLProjection(datasets, pastEndQuery)
         );
 
         Assert.Equal(2, unpaged.Count);

@@ -1,10 +1,18 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.Schema;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Cells;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
+using Pure.RelationalSchema.Storage.Samples.TableDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -41,15 +49,33 @@ public sealed class NegativePathTests
     [Fact]
     public void FromEntityNotInSuppliedDatasetsThrowsInvalidOperationException()
     {
-        SampleDatabase db = new SampleDatabase();
+        // The stored rows are irrelevant here - the lookup fails before any
+        // cell is read - so this uses the minimal shape fixture rather than
+        // SchemaDataSetWithForeignKeys, which makes that independence
+        // explicit.
+        IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
         Query query = new Query(
-            new FromExpression("shop.nonexistent_table"),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new SingleTableRelationalSchema().Name, new String("nonexistent_table")]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
-                            new StringField("shop.nonexistent_table", "whatever")
+                            new StringField(
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new SingleTableRelationalSchema().Name,
+                                        new String("nonexistent_table"),
+                                    ]
+                                ).TextValue,
+                                "whatever"
+                            )
                         )
                     )
                 ),
@@ -57,7 +83,7 @@ public sealed class NegativePathTests
         );
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection([dataset], query)
         );
 
         Assert.Contains(
@@ -75,17 +101,28 @@ public sealed class NegativePathTests
     [Fact]
     public void JoinEntityNotInSuppliedDatasetsThrowsInvalidOperationException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new SingleTableRelationalSchema().Name, new SingleColumnTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new SingleTableRelationalSchema().Name,
+                                        new SingleColumnTable().Name,
+                                    ]
+                                ).TextValue,
+                                new IdColumn().Name.TextValue
                             )
                         )
                     )
@@ -95,19 +132,37 @@ public sealed class NegativePathTests
             [
                 new Join(
                     JoinType.Inner,
-                    "shop.nonexistent_join_table",
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new SingleTableRelationalSchema().Name,
+                            new String("nonexistent_join_table"),
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new SingleTableRelationalSchema().Name,
+                                                new SingleColumnTable().Name,
+                                            ]
+                                        ).TextValue,
+                                        new IdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        "shop.nonexistent_join_table",
+                                        new JoinedString(
+                                            new DotString(),
+                                            [
+                                                new SingleTableRelationalSchema().Name,
+                                                new String("nonexistent_join_table"),
+                                            ]
+                                        ).TextValue,
                                         "whatever_id"
                                     )
                                 )
@@ -123,7 +178,7 @@ public sealed class NegativePathTests
         );
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => new PureQLProjection(db.Datasets, query)
+            () => new PureQLProjection([dataset], query)
         );
 
         Assert.Contains(
@@ -138,21 +193,34 @@ public sealed class NegativePathTests
     // The per-row projection path (RowsFromDatasets.ApplyRowProjection) uses
     // CellValueExtractor.GetRequiredCell, which throws KeyNotFoundException
     // when no column on the row matches the requested field name. The table
-    // itself resolves fine here (shop.users); only the field name is bad.
+    // itself resolves fine here (schema_with_foreign_keys.users); only the
+    // field name is bad.
     [Trait("Clause", "Select")]
     [Fact]
     public void SelectFieldNotOnResolvedTableThrowsKeyNotFoundException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
                                 "user_nickname"
                             )
                         )
@@ -162,7 +230,7 @@ public sealed class NegativePathTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains("user_nickname", exception.Message, System.StringComparison.Ordinal);
@@ -176,17 +244,29 @@ public sealed class NegativePathTests
     [Fact]
     public void GroupBySelectFieldNotOnResolvedTableThrowsKeyNotFoundException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -196,7 +276,13 @@ public sealed class NegativePathTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
                                 "order_notes"
                             )
                         )
@@ -210,8 +296,14 @@ public sealed class NegativePathTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],
@@ -221,7 +313,7 @@ public sealed class NegativePathTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains("order_notes", exception.Message, System.StringComparison.Ordinal);
@@ -238,17 +330,29 @@ public sealed class NegativePathTests
     [Fact]
     public void AggregateInsideWhereComparisonThrowsNotSupportedException()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -263,8 +367,14 @@ public sealed class NegativePathTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Id
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -281,7 +391,9 @@ public sealed class NegativePathTests
             pagination: null
         );
 
-        _ = Assert.Throws<NotSupportedException>(() => new PureQLProjection(db.Datasets, query));
+        _ = Assert.Throws<NotSupportedException>(
+            () => new PureQLProjection(datasets, query)
+        );
     }
 
     // ===== Missing column outside SELECT fails fast =====
@@ -295,17 +407,29 @@ public sealed class NegativePathTests
     [Trait("Clause", "Where")]
     public void WhereFieldNotOnResolvedTableFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -316,7 +440,13 @@ public sealed class NegativePathTests
                     new EachStringEquality(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
                                 "order_notes"
                             )
                         ),
@@ -332,7 +462,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<KeyNotFoundException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -349,17 +479,29 @@ public sealed class NegativePathTests
     [Trait("Clause", "Where")]
     public void TypeMismatchNumberFieldAgainstStringColumnFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -371,8 +513,14 @@ public sealed class NegativePathTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(0))
@@ -387,7 +535,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<FormatException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -397,7 +545,8 @@ public sealed class NegativePathTests
     // data, as opposed to a schema/reference type mismatch) is parsed by
     // CellValueExtractor.GetGuidValue via Guid.TryParse; non-empty text that
     // fails to parse now throws FormatException instead of being treated as
-    // an absent value.
+    // an absent value. This table is deliberately hand-built (not from the
+    // package) so its uuid cell can hold malformed text.
     [Fact]
     [Trait("Clause", "Where")]
     public void MalformedUuidCellTextFailsFast()
@@ -412,28 +561,17 @@ public sealed class NegativePathTests
             new Collections.Generic.Dictionary<IColumn, IColumn, ICell>(
                 table.Columns,
                 column => column,
-                _ => new Cell(new String("not-a-valid-uuid")),
+                _ => new InvariantCell(new String("not-a-valid-uuid")),
                 column => new ColumnHash(column)
             )
         );
 
-        IStoredTableDataSet tableDataset = new SampleTableDataset(table, [malformedRow]);
+        IStoredTableDataSet tableDataset = new StoredTableDataSet(table, [malformedRow]);
 
         ISchema schema = new Schema.Schema(new String("shop"), [table], []);
 
-        IReadOnlyDictionary<ITable, IStoredTableDataSet> byTable =
-            new Collections.Generic.Dictionary<
-                IStoredTableDataSet,
-                ITable,
-                IStoredTableDataSet
-            >(
-                [tableDataset],
-                dataset => dataset.TableSchema,
-                dataset => dataset,
-                t => new TableHash(t)
-            );
-
-        IStoredSchemaDataSet[] datasets = [new StoredSchemaDataset(schema, byTable)];
+        IStoredSchemaDataSet[] datasets =
+            [new StoredSchemaDataSet(schema, [tableDataset])];
 
         Query query = new Query(
             new FromExpression("shop.widgets"),
@@ -478,17 +616,29 @@ public sealed class NegativePathTests
     [Trait("Clause", "Where")]
     public void EachDivideByZeroFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -504,8 +654,15 @@ public sealed class NegativePathTests
                                     [
                                         new NumberArrayReturning(
                                             new NumberField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Total
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys()
+                                                            .Name,
+                                                        new OrdersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new OrderTotalColumn().Name.TextValue
                                             )
                                         ),
                                         new NumberReturning(new NumberScalar(0)),
@@ -525,7 +682,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -539,17 +696,29 @@ public sealed class NegativePathTests
     [Trait("Clause", "OrderBy")]
     public void OrderByFieldNotOnResolvedTableFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue
+            ),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -563,7 +732,16 @@ public sealed class NegativePathTests
             [
                 new OrderByItem(
                     new Field(
-                        new StringField(SampleDatabase.Users.Entity, "user_nickname")
+                        new StringField(
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            "user_nickname"
+                        )
                     ),
                     SortDirection.Asc
                 ),
@@ -572,7 +750,7 @@ public sealed class NegativePathTests
         );
 
         _ = Assert.Throws<KeyNotFoundException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

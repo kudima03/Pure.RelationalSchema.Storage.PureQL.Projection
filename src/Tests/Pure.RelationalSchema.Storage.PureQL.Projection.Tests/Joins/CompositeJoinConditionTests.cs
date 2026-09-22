@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -19,17 +27,28 @@ public sealed class CompositeJoinConditionTests
     [Fact]
     public void InnerJoinOnKeyAndQuantityKeepsMatchingHighQuantityItems()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.Qty
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         )
                     )
@@ -39,7 +58,13 @@ public sealed class CompositeJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.OrderItems.Entity,
+                    new JoinedString(
+                        new DotString(),
+                        [
+                            new RelationalSchemaWithForeignKeys().Name,
+                            new OrderItemsTable().Name,
+                        ]
+                    ).TextValue,
                     new BooleanArrayReturning(
                         new EachAndOperator(
                             [
@@ -48,14 +73,26 @@ public sealed class CompositeJoinConditionTests
                                         new EachUuidEquality(
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.OrderId
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys().Name,
+                                                            new OrderItemsTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ItemOrderIdColumn().Name.TextValue
                                                 )
                                             ),
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.Id
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys().Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new OrderIdColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -67,8 +104,14 @@ public sealed class CompositeJoinConditionTests
                                             EachComparisonOperator.EachGreaterThan,
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.Qty
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys().Name,
+                                                            new OrderItemsTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new ItemQtyColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberReturning(new NumberScalar(1))
@@ -87,12 +130,12 @@ public sealed class CompositeJoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         int expected = (
-            from order in db.OrderRows
-            from item in db.OrderItemRows
+            from order in orderRows
+            from item in orderItemRows
             where item.ItemOrderId == order.OrderId && item.ItemQty > 1
             select 1
         ).Count();

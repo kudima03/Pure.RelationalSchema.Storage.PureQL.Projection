@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -15,17 +23,26 @@ public sealed class NonEquiJoinTests
     [Fact]
     public void InnerJoinOnPriceLessThanTotalKeepsEveryQualifyingPair()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Products.Entity,
-                                SampleDatabase.Products.Name
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                new ProductNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -35,21 +52,30 @@ public sealed class NonEquiJoinTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Products.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachComparison(
                             new EachNumberComparison(
                                 EachComparisonOperator.EachLessThan,
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Products.Entity,
-                                        SampleDatabase.Products.Price
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
+                ).TextValue,
+                                        new ProductPriceColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Total
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderTotalColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -64,11 +90,11 @@ public sealed class NonEquiJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows.Sum(order =>
-            db.ProductRows.Count(product => product.ProductPrice < order.OrderTotal)
+        int expected = orderRows.Sum(order =>
+            productRows.Count(product => product.ProductPrice < order.OrderTotal)
         );
 
         Assert.Equal(expected, result.Count);

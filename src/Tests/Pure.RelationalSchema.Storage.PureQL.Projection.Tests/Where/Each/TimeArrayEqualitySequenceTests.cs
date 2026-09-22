@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayEqualities;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -24,7 +32,14 @@ public sealed class TimeArrayEqualitySequenceTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -35,10 +50,19 @@ public sealed class TimeArrayEqualitySequenceTests
     [Fact]
     public void WholeTimeArrayEqualityOfTwoEqualLiteralArraysKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -74,10 +98,10 @@ public sealed class TimeArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     // Two literal arrays with the same length but a different order:
@@ -85,10 +109,18 @@ public sealed class TimeArrayEqualitySequenceTests
     [Fact]
     public void WholeTimeArrayEqualityOfTwoReorderedLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -124,7 +156,7 @@ public sealed class TimeArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -140,15 +172,24 @@ public sealed class TimeArrayEqualitySequenceTests
     [Fact]
     public void WholeTimeArrayEqualityOfFieldAgainstLiteralFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         TimeOnly[] reversedShiftStarts =
         [
-            .. db.UserRows.Select(user => user.ShiftStart).Reverse(),
+            .. userRows.Select(user => user.ShiftStart).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -156,8 +197,14 @@ public sealed class TimeArrayEqualitySequenceTests
                         new TimeArrayEquality(
                             new TimeArrayReturning(
                                 new TimeField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.ShiftStart
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new ShiftStartColumn().Name.TextValue
                                 )
                             ),
                             new TimeArrayReturning(
@@ -175,7 +222,7 @@ public sealed class TimeArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -185,15 +232,24 @@ public sealed class TimeArrayEqualitySequenceTests
     [Fact]
     public void WholeTimeArrayEqualityOfLiteralAgainstFieldFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         TimeOnly[] reversedShiftStarts =
         [
-            .. db.UserRows.Select(user => user.ShiftStart).Reverse(),
+            .. userRows.Select(user => user.ShiftStart).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -204,8 +260,14 @@ public sealed class TimeArrayEqualitySequenceTests
                             ),
                             new TimeArrayReturning(
                                 new TimeField(
-                                    SampleDatabase.Users.Entity,
-                                    SampleDatabase.Users.ShiftStart
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new UsersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new ShiftStartColumn().Name.TextValue
                                 )
                             )
                         )
@@ -220,7 +282,7 @@ public sealed class TimeArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

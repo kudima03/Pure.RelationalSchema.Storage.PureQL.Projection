@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Date;
@@ -33,8 +41,14 @@ public sealed class HavingEqualityMatrixTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Id
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -45,7 +59,10 @@ public sealed class HavingEqualityMatrixTests
     private static NumberArrayReturning Totals()
     {
         return new NumberArrayReturning(
-            new NumberField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Total)
+            new NumberField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderTotalColumn().Name.TextValue)
         );
     }
 
@@ -62,7 +79,10 @@ public sealed class HavingEqualityMatrixTests
     private static DateArrayReturning PlacedOns()
     {
         return new DateArrayReturning(
-            new DateField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.PlacedOn)
+            new DateField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new PlacedOnColumn().Name.TextValue)
         );
     }
 
@@ -75,8 +95,11 @@ public sealed class HavingEqualityMatrixTests
     {
         return new DateTimeArrayReturning(
             new DateTimeField(
-                SampleDatabase.Orders.Entity,
-                SampleDatabase.Orders.PlacedAt
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                new PlacedAtColumn().Name.TextValue
             )
         );
     }
@@ -91,7 +114,10 @@ public sealed class HavingEqualityMatrixTests
     private static StringArrayReturning Statuses()
     {
         return new StringArrayReturning(
-            new StringField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Status)
+            new StringField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, new OrderStatusColumn().Name.TextValue)
         );
     }
 
@@ -103,7 +129,10 @@ public sealed class HavingEqualityMatrixTests
     private static TimeArrayReturning ShiftStarts()
     {
         return new TimeArrayReturning(
-            new TimeField(SampleDatabase.Users.Entity, SampleDatabase.Users.ShiftStart)
+            new TimeField(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue, new ShiftStartColumn().Name.TextValue)
         );
     }
 
@@ -154,14 +183,23 @@ public sealed class HavingEqualityMatrixTests
     private static Query OrdersGroupedByUser(BooleanReturning having)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -172,8 +210,14 @@ public sealed class HavingEqualityMatrixTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -186,14 +230,23 @@ public sealed class HavingEqualityMatrixTests
     private static Query UsersGroupedByActive(BooleanReturning having)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new BooleanArrayReturning(
                             new BooleanField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Active
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserActiveColumn().Name.TextValue
                             )
                         )
                     )
@@ -204,8 +257,14 @@ public sealed class HavingEqualityMatrixTests
             [
                 new Field(
                     new BooleanField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Active
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new UsersTable().Name,
+                            ]
+                        ).TextValue,
+                        new UserActiveColumn().Name.TextValue
                     )
                 ),
             ],
@@ -221,8 +280,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingNumberEquality")]
     public void HavingCountEqualConstantKeepsMatchingGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -237,12 +297,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Count() == 2)
                 .Select(group => group.Key),
@@ -251,14 +311,14 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -267,8 +327,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingNumberEquality")]
     public void HavingCountEqualConstantKeepsNoGroupsWhenNoMatch()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -283,12 +344,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.DoesNotContain(
             5,
-            db.OrderRows.GroupBy(order => order.OrderUserId).Select(group => group.Count())
+            orderRows.GroupBy(order => order.OrderUserId).Select(group => group.Count())
         );
         Assert.Equal(0, result.Count);
     }
@@ -299,8 +360,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingBooleanComposite")]
     public void HavingBooleanEqualityOfCountAndSumComparisonsKeepsMatchingTruth()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -312,12 +374,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     (group.Count() > 1) == (group.Sum(order => order.OrderTotal) > 150)
@@ -328,14 +390,14 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -344,8 +406,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingBooleanComposite")]
     public void HavingBooleanEqualityOfCountAndMaxComparisonsKeepsMatchingTruth()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -360,12 +423,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     (group.Count() > 1)
@@ -377,14 +440,14 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
         Assert.NotEmpty(expected);
         Assert.True(
             expected.Count
-                < db.OrderRows.Select(order => order.OrderUserId).Distinct().Count()
+                < orderRows.Select(order => order.OrderUserId).Distinct().Count()
         );
         Assert.Equal(expected, actual);
     }
@@ -395,7 +458,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingDateEquality")]
     public void HavingMaxPlacedOnEqualConstantKeepsMatchingGroup()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 2);
 
         Query query = OrdersGroupedByUser(
@@ -412,12 +477,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedOn) == threshold)
                 .Select(group => group.Key),
@@ -426,7 +491,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -438,7 +503,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingDateEquality")]
     public void HavingMaxPlacedOnEqualConstantKeepsNoGroupsWhenNoMatch()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 1, 1);
 
         Query query = OrdersGroupedByUser(
@@ -455,12 +522,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.DoesNotContain(
             threshold,
-            db.OrderRows
+            orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Select(group => group.Max(order => order.PlacedOn))
         );
@@ -473,7 +540,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingDateTimeEquality")]
     public void HavingMaxPlacedAtEqualConstantKeepsMatchingGroup()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 5, 14, 0, 0);
 
         Query query = OrdersGroupedByUser(
@@ -490,12 +559,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group => group.Max(order => order.PlacedAt) == threshold)
                 .Select(group => group.Key),
@@ -504,7 +573,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -516,7 +585,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingDateTimeEquality")]
     public void HavingMaxPlacedAtEqualConstantKeepsNoGroupsWhenNoMatch()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 1, 1, 0, 0, 0);
 
         Query query = OrdersGroupedByUser(
@@ -533,12 +604,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.DoesNotContain(
             threshold,
-            db.OrderRows
+            orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Select(group => group.Max(order => order.PlacedAt))
         );
@@ -551,7 +622,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingTimeEquality")]
     public void HavingMaxShiftStartEqualConstantKeepsMatchingGroup()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(11, 30, 0);
 
         Query query = UsersGroupedByActive(
@@ -568,12 +641,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<bool> expected =
         [
-            .. db.UserRows
+            .. userRows
                 .GroupBy(user => user.UserActive)
                 .Where(group => group.Max(user => user.ShiftStart) == threshold)
                 .Select(group => group.Key),
@@ -582,7 +655,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<bool> actual =
         [
             .. result.Rows.Select(row =>
-                row.Bool(SampleDatabase.Users.Active)!.Value
+                row.Bool(new UserActiveColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -594,7 +667,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingTimeEquality")]
     public void HavingMaxShiftStartEqualConstantKeepsNoGroupsWhenNoMatch()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(0, 0, 0);
 
         Query query = UsersGroupedByActive(
@@ -611,12 +686,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.DoesNotContain(
             threshold,
-            db.UserRows
+            userRows
                 .GroupBy(user => user.UserActive)
                 .Select(group => group.Max(user => user.ShiftStart))
         );
@@ -629,8 +704,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingStringEquality")]
     public void HavingMinStatusEqualConstantKeepsMatchingGroup()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -645,12 +721,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         HashSet<Guid> expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Where(group =>
                     string.Equals(
@@ -665,7 +741,7 @@ public sealed class HavingEqualityMatrixTests
         HashSet<Guid> actual =
         [
             .. result.Rows.Select(row =>
-                row.Uuid(SampleDatabase.Orders.UserId)!.Value
+                row.Uuid(new OrderUserIdColumn().Name.TextValue)!.Value
             ),
         ];
 
@@ -677,8 +753,9 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingStringEquality")]
     public void HavingMinStatusEqualConstantKeepsNoGroupsWhenNoMatch()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -693,12 +770,12 @@ public sealed class HavingEqualityMatrixTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.DoesNotContain(
             "unknown",
-            db.OrderRows
+            orderRows
                 .GroupBy(order => order.OrderUserId)
                 .Select(group =>
                     group.Select(order => order.OrderStatus).Min(StringComparer.Ordinal)
@@ -720,8 +797,8 @@ public sealed class HavingEqualityMatrixTests
     [Trait("Feature", "HavingUuidEquality")]
     public void HavingUuidParameterEqualityFailsFastWithoutBinding()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -736,7 +813,7 @@ public sealed class HavingEqualityMatrixTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() =>
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
     }
 }

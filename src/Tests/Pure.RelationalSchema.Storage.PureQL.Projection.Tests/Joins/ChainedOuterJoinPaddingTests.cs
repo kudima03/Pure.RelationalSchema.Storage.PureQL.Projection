@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -18,20 +26,35 @@ public sealed class ChainedOuterJoinPaddingTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.Orders.Entity,
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -44,20 +67,35 @@ public sealed class ChainedOuterJoinPaddingTests
     {
         return new Join(
             JoinType.Left,
-            SampleDatabase.OrderItems.Entity,
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.OrderId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrderItemsTable().Name,
+                                    ]
+                                ).TextValue,
+                                new ItemOrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -69,17 +107,29 @@ public sealed class ChainedOuterJoinPaddingTests
     [Fact]
     public void SecondLeftJoinPadsRowsAlreadyPaddedByTheFirst()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -94,14 +144,14 @@ public sealed class ChainedOuterJoinPaddingTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
+        int expectedCount = userRows.Sum(user =>
         {
-            List<OrderRow> orders =
+            List<OrderRecord> orders =
             [
-                .. db.OrderRows.Where(order =>
+                .. orderRows.Where(order =>
                     order.OrderUserId == user.UserId
                 ),
             ];
@@ -111,7 +161,7 @@ public sealed class ChainedOuterJoinPaddingTests
                 : orders.Sum(order =>
                     Math.Max(
                         1,
-                        db.OrderItemRows.Count(item =>
+                        orderItemRows.Count(item =>
                             item.ItemOrderId == order.OrderId
                         )
                     )
@@ -120,11 +170,11 @@ public sealed class ChainedOuterJoinPaddingTests
 
         Assert.Equal(expectedCount, result.Count);
 
-        foreach (UserRow user in db.UserRows)
+        foreach (UserRecord user in userRows)
         {
-            List<OrderRow> orders =
+            List<OrderRecord> orders =
             [
-                .. db.OrderRows.Where(order =>
+                .. orderRows.Where(order =>
                     order.OrderUserId == user.UserId
                 ),
             ];
@@ -134,7 +184,7 @@ public sealed class ChainedOuterJoinPaddingTests
                 : orders.Sum(order =>
                     Math.Max(
                         1,
-                        db.OrderItemRows.Count(item =>
+                        orderItemRows.Count(item =>
                             item.ItemOrderId == order.OrderId
                         )
                     )
@@ -143,7 +193,7 @@ public sealed class ChainedOuterJoinPaddingTests
             Assert.Equal(
                 expectedAppearances,
                 result
-                    .Column(SampleDatabase.Users.Name)
+                    .Column(new UserNameColumn().Name.TextValue)
                     .Count(name => name == user.UserName)
             );
         }

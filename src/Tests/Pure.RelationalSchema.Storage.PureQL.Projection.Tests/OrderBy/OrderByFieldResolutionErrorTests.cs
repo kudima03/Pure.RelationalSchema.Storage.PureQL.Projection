@@ -1,4 +1,11 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Numeric;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -25,17 +32,24 @@ public sealed class OrderByFieldResolutionErrorTests
     [Fact]
     public void OrderingByAliasWithoutGroupByThrowsWithRuleInMessage()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Age
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserAgeColumn().Name.TextValue
                             )
                         )
                     ),
@@ -49,7 +63,10 @@ public sealed class OrderByFieldResolutionErrorTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "years")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "years")
                     ),
                     SortDirection.Desc
                 ),
@@ -58,7 +75,7 @@ public sealed class OrderByFieldResolutionErrorTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains("years", exception.Message, StringComparison.Ordinal);
@@ -77,17 +94,24 @@ public sealed class OrderByFieldResolutionErrorTests
     [Fact]
     public void OrderingByOriginalFieldNameInGroupByThrowsWithRuleInMessage()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -100,8 +124,11 @@ public sealed class OrderByFieldResolutionErrorTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -116,8 +143,11 @@ public sealed class OrderByFieldResolutionErrorTests
             [
                 new Field(
                     new StringField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.Status
+                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                        new OrderStatusColumn().Name.TextValue
                     )
                 ),
             ],
@@ -126,8 +156,11 @@ public sealed class OrderByFieldResolutionErrorTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -137,11 +170,11 @@ public sealed class OrderByFieldResolutionErrorTests
         );
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
-            () => new ProjectionResult(new PureQLProjection(db.Datasets, query))
+            () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
         Assert.Contains(
-            SampleDatabase.Orders.Total,
+            new OrderTotalColumn().Name.TextValue,
             exception.Message,
             StringComparison.Ordinal
         );

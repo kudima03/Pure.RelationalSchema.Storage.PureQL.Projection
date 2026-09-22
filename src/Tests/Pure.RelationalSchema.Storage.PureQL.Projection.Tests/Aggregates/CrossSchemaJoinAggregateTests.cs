@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.DateTime;
@@ -20,20 +28,20 @@ public sealed class CrossSchemaJoinAggregateTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Logins.Entity,
+            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Logins.Entity,
-                                SampleDatabase.Logins.UserId
+                                new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -45,17 +53,19 @@ public sealed class CrossSchemaJoinAggregateTests
     [Fact]
     public void PerUserMaxAndCountOverCrossSchemaLoginsFoldTheJoinedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -67,8 +77,8 @@ public sealed class CrossSchemaJoinAggregateTests
                                 new MaxDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.At
+                                            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                            new LoginAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -84,8 +94,8 @@ public sealed class CrossSchemaJoinAggregateTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            new JoinedString(new DotString(), [new AuditRelationalSchema().Name, new LoginsTable().Name]).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -100,8 +110,8 @@ public sealed class CrossSchemaJoinAggregateTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Users.Entity,
-                        SampleDatabase.Users.Id
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                        new UserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -111,10 +121,10 @@ public sealed class CrossSchemaJoinAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Dictionary<Guid, (DateTime, double)> expected = db.LoginRows
+        Dictionary<Guid, (DateTime, double)> expected = loginRows
             .GroupBy(login => login.LoginUserId)
             .ToDictionary(
                 group => group.Key,
@@ -126,7 +136,7 @@ public sealed class CrossSchemaJoinAggregateTests
             );
 
         Dictionary<Guid, (DateTime, double)> actual = result.Rows.ToDictionary(
-            row => row.Uuid(SampleDatabase.Users.Id)!.Value,
+            row => row.Uuid(new UserIdColumn().Name.TextValue)!.Value,
             row =>
                 (
                     row.DateTime("lastLoginAt")!.Value,

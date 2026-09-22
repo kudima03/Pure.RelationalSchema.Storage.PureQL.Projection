@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachEqualities;
@@ -17,20 +25,35 @@ public sealed class DistinctOverJoinTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -42,7 +65,10 @@ public sealed class DistinctOverJoinTests
     private static Query DistinctColumnThroughJoin(SelectExpression select)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [select],
             where: null,
             [UsersToOrdersInnerJoin()],
@@ -57,15 +83,24 @@ public sealed class DistinctOverJoinTests
     [Fact]
     public void DistinctCollapsesJoinFanOutDuplicates()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = DistinctColumnThroughJoin(
             new SelectExpression(
                 new ArrayReturning(
                     new StringArrayReturning(
                         new StringField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Name
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserNameColumn().Name.TextValue
                         )
                     )
                 )
@@ -73,14 +108,14 @@ public sealed class DistinctOverJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Where(user =>
-                    db.OrderRows.Any(order => order.OrderUserId == user.UserId)
+                    orderRows.Any(order => order.OrderUserId == user.UserId)
                 )
                 .Select(user => user.UserName)
                 .OrderBy(name => name),
@@ -88,22 +123,30 @@ public sealed class DistinctOverJoinTests
 
         Assert.Equal(
             expected,
-            result.Column(SampleDatabase.Users.Name).OrderBy(name => name).ToArray()
+            result.Column(new UserNameColumn().Name.TextValue).OrderBy(name => name).ToArray()
         );
     }
 
     [Fact]
     public void DistinctOnJoinedColumnCollapsesToItsDistinctValues()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = DistinctColumnThroughJoin(
             new SelectExpression(
                 new ArrayReturning(
                     new StringArrayReturning(
                         new StringField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Status
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderStatusColumn().Name.TextValue
                         )
                     )
                 )
@@ -111,12 +154,12 @@ public sealed class DistinctOverJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         string[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Select(order => order.OrderStatus)
                 .Distinct()
                 .OrderBy(status => status),
@@ -125,7 +168,7 @@ public sealed class DistinctOverJoinTests
         Assert.Equal(
             expected,
             result
-                .Column(SampleDatabase.Orders.Status)
+                .Column(new OrderStatusColumn().Name.TextValue)
                 .OrderBy(status => status)
                 .ToArray()
         );

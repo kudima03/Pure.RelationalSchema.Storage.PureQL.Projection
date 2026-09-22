@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -31,28 +39,40 @@ public sealed class JoinPipelineFullStackTests
     {
         return new Join(
             JoinType.Inner,
-            SampleDatabase.Orders.Entity,
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
             UsersOrdersCondition()
         );
     }
 
     private static Join UsersToOrdersLeftJoin()
     {
-        return new Join(JoinType.Left, SampleDatabase.Orders.Entity, UsersOrdersCondition());
+        return new Join(JoinType.Left, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue, UsersOrdersCondition());
     }
 
     private static Join OrdersToUsersRightJoin()
     {
         return new Join(
             JoinType.Right,
-            SampleDatabase.Users.Entity,
+            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
             OrdersUsersCondition()
         );
     }
 
     private static Join OrdersToUsersFullJoin()
     {
-        return new Join(JoinType.Full, SampleDatabase.Users.Entity, OrdersUsersCondition());
+        return new Join(JoinType.Full, new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, OrdersUsersCondition());
     }
 
     private static BooleanArrayReturning UsersOrdersCondition()
@@ -61,12 +81,18 @@ public sealed class JoinPipelineFullStackTests
             new EachEquality(
                 new EachUuidEquality(
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -81,12 +107,18 @@ public sealed class JoinPipelineFullStackTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     ),
                     new UuidArrayReturning(
-                        new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                        new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                     )
                 )
             )
@@ -100,8 +132,11 @@ public sealed class JoinPipelineFullStackTests
                 new EachBooleanEquality(
                     new BooleanArrayReturning(
                         new BooleanField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Active
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                            new UserActiveColumn().Name.TextValue
                         )
                     ),
                     new BooleanReturning(new BooleanScalar(true))
@@ -119,8 +154,11 @@ public sealed class JoinPipelineFullStackTests
                         new ArrayReturning(
                             new UuidArrayReturning(
                                 new UuidField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Id
+                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                    new OrderIdColumn().Name.TextValue
                                 )
                             )
                         )
@@ -142,8 +180,11 @@ public sealed class JoinPipelineFullStackTests
                             new SumNumber(
                                 new NumberArrayReturning(
                                     new NumberField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.Total
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderTotalColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -168,14 +209,20 @@ public sealed class JoinPipelineFullStackTests
             [join],
             [
                 new Field(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                 ),
             ],
             CountAtLeastOne(),
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "orderCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "orderCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -190,14 +237,17 @@ public sealed class JoinPipelineFullStackTests
     // and Fay places none - Fay's zero-order group is dropped by HAVING.
     // Distinct group counts, sorted desc, are therefore [2, 1]; skipping
     // the first (2) and taking up to 5 leaves exactly [1].
-    private static double[] ExpectedDistinctOrderCountsSkippingFirst(SampleDatabase db)
+    private static double[] ExpectedDistinctOrderCountsSkippingFirst(
+        IReadOnlyList<UserRecord> userRows,
+        IReadOnlyList<OrderRecord> orderRows
+    )
     {
         return
         [
-            .. db.UserRows
+            .. userRows
                 .Where(user => user.UserActive)
                 .Select(user =>
-                    (double)db.OrderRows.Count(order => order.OrderUserId == user.UserId)
+                    (double)orderRows.Count(order => order.OrderUserId == user.UserId)
                 )
                 .Where(count => count >= 1)
                 .Distinct()
@@ -210,18 +260,24 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void InnerJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersInnerJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -231,18 +287,24 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void LeftJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             UsersToOrdersLeftJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -252,18 +314,24 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void RightJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersRightJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -273,18 +341,24 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void FullJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = FullPipelineQuery(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             OrdersToUsersFullJoin()
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(db);
+        double[] expected = ExpectedDistinctOrderCountsSkippingFirst(userRows, orderRows);
 
         double[] actual = [.. result.Rows.Select(row => row.Double("orderCount")!.Value)];
 
@@ -300,24 +374,36 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void CrossSchemaLeftJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Join usersToLoginsLeftJoin = new Join(
             JoinType.Left,
-            SampleDatabase.Logins.Entity,
+            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Logins.Entity,
-                                SampleDatabase.Logins.UserId
+                                new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -326,7 +412,10 @@ public sealed class JoinPipelineFullStackTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -335,8 +424,11 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -350,7 +442,10 @@ public sealed class JoinPipelineFullStackTests
             [usersToLoginsLeftJoin],
             [
                 new Field(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                 ),
             ],
             new BooleanReturning(
@@ -362,8 +457,11 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -376,7 +474,10 @@ public sealed class JoinPipelineFullStackTests
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "loginCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "loginCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -386,14 +487,14 @@ public sealed class JoinPipelineFullStackTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Select(user =>
-                    (double)db.LoginRows.Count(login => login.LoginUserId == user.UserId)
+                    (double)loginRows.Count(login => login.LoginUserId == user.UserId)
                 )
                 .Where(count => count >= 1)
                 .Distinct()
@@ -413,24 +514,36 @@ public sealed class JoinPipelineFullStackTests
     [Fact]
     public void CrossSchemaInnerJoinFullPipelineComposesEveryClauseInOrder()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Join usersToLoginsInnerJoin = new Join(
             JoinType.Inner,
-            SampleDatabase.Logins.Entity,
+            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
             new BooleanArrayReturning(
                 new EachEquality(
                     new EachUuidEquality(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Id
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserIdColumn().Name.TextValue
                             )
                         ),
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Logins.Entity,
-                                SampleDatabase.Logins.UserId
+                                new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                new LoginUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -439,7 +552,10 @@ public sealed class JoinPipelineFullStackTests
         );
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -448,8 +564,11 @@ public sealed class JoinPipelineFullStackTests
                                 new ArrayReturning(
                                     new UuidArrayReturning(
                                         new UuidField(
-                                            SampleDatabase.Logins.Entity,
-                                            SampleDatabase.Logins.Id
+                                            new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
+                                            new LoginIdColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -463,14 +582,20 @@ public sealed class JoinPipelineFullStackTests
             [usersToLoginsInnerJoin],
             [
                 new Field(
-                    new UuidField(SampleDatabase.Users.Entity, SampleDatabase.Users.Id)
+                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, new UserIdColumn().Name.TextValue)
                 ),
             ],
             having: null,
             [
                 new OrderByItem(
                     new Field(
-                        new NumberField(SampleDatabase.Users.Entity, "loginCount")
+                        new NumberField(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue, "loginCount")
                     ),
                     SortDirection.Desc
                 ),
@@ -480,14 +605,14 @@ public sealed class JoinPipelineFullStackTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double[] expected =
         [
-            .. db.UserRows
+            .. userRows
                 .Select(user =>
-                    (double)db.LoginRows.Count(login => login.LoginUserId == user.UserId)
+                    (double)loginRows.Count(login => login.LoginUserId == user.UserId)
                 )
                 .Where(count => count >= 1)
                 .Distinct()

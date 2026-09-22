@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -28,17 +36,26 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
     [Fact]
     public void InnerJoinOnKeyEqualityAndQtyAtMostOrderTotalKeepsEveryMatchingItem()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
+        IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.OrderItems.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.OrderItems.Entity,
-                                SampleDatabase.OrderItems.Qty
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                new ItemQtyColumn().Name.TextValue
                             )
                         )
                     )
@@ -48,7 +65,10 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Orders.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachAndOperator(
                             [
@@ -57,14 +77,20 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
                                         new EachUuidEquality(
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.OrderId
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                                    new ItemOrderIdColumn().Name.TextValue
                                                 )
                                             ),
                                             new UuidArrayReturning(
                                                 new UuidField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.Id
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                                    new OrderIdColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -76,14 +102,20 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
                                             EachComparisonOperator.EachLessThanOrEqual,
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    SampleDatabase.OrderItems.Entity,
-                                                    SampleDatabase.OrderItems.Qty
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
+                ).TextValue,
+                                                    new ItemQtyColumn().Name.TextValue
                                                 )
                                             ),
                                             new NumberArrayReturning(
                                                 new NumberField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.Total
+                                                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                                    new OrderTotalColumn().Name.TextValue
                                                 )
                                             )
                                         )
@@ -101,12 +133,12 @@ public sealed class CompositeEqualityAndFieldComparisonJoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         int expected = (
-            from item in db.OrderItemRows
-            join order in db.OrderRows on item.ItemOrderId equals order.OrderId
+            from item in orderItemRows
+            join order in orderRows on item.ItemOrderId equals order.OrderId
             where item.ItemQty <= order.OrderTotal
             select 1
         ).Count();
@@ -125,17 +157,26 @@ public sealed class EachDateTimeComparisonCrossSchemaJoinConditionTests
     [Fact]
     public void InnerJoinOnLastLoginAfterLoginAtKeepsQualifyingPairsAcrossSchemas()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -145,22 +186,28 @@ public sealed class EachDateTimeComparisonCrossSchemaJoinConditionTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Logins.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachComparison(
                             new EachDateTimeComparison(
                                 EachComparisonOperator.EachGreaterThan,
                                 new DateTimeArrayReturning(
                                     new DateTimeField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.LastLogin
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new LastLoginColumn().Name.TextValue
                                     )
                                 ),
                                 new DateTimeArrayReturning(
-                                    new DateTimeField(
-                                        SampleDatabase.Logins.Entity,
-                                        SampleDatabase.Logins.At
-                                    )
+                                    new DateTimeField(new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue, new LoginAtColumn().Name.TextValue)
                                 )
                             )
                         )
@@ -174,12 +221,12 @@ public sealed class EachDateTimeComparisonCrossSchemaJoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         int expected = (
-            from user in db.UserRows
-            from login in db.LoginRows
+            from user in userRows
+            from login in loginRows
             where user.LastLogin > login.LoginAt
             select 1
         ).Count();
@@ -199,17 +246,26 @@ public sealed class CrossSchemaOuterJoinTests
     [Fact]
     public void LeftJoinFromUsersToLoginsKeepsUsersWithNoLogins()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -219,21 +275,27 @@ public sealed class CrossSchemaOuterJoinTests
             [
                 new Join(
                     JoinType.Left,
-                    SampleDatabase.Logins.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
-                                    new UuidField(
-                                        SampleDatabase.Logins.Entity,
-                                        SampleDatabase.Logins.UserId
-                                    )
+                                    new UuidField(new JoinedString(
+                    new DotString(),
+                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
+                ).TextValue, new LoginUserIdColumn().Name.TextValue)
                                 )
                             )
                         )
@@ -247,27 +309,27 @@ public sealed class CrossSchemaOuterJoinTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
-            Math.Max(1, db.LoginRows.Count(login => login.LoginUserId == user.UserId))
+        int expectedCount = userRows.Sum(user =>
+            Math.Max(1, loginRows.Count(login => login.LoginUserId == user.UserId))
         );
 
         Assert.Equal(expectedCount, result.Count);
         // Cara and Dan have no logins and must each still appear exactly once.
         Assert.Equal(
             1,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Cara")
+            result.Column(new UserNameColumn().Name.TextValue).Count(name => name == "Cara")
         );
         Assert.Equal(
             1,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Dan")
+            result.Column(new UserNameColumn().Name.TextValue).Count(name => name == "Dan")
         );
         // Ann has two logins and must appear once per matched login.
         Assert.Equal(
             2,
-            result.Column(SampleDatabase.Users.Name).Count(name => name == "Ann")
+            result.Column(new UserNameColumn().Name.TextValue).Count(name => name == "Ann")
         );
     }
 }
@@ -281,17 +343,25 @@ public sealed class JoinThenOrderByTests
     [Fact]
     public void InnerJoinThenOrderByTotalDescendingSortsMergedRows()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -301,20 +371,29 @@ public sealed class JoinThenOrderByTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -328,8 +407,11 @@ public sealed class JoinThenOrderByTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Desc
@@ -339,19 +421,19 @@ public sealed class JoinThenOrderByTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double?[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .OrderByDescending(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal),
         ];
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total)),
+            .. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);
@@ -371,17 +453,25 @@ public sealed class JoinThenPaginationTests
     [Fact]
     public void InnerJoinThenPaginationAloneReturnsTheDeterministicWindow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -391,20 +481,29 @@ public sealed class JoinThenPaginationTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -419,17 +518,17 @@ public sealed class JoinThenPaginationTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid?[] expected =
         [
-            .. db.OrderRows.Skip(2).Take(2).Select(order => (Guid?)order.OrderId),
+            .. orderRows.Skip(2).Take(2).Select(order => (Guid?)order.OrderId),
         ];
 
         Guid?[] actual =
         [
-            .. result.Rows.Select(row => row.Uuid(SampleDatabase.Orders.Id)),
+            .. result.Rows.Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);
@@ -445,17 +544,25 @@ public sealed class JoinWhereOrderByBridgeTests
     [Fact]
     public void InnerJoinThenWhereThenOrderByComposesAllThreeClauses()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     )
@@ -467,8 +574,11 @@ public sealed class JoinWhereOrderByBridgeTests
                         EachComparisonOperator.EachGreaterThan,
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         ),
                         new NumberReturning(new NumberScalar(50))
@@ -478,20 +588,29 @@ public sealed class JoinWhereOrderByBridgeTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+                ).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -505,8 +624,11 @@ public sealed class JoinWhereOrderByBridgeTests
                 new OrderByItem(
                     new Field(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     SortDirection.Asc
@@ -516,12 +638,12 @@ public sealed class JoinWhereOrderByBridgeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         double?[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(order => order.OrderTotal > 50)
                 .OrderBy(order => order.OrderTotal)
                 .Select(order => (double?)order.OrderTotal),
@@ -529,7 +651,7 @@ public sealed class JoinWhereOrderByBridgeTests
 
         double?[] actual =
         [
-            .. result.Rows.Select(row => row.Double(SampleDatabase.Orders.Total)),
+            .. result.Rows.Select(row => row.Double(new OrderTotalColumn().Name.TextValue)),
         ];
 
         Assert.Equal(expected, actual);

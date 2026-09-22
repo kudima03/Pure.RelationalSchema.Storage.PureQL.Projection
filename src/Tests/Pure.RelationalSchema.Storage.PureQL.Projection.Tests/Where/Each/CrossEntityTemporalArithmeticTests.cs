@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -20,19 +28,28 @@ public sealed class CrossEntityTemporalArithmeticTests
     [Fact]
     public void EachDateDiffDaysAcrossJoinedTablesFiltersByTheGap()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         const double thresholdDays = 1200;
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -46,14 +63,20 @@ public sealed class CrossEntityTemporalArithmeticTests
                             new EachDateDiffDays(
                                 new DateArrayReturning(
                                     new DateField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.PlacedOn
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                        new PlacedOnColumn().Name.TextValue
                                     )
                                 ),
                                 new DateArrayReturning(
                                     new DateField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.SignupDate
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new SignupDateColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -65,20 +88,29 @@ public sealed class CrossEntityTemporalArithmeticTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -93,15 +125,15 @@ public sealed class CrossEntityTemporalArithmeticTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Guid[] expected =
         [
-            .. db.OrderRows
+            .. orderRows
                 .Where(order =>
                 {
-                    UserRow user = db.UserRows.Single(candidate =>
+                    UserRecord user = userRows.Single(candidate =>
                         candidate.UserId == order.OrderUserId
                     );
 
@@ -117,7 +149,7 @@ public sealed class CrossEntityTemporalArithmeticTests
         Guid[] actual =
         [
             .. result.Rows
-                .Select(row => row.Uuid(SampleDatabase.Orders.Id)!.Value)
+                .Select(row => row.Uuid(new OrderIdColumn().Name.TextValue)!.Value)
                 .OrderBy(id => id),
         ];
 

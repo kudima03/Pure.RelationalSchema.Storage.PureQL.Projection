@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.Aggregates.Numeric;
@@ -26,8 +34,14 @@ public sealed class HavingCompositeTests
                 new ArrayReturning(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Id
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -39,8 +53,11 @@ public sealed class HavingCompositeTests
     {
         return new NumberArrayReturning(
             new NumberField(
-                SampleDatabase.Orders.Entity,
-                SampleDatabase.Orders.Total
+                new JoinedString(
+                    new DotString(),
+                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+                ).TextValue,
+                new OrderTotalColumn().Name.TextValue
             )
         );
     }
@@ -84,14 +101,23 @@ public sealed class HavingCompositeTests
     private static Query OrdersGroupedByUser(BooleanReturning having)
     {
         return new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.UserId
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderUserIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -102,8 +128,14 @@ public sealed class HavingCompositeTests
             [
                 new Field(
                     new UuidField(
-                        SampleDatabase.Orders.Entity,
-                        SampleDatabase.Orders.UserId
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
                     )
                 ),
             ],
@@ -116,8 +148,9 @@ public sealed class HavingCompositeTests
     [Fact]
     public void HavingAndOfTwoAggregateComparisonsRequiresBoth()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new BooleanOperator(
@@ -127,10 +160,10 @@ public sealed class HavingCompositeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .Count(group =>
                 group.Count() > 1 && group.Max(order => order.OrderTotal) >= 200
@@ -142,8 +175,9 @@ public sealed class HavingCompositeTests
     [Fact]
     public void HavingOrOfTwoAggregateComparisonsAcceptsEither()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new BooleanOperator(
@@ -153,10 +187,10 @@ public sealed class HavingCompositeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .Count(group =>
                 group.Count() > 1 || group.Max(order => order.OrderTotal) >= 200
@@ -168,8 +202,9 @@ public sealed class HavingCompositeTests
     [Fact]
     public void HavingNotInvertsAnAggregateComparison()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new BooleanOperator(new NotOperator(CountGreaterThan(1)))
@@ -177,10 +212,10 @@ public sealed class HavingCompositeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .Count(group => group.Count() <= 1);
 
@@ -190,8 +225,9 @@ public sealed class HavingCompositeTests
     [Fact]
     public void HavingEqualityOfMinAndMaxKeepsConstantGroups()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = OrdersGroupedByUser(
             new BooleanReturning(
                 new Equality(
@@ -203,10 +239,10 @@ public sealed class HavingCompositeTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expected = db.OrderRows
+        int expected = orderRows
             .GroupBy(order => order.OrderUserId)
             .Count(group =>
                 group.Min(order => order.OrderTotal)

@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Date;
 using PureQL.CSharp.Model.Aggregates.DateTime;
@@ -19,10 +27,12 @@ public sealed class TemporalAggregateTests
     [Fact]
     public void MaxPlacedOnPerUserProjectsGroupLatestDate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -31,8 +41,8 @@ public sealed class TemporalAggregateTests
                                 new MaxDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedOnColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -44,19 +54,26 @@ public sealed class TemporalAggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         DateOnly[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => group.Max(order => order.PlacedOn))
                 .OrderBy(value => value),
         ];
@@ -73,10 +90,12 @@ public sealed class TemporalAggregateTests
     [Fact]
     public void MinPlacedAtPerUserProjectsGroupEarliestInstant()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -85,8 +104,8 @@ public sealed class TemporalAggregateTests
                                 new MinDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedAt
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -98,19 +117,26 @@ public sealed class TemporalAggregateTests
             ],
             where: null,
             join: null,
-            [new Field(new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.UserId))],
+            [
+                new Field(
+                    new UuidField(
+                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                        new OrderUserIdColumn().Name.TextValue
+                    )
+                ),
+            ],
             having: null,
             orderBy: null,
             pagination: null
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         DateTime[] expected =
         [
-            .. db.OrderRows.GroupBy(order => order.OrderUserId)
+            .. orderRows.GroupBy(order => order.OrderUserId)
                 .Select(group => group.Min(order => order.PlacedAt))
                 .OrderBy(value => value),
         ];
@@ -128,10 +154,12 @@ public sealed class TemporalAggregateTests
     [Fact]
     public void MaxShiftStartOverAllUsersProjectsSingleLatestTime()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -140,8 +168,8 @@ public sealed class TemporalAggregateTests
                                 new MaxTime(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.ShiftStart
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                            new ShiftStartColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -154,12 +182,12 @@ public sealed class TemporalAggregateTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(1, result.Count);
         Assert.Equal(
-            db.UserRows.Max(user => user.ShiftStart),
+            userRows.Max(user => user.ShiftStart),
             result.Row(0).Time("max_shift_start")
         );
     }

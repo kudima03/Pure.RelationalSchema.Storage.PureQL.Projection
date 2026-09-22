@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachComparisons;
@@ -22,18 +30,26 @@ public sealed class EachDateTimeMathTests
     [Fact]
     public void EachDateAddDaysShiftsDateBeforeEquality()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly expectedAfterShift = new DateOnly(2024, 6, 2);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -46,8 +62,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateAddDays(
                                 new DateArrayReturning(
                                     new DateField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.PlacedOn
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                        new PlacedOnColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(1))
@@ -65,11 +84,11 @@ public sealed class EachDateTimeMathTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.PlacedOn.AddDays(1) == expectedAfterShift),
+            orderRows.Count(order => order.PlacedOn.AddDays(1) == expectedAfterShift),
             result.Count
         );
     }
@@ -77,18 +96,26 @@ public sealed class EachDateTimeMathTests
     [Fact]
     public void EachDateDiffDaysComputesDayGapBeforeComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly origin = new DateOnly(2024, 6, 1);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -102,8 +129,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateDiffDays(
                                 new DateArrayReturning(
                                     new DateField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.PlacedOn
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+).TextValue,
+                                        new PlacedOnColumn().Name.TextValue
                                     )
                                 ),
                                 new DateReturning(new DateScalar(origin))
@@ -121,11 +151,11 @@ public sealed class EachDateTimeMathTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order =>
+            orderRows.Count(order =>
                 order.PlacedOn.DayNumber - origin.DayNumber > 2
             ),
             result.Count
@@ -135,18 +165,26 @@ public sealed class EachDateTimeMathTests
     [Fact]
     public void EachTimeAddSecondsShiftsTimeBeforeEquality()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly expectedAfterShift = new TimeOnly(10, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -159,8 +197,11 @@ public sealed class EachDateTimeMathTests
                             new EachTimeAddSeconds(
                                 new TimeArrayReturning(
                                     new TimeField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.ShiftStart
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new ShiftStartColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(3600))
@@ -178,11 +219,11 @@ public sealed class EachDateTimeMathTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user =>
+            userRows.Count(user =>
                 user.ShiftStart.Add(TimeSpan.FromSeconds(3600)) == expectedAfterShift
             ),
             result.Count
@@ -192,18 +233,26 @@ public sealed class EachDateTimeMathTests
     [Fact]
     public void EachTimeDiffSecondsComputesSecondGapBeforeComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -217,8 +266,11 @@ public sealed class EachDateTimeMathTests
                             new EachTimeDiffSeconds(
                                 new TimeArrayReturning(
                                     new TimeField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.ShiftStart
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new ShiftStartColumn().Name.TextValue
                                     )
                                 ),
                                 new TimeReturning(new TimeScalar(origin))
@@ -236,11 +288,11 @@ public sealed class EachDateTimeMathTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user =>
+            userRows.Count(user =>
                 (user.ShiftStart - origin).TotalSeconds > 3600
             ),
             result.Count
@@ -250,18 +302,26 @@ public sealed class EachDateTimeMathTests
     [Fact]
     public void EachDateTimeAddSecondsShiftsInstantBeforeEquality()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime expectedAfterShift = new DateTime(2024, 6, 1, 9, 30, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -274,8 +334,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateTimeAddSeconds(
                                 new DateTimeArrayReturning(
                                     new DateTimeField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.LastLogin
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new LastLoginColumn().Name.TextValue
                                     )
                                 ),
                                 new NumberReturning(new NumberScalar(3600))
@@ -293,11 +356,11 @@ public sealed class EachDateTimeMathTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user =>
+            userRows.Count(user =>
                 user.LastLogin.AddSeconds(3600) == expectedAfterShift
             ),
             result.Count
@@ -307,18 +370,26 @@ public sealed class EachDateTimeMathTests
     [Fact]
     public void EachDateTimeDiffSecondsComputesSecondGapBeforeComparison()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime origin = new DateTime(2024, 6, 2, 0, 0, 0);
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
@@ -332,8 +403,11 @@ public sealed class EachDateTimeMathTests
                             new EachDateTimeDiffSeconds(
                                 new DateTimeArrayReturning(
                                     new DateTimeField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.LastLogin
+                                        new JoinedString(
+new DotString(),
+[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+).TextValue,
+                                        new LastLoginColumn().Name.TextValue
                                     )
                                 ),
                                 new DateTimeReturning(new DateTimeScalar(origin))
@@ -351,11 +425,11 @@ public sealed class EachDateTimeMathTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.UserRows.Count(user =>
+            userRows.Count(user =>
                 (user.LastLogin - origin).TotalSeconds > 0
             ),
             result.Count

@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayEqualities;
 using PureQL.CSharp.Model.ArrayReturnings;
@@ -24,7 +32,14 @@ public sealed class StringArrayEqualitySequenceTests
         return new SelectExpression(
             new ArrayReturning(
                 new UuidArrayReturning(
-                    new UuidField(SampleDatabase.Orders.Entity, SampleDatabase.Orders.Id)
+                    new UuidField(
+                        new JoinedString(
+                            new DotString(),
+                            [
+                                new RelationalSchemaWithForeignKeys().Name,
+                                new OrdersTable().Name,
+                            ]
+                        ).TextValue, new OrderIdColumn().Name.TextValue)
                 )
             )
         );
@@ -35,10 +50,19 @@ public sealed class StringArrayEqualitySequenceTests
     [Fact]
     public void WholeStringArrayEqualityOfTwoEqualLiteralArraysKeepsEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -62,10 +86,10 @@ public sealed class StringArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        Assert.Equal(db.OrderRows.Count, result.Count);
+        Assert.Equal(orderRows.Count, result.Count);
     }
 
     // Two literal arrays with the same length but a different order:
@@ -73,10 +97,18 @@ public sealed class StringArrayEqualitySequenceTests
     [Fact]
     public void WholeStringArrayEqualityOfTwoReorderedLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -100,7 +132,7 @@ public sealed class StringArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -111,10 +143,18 @@ public sealed class StringArrayEqualitySequenceTests
     [Fact]
     public void WholeStringArrayEqualityOfDifferentLengthLiteralArraysRemovesEveryRow()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -140,7 +180,7 @@ public sealed class StringArrayEqualitySequenceTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(0, result.Count);
@@ -156,15 +196,24 @@ public sealed class StringArrayEqualitySequenceTests
     [Fact]
     public void WholeStringArrayEqualityOfFieldAgainstLiteralFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         string[] reversedStatuses =
         [
-            .. db.OrderRows.Select(order => order.OrderStatus).Reverse(),
+            .. orderRows.Select(order => order.OrderStatus).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -172,8 +221,14 @@ public sealed class StringArrayEqualitySequenceTests
                         new StringArrayEquality(
                             new StringArrayReturning(
                                 new StringField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Status
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderStatusColumn().Name.TextValue
                                 )
                             ),
                             new StringArrayReturning(
@@ -191,7 +246,7 @@ public sealed class StringArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 
@@ -201,15 +256,24 @@ public sealed class StringArrayEqualitySequenceTests
     [Fact]
     public void WholeStringArrayEqualityOfLiteralAgainstFieldFailsFast()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         string[] reversedStatuses =
         [
-            .. db.OrderRows.Select(order => order.OrderStatus).Reverse(),
+            .. orderRows.Select(order => order.OrderStatus).Reverse(),
         ];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [OrderIdSelect()],
             new BooleanReturning(
                 new Equality(
@@ -220,8 +284,14 @@ public sealed class StringArrayEqualitySequenceTests
                             ),
                             new StringArrayReturning(
                                 new StringField(
-                                    SampleDatabase.Orders.Entity,
-                                    SampleDatabase.Orders.Status
+                                    new JoinedString(
+                                        new DotString(),
+                                        [
+                                            new RelationalSchemaWithForeignKeys().Name,
+                                            new OrdersTable().Name,
+                                        ]
+                                    ).TextValue,
+                                    new OrderStatusColumn().Name.TextValue
                                 )
                             )
                         )
@@ -236,7 +306,7 @@ public sealed class StringArrayEqualitySequenceTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         ));
     }
 }

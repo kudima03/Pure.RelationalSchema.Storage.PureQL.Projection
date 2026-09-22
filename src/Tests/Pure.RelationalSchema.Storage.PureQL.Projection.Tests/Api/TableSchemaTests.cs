@@ -1,5 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Aggregates.Date;
 using PureQL.CSharp.Model.Aggregates.DateTime;
@@ -23,17 +30,18 @@ public sealed class TableSchemaTests
     [Fact]
     public void TableSchemaColumnsFollowTheAliasedSelectExpressions()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     ),
@@ -43,8 +51,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     ),
@@ -54,8 +62,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new NumberArrayReturning(
                             new NumberField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Total
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderTotalColumn().Name.TextValue
                             )
                         )
                     ),
@@ -64,7 +72,7 @@ public sealed class TableSchemaTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
@@ -81,10 +89,11 @@ public sealed class TableSchemaTests
     [Fact]
     public void TableSchemaColumnForAggregateFollowsAliasAndType()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new SingleValueReturning(
@@ -93,8 +102,8 @@ public sealed class TableSchemaTests
                                 new SumNumber(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -110,8 +119,8 @@ public sealed class TableSchemaTests
                                 new MaxString(
                                     new StringArrayReturning(
                                         new StringField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Status
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new OrderStatusColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -127,8 +136,8 @@ public sealed class TableSchemaTests
                                 new MaxDate(
                                     new DateArrayReturning(
                                         new DateField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedOn
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedOnColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -144,8 +153,8 @@ public sealed class TableSchemaTests
                                 new MinDateTime(
                                     new DateTimeArrayReturning(
                                         new DateTimeField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.PlacedAt
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                            new PlacedAtColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -161,8 +170,8 @@ public sealed class TableSchemaTests
                                 new MaxTime(
                                     new TimeArrayReturning(
                                         new TimeField(
-                                            SampleDatabase.Users.Entity,
-                                            SampleDatabase.Users.ShiftStart
+                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                            new ShiftStartColumn().Name.TextValue
                                         )
                                     )
                                 )
@@ -176,20 +185,20 @@ public sealed class TableSchemaTests
             [
                 new Join(
                     JoinType.Inner,
-                    SampleDatabase.Users.Entity,
+                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
                     new BooleanArrayReturning(
                         new EachEquality(
                             new EachUuidEquality(
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Orders.Entity,
-                                        SampleDatabase.Orders.UserId
+                                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                        new OrderUserIdColumn().Name.TextValue
                                     )
                                 ),
                                 new UuidArrayReturning(
                                     new UuidField(
-                                        SampleDatabase.Users.Entity,
-                                        SampleDatabase.Users.Id
+                                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
+                                        new UserIdColumn().Name.TextValue
                                     )
                                 )
                             )
@@ -203,7 +212,7 @@ public sealed class TableSchemaTests
             pagination: null
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
@@ -220,17 +229,18 @@ public sealed class TableSchemaTests
     [Fact]
     public void TableSchemaWithoutAliasesFallsBackToFieldNames()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new UuidArrayReturning(
                             new UuidField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Id
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderIdColumn().Name.TextValue
                             )
                         )
                     )
@@ -239,8 +249,8 @@ public sealed class TableSchemaTests
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -248,12 +258,12 @@ public sealed class TableSchemaTests
             ]
         );
 
-        PureQLProjection projection = new PureQLProjection(db.Datasets, query);
+        PureQLProjection projection = new PureQLProjection(datasets, query);
 
         IColumn[] columns = [.. projection.TableSchema.Columns];
 
         Assert.Equal(
-            [SampleDatabase.Orders.Id, SampleDatabase.Orders.Status],
+            [new OrderIdColumn().Name.TextValue, new OrderStatusColumn().Name.TextValue],
             [.. columns.Select(column => column.Name.TextValue)]
         );
 

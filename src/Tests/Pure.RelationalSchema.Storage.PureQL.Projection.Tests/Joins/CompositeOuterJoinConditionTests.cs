@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -24,14 +32,26 @@ public sealed class CompositeOuterJoinConditionTests
                 new EachUuidEquality(
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Users.Entity,
-                            SampleDatabase.Users.Id
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new UsersTable().Name,
+                                ]
+                            ).TextValue,
+                            new UserIdColumn().Name.TextValue
                         )
                     ),
                     new UuidArrayReturning(
                         new UuidField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.UserId
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderUserIdColumn().Name.TextValue
                         )
                     )
                 )
@@ -47,8 +67,14 @@ public sealed class CompositeOuterJoinConditionTests
                     EachComparisonOperator.EachGreaterThan,
                     new NumberArrayReturning(
                         new NumberField(
-                            SampleDatabase.Orders.Entity,
-                            SampleDatabase.Orders.Total
+                            new JoinedString(
+                                new DotString(),
+                                [
+                                    new RelationalSchemaWithForeignKeys().Name,
+                                    new OrdersTable().Name,
+                                ]
+                            ).TextValue,
+                            new OrderTotalColumn().Name.TextValue
                         )
                     ),
                     new NumberReturning(new NumberScalar(threshold))
@@ -63,21 +89,33 @@ public sealed class CompositeOuterJoinConditionTests
     )
     {
         return new Query(
-            new FromExpression(SampleDatabase.Users.Entity),
+            new FromExpression(new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
+            ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Users.Entity,
-                                SampleDatabase.Users.Name
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new UsersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new UserNameColumn().Name.TextValue
                             )
                         )
                     )
                 ),
             ],
             where: null,
-            [new Join(joinType, SampleDatabase.Orders.Entity, onCondition)],
+            [new Join(joinType, new JoinedString(
+                new DotString(),
+                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
+            ).TextValue, onCondition)],
             groupBy: null,
             having: null,
             orderBy: null,
@@ -88,8 +126,10 @@ public sealed class CompositeOuterJoinConditionTests
     [Fact]
     public void LeftJoinOnKeyAndThresholdPadsUsersWithoutQualifyingOrders()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         const double threshold = 100;
 
         Query query = UsersJoinedToOrders(
@@ -100,13 +140,13 @@ public sealed class CompositeOuterJoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
+        int expectedCount = userRows.Sum(user =>
             Math.Max(
                 1,
-                db.OrderRows.Count(order =>
+                orderRows.Count(order =>
                     order.OrderUserId == user.UserId
                     && order.OrderTotal > threshold
                 )
@@ -115,11 +155,11 @@ public sealed class CompositeOuterJoinConditionTests
 
         Assert.Equal(expectedCount, result.Count);
 
-        foreach (UserRow user in db.UserRows)
+        foreach (UserRecord user in userRows)
         {
             int expectedAppearances = Math.Max(
                 1,
-                db.OrderRows.Count(order =>
+                orderRows.Count(order =>
                     order.OrderUserId == user.UserId
                     && order.OrderTotal > threshold
                 )
@@ -128,7 +168,7 @@ public sealed class CompositeOuterJoinConditionTests
             Assert.Equal(
                 expectedAppearances,
                 result
-                    .Column(SampleDatabase.Users.Name)
+                    .Column(new UserNameColumn().Name.TextValue)
                     .Count(name => name == user.UserName)
             );
         }
@@ -137,8 +177,10 @@ public sealed class CompositeOuterJoinConditionTests
     [Fact]
     public void InnerJoinOnDisjunctiveConditionKeepsEitherMatch()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         const double markerTotal = 200;
 
         Query query = UsersJoinedToOrders(
@@ -152,8 +194,14 @@ public sealed class CompositeOuterJoinConditionTests
                                 new EachNumberEquality(
                                     new NumberArrayReturning(
                                         new NumberField(
-                                            SampleDatabase.Orders.Entity,
-                                            SampleDatabase.Orders.Total
+                                            new JoinedString(
+                                                new DotString(),
+                                                [
+                                                    new RelationalSchemaWithForeignKeys().Name,
+                                                    new OrdersTable().Name,
+                                                ]
+                                            ).TextValue,
+                                            new OrderTotalColumn().Name.TextValue
                                         )
                                     ),
                                     new NumberReturning(
@@ -168,11 +216,11 @@ public sealed class CompositeOuterJoinConditionTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
-            db.OrderRows.Count(order =>
+        int expectedCount = userRows.Sum(user =>
+            orderRows.Count(order =>
                 order.OrderUserId == user.UserId
                 || order.OrderTotal == markerTotal
             )
@@ -184,19 +232,21 @@ public sealed class CompositeOuterJoinConditionTests
     [Fact]
     public void InnerJoinOnNegatedKeyEqualityKeepsOnlyNonMatchingPairs()
     {
-        SampleDatabase db = new SampleDatabase();
-
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Query query = UsersJoinedToOrders(
             JoinType.Inner,
             new BooleanArrayReturning(new EachNotOperator(UserKeyMatch()))
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
-        int expectedCount = db.UserRows.Sum(user =>
-            db.OrderRows.Count(order => order.OrderUserId != user.UserId)
+        int expectedCount = userRows.Sum(user =>
+            orderRows.Count(order => order.OrderUserId != user.UserId)
         );
 
         Assert.Equal(expectedCount, result.Count);

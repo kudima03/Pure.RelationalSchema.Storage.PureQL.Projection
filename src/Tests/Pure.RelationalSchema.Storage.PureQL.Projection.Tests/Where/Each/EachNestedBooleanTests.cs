@@ -1,4 +1,12 @@
+using Pure.Primitives.String;
+using Pure.Primitives.String.Operations;
+using Pure.RelationalSchema.Samples.Columns;
+using Pure.RelationalSchema.Samples.Schemas;
+using Pure.RelationalSchema.Samples.Tables;
+using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.Records;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.ArrayReturnings;
 using PureQL.CSharp.Model.EachBooleanOperations;
@@ -19,17 +27,32 @@ public sealed class EachNestedBooleanTests
     [Fact]
     public void AndOfOrAndNotFiltersByTheCombinedPredicate()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -47,8 +70,15 @@ public sealed class EachNestedBooleanTests
                                                 EachComparisonOperator.EachGreaterThan,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.Total
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderTotalColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(100))
@@ -60,8 +90,15 @@ public sealed class EachNestedBooleanTests
                                             new EachStringEquality(
                                                 new StringArrayReturning(
                                                     new StringField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.Status
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderStatusColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new StringReturning(
@@ -80,8 +117,15 @@ public sealed class EachNestedBooleanTests
                                         new EachStringEquality(
                                             new StringArrayReturning(
                                                 new StringField(
-                                                    SampleDatabase.Orders.Entity,
-                                                    SampleDatabase.Orders.Status
+                                                    new JoinedString(
+                                                        new DotString(),
+                                                        [
+                                                            new RelationalSchemaWithForeignKeys()
+                                                                .Name,
+                                                            new OrdersTable().Name,
+                                                        ]
+                                                    ).TextValue,
+                                                    new OrderStatusColumn().Name.TextValue
                                                 )
                                             ),
                                             new StringReturning(
@@ -103,11 +147,11 @@ public sealed class EachNestedBooleanTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order =>
+            orderRows.Count(order =>
                 (order.OrderTotal > 100 || order.OrderStatus == "pending")
                 && order.OrderStatus != "cancelled"
             ),
@@ -118,17 +162,32 @@ public sealed class EachNestedBooleanTests
     [Fact]
     public void OrOfTwoAndBranchesFiltersByEitherCombination()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -145,8 +204,15 @@ public sealed class EachNestedBooleanTests
                                             new EachStringEquality(
                                                 new StringArrayReturning(
                                                     new StringField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.Status
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderStatusColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new StringReturning(
@@ -161,8 +227,15 @@ public sealed class EachNestedBooleanTests
                                                 EachComparisonOperator.EachGreaterThanOrEqual,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.Total
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderTotalColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(200))
@@ -180,8 +253,15 @@ public sealed class EachNestedBooleanTests
                                             new EachStringEquality(
                                                 new StringArrayReturning(
                                                     new StringField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.Status
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderStatusColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new StringReturning(
@@ -196,8 +276,15 @@ public sealed class EachNestedBooleanTests
                                                 EachComparisonOperator.EachLessThan,
                                                 new NumberArrayReturning(
                                                     new NumberField(
-                                                        SampleDatabase.Orders.Entity,
-                                                        SampleDatabase.Orders.Total
+                                                        new JoinedString(
+                                                            new DotString(),
+                                                            [
+                                                                new RelationalSchemaWithForeignKeys()
+                                                                    .Name,
+                                                                new OrdersTable().Name,
+                                                            ]
+                                                        ).TextValue,
+                                                        new OrderTotalColumn().Name.TextValue
                                                     )
                                                 ),
                                                 new NumberReturning(new NumberScalar(100))
@@ -218,11 +305,11 @@ public sealed class EachNestedBooleanTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order =>
+            orderRows.Count(order =>
                 (order.OrderStatus == "shipped" && order.OrderTotal >= 200)
                 || (order.OrderStatus == "pending" && order.OrderTotal < 100)
             ),
@@ -233,17 +320,32 @@ public sealed class EachNestedBooleanTests
     [Fact]
     public void DoubleNegationIsEquivalentToTheInnerCondition()
     {
-        SampleDatabase db = new SampleDatabase();
+        IEnumerable<IStoredSchemaDataSet> datasets =
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
+        IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
         Query query = new Query(
-            new FromExpression(SampleDatabase.Orders.Entity),
+            new FromExpression(
+                new JoinedString(
+                    new DotString(),
+                    [
+                        new RelationalSchemaWithForeignKeys().Name,
+                        new OrdersTable().Name,
+                    ]
+                ).TextValue),
             [
                 new SelectExpression(
                     new ArrayReturning(
                         new StringArrayReturning(
                             new StringField(
-                                SampleDatabase.Orders.Entity,
-                                SampleDatabase.Orders.Status
+                                new JoinedString(
+                                    new DotString(),
+                                    [
+                                        new RelationalSchemaWithForeignKeys().Name,
+                                        new OrdersTable().Name,
+                                    ]
+                                ).TextValue,
+                                new OrderStatusColumn().Name.TextValue
                             )
                         )
                     )
@@ -258,8 +360,15 @@ public sealed class EachNestedBooleanTests
                                     new EachStringEquality(
                                         new StringArrayReturning(
                                             new StringField(
-                                                SampleDatabase.Orders.Entity,
-                                                SampleDatabase.Orders.Status
+                                                new JoinedString(
+                                                    new DotString(),
+                                                    [
+                                                        new RelationalSchemaWithForeignKeys()
+                                                            .Name,
+                                                        new OrdersTable().Name,
+                                                    ]
+                                                ).TextValue,
+                                                new OrderStatusColumn().Name.TextValue
                                             )
                                         ),
                                         new StringReturning(new StringScalar("shipped"))
@@ -278,11 +387,11 @@ public sealed class EachNestedBooleanTests
         );
 
         ProjectionResult result = new ProjectionResult(
-            new PureQLProjection(db.Datasets, query)
+            new PureQLProjection(datasets, query)
         );
 
         Assert.Equal(
-            db.OrderRows.Count(order => order.OrderStatus == "shipped"),
+            orderRows.Count(order => order.OrderStatus == "shipped"),
             result.Count
         );
     }
