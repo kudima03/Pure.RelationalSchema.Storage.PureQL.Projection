@@ -1,15 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Fields;
+using PureQL.CSharp.Model.Samples.Queries.Select;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
@@ -26,37 +20,7 @@ public sealed class DistinctTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null,
-            distinct: true
-        );
+        Query query = new DistinctOnStringColumnQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -75,37 +39,7 @@ public sealed class DistinctTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserActiveColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null,
-            distinct: true
-        );
+        Query query = new DistinctOnBooleanColumnQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

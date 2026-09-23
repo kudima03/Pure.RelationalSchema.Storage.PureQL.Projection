@@ -1,26 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Date;
-using PureQL.CSharp.Model.Aggregates.DateTime;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.Aggregates.String;
-using PureQL.CSharp.Model.Aggregates.Time;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Equalities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.GroupBy;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
@@ -34,246 +18,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 [Trait("Clause", "Having")]
 public sealed class HavingEqualityMatrixTests
 {
-    private static NumberReturning OrderCount()
-    {
-        return new NumberReturning(
-            new Count(
-                new ArrayReturning(
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderIdColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning Totals()
-    {
-        return new NumberArrayReturning(
-            new NumberField(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue, new OrderTotalColumn().Name.TextValue)
-        );
-    }
-
-    private static NumberReturning SumTotal()
-    {
-        return new NumberReturning(new NumberAggregate(new SumNumber(Totals())));
-    }
-
-    private static NumberReturning MaxTotal()
-    {
-        return new NumberReturning(new NumberAggregate(new MaxNumber(Totals())));
-    }
-
-    private static DateArrayReturning PlacedOns()
-    {
-        return new DateArrayReturning(
-            new DateField(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue, new PlacedOnColumn().Name.TextValue)
-        );
-    }
-
-    private static DateReturning MaxPlacedOn()
-    {
-        return new DateReturning(new DateAggregate(new MaxDate(PlacedOns())));
-    }
-
-    private static DateTimeArrayReturning PlacedAts()
-    {
-        return new DateTimeArrayReturning(
-            new DateTimeField(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                new PlacedAtColumn().Name.TextValue
-            )
-        );
-    }
-
-    private static DateTimeReturning MaxPlacedAt()
-    {
-        return new DateTimeReturning(
-            new DateTimeAggregate(new MaxDateTime(PlacedAts()))
-        );
-    }
-
-    private static StringArrayReturning Statuses()
-    {
-        return new StringArrayReturning(
-            new StringField(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue, new OrderStatusColumn().Name.TextValue)
-        );
-    }
-
-    private static StringReturning MinStatus()
-    {
-        return new StringReturning(new StringAggregate(new MinString(Statuses())));
-    }
-
-    private static TimeArrayReturning ShiftStarts()
-    {
-        return new TimeArrayReturning(
-            new TimeField(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue, new ShiftStartColumn().Name.TextValue)
-        );
-    }
-
-    private static TimeReturning MaxShiftStart()
-    {
-        return new TimeReturning(new TimeAggregate(new MaxTime(ShiftStarts())));
-    }
-
-    private static BooleanReturning CountGreaterThanOne()
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    OrderCount(),
-                    new NumberReturning(new NumberScalar(1))
-                )
-            )
-        );
-    }
-
-    private static BooleanReturning SumGreaterThan(double threshold)
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    SumTotal(),
-                    new NumberReturning(new NumberScalar(threshold))
-                )
-            )
-        );
-    }
-
-    private static BooleanReturning MaxTotalGreaterThanOrEqual(double threshold)
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThanOrEqual,
-                    MaxTotal(),
-                    new NumberReturning(new NumberScalar(threshold))
-                )
-            )
-        );
-    }
-
-    private static Query OrdersGroupedByUser(BooleanReturning having)
-    {
-        return new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderUserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new UuidField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderUserIdColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having,
-            orderBy: null,
-            pagination: null
-        );
-    }
-
-    private static Query UsersGroupedByActive(BooleanReturning having)
-    {
-        return new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserActiveColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new BooleanField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new UsersTable().Name,
-                            ]
-                        ).TextValue,
-                        new UserActiveColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having,
-            orderBy: null,
-            pagination: null
-        );
-    }
-
     // ---- Number: count(Orders.Id) == constant ----
 
     [Fact]
@@ -283,18 +27,7 @@ public sealed class HavingEqualityMatrixTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new NumberEquality(
-                            OrderCount(),
-                            new NumberReturning(new NumberScalar(2))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingCountEqualExistingValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -330,18 +63,7 @@ public sealed class HavingEqualityMatrixTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new NumberEquality(
-                            OrderCount(),
-                            new NumberReturning(new NumberScalar(5))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingCountEqualAbsentValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -363,15 +85,7 @@ public sealed class HavingEqualityMatrixTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new BooleanEquality(CountGreaterThanOne(), SumGreaterThan(150))
-                    )
-                )
-            )
-        );
+        Query query = new HavingBooleanEqualityOfCountAndSumComparisonsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -409,18 +123,7 @@ public sealed class HavingEqualityMatrixTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new BooleanEquality(
-                            CountGreaterThanOne(),
-                            MaxTotalGreaterThanOrEqual(300)
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingBooleanEqualityOfCountAndMaxComparisonsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -463,18 +166,7 @@ public sealed class HavingEqualityMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 2);
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new DateEquality(
-                            MaxPlacedOn(),
-                            new DateReturning(new DateScalar(threshold))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxPlacedOnEqualExistingValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -508,18 +200,7 @@ public sealed class HavingEqualityMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 1, 1);
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new DateEquality(
-                            MaxPlacedOn(),
-                            new DateReturning(new DateScalar(threshold))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxPlacedOnEqualAbsentValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -545,18 +226,7 @@ public sealed class HavingEqualityMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 5, 14, 0, 0);
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new DateTimeEquality(
-                            MaxPlacedAt(),
-                            new DateTimeReturning(new DateTimeScalar(threshold))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxPlacedAtEqualExistingValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -590,18 +260,7 @@ public sealed class HavingEqualityMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 1, 1, 0, 0, 0);
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new DateTimeEquality(
-                            MaxPlacedAt(),
-                            new DateTimeReturning(new DateTimeScalar(threshold))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxPlacedAtEqualAbsentValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -627,18 +286,7 @@ public sealed class HavingEqualityMatrixTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(11, 30, 0);
 
-        Query query = UsersGroupedByActive(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new TimeEquality(
-                            MaxShiftStart(),
-                            new TimeReturning(new TimeScalar(threshold))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxShiftStartEqualExistingValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -672,18 +320,7 @@ public sealed class HavingEqualityMatrixTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(0, 0, 0);
 
-        Query query = UsersGroupedByActive(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new TimeEquality(
-                            MaxShiftStart(),
-                            new TimeReturning(new TimeScalar(threshold))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxShiftStartEqualAbsentValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -707,18 +344,7 @@ public sealed class HavingEqualityMatrixTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new StringEquality(
-                            MinStatus(),
-                            new StringReturning(new StringScalar("cancelled"))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMinStatusEqualExistingValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -732,7 +358,7 @@ public sealed class HavingEqualityMatrixTests
                     string.Equals(
                         group.Select(order => order.OrderStatus).Min(StringComparer.Ordinal),
                         "cancelled",
-                        System.StringComparison.Ordinal
+                        StringComparison.Ordinal
                     )
                 )
                 .Select(group => group.Key),
@@ -756,18 +382,7 @@ public sealed class HavingEqualityMatrixTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new StringEquality(
-                            MinStatus(),
-                            new StringReturning(new StringScalar("unknown"))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingMinStatusEqualAbsentValueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -799,18 +414,7 @@ public sealed class HavingEqualityMatrixTests
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new UuidEquality(
-                            new UuidReturning(new UuidParameter("id")),
-                            new UuidReturning(new UuidScalar(Guid.Empty))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingUuidParameterEqualityQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() =>
             new PureQLProjection(datasets, query)

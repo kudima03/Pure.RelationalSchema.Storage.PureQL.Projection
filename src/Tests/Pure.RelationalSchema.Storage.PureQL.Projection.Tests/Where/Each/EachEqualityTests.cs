@@ -1,18 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -31,58 +23,7 @@ public sealed class EachEqualityTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachStringEquality(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        ),
-                        new StringReturning(new StringScalar("shipped"))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachStringEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -104,58 +45,7 @@ public sealed class EachEqualityTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachStringEquality(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        ),
-                        new StringReturning(new StringScalar("no-such-status"))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachStringEqualityWithNoMatchQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -171,58 +61,7 @@ public sealed class EachEqualityTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachNumberEquality(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserAgeColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(30))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNumberEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -244,58 +83,7 @@ public sealed class EachEqualityTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachBooleanEquality(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserActiveColumn().Name.TextValue
-                            )
-                        ),
-                        new BooleanReturning(new BooleanScalar(true))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachBooleanEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -312,58 +100,7 @@ public sealed class EachEqualityTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateOnly target = new DateOnly(2020, 1, 15);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateEquality(
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new SignupDateColumn().Name.TextValue
-                            )
-                        ),
-                        new DateReturning(new DateScalar(target))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDateEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -380,58 +117,7 @@ public sealed class EachEqualityTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly target = new TimeOnly(9, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachTimeEquality(
-                        new TimeArrayReturning(
-                            new TimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ShiftStartColumn().Name.TextValue
-                            )
-                        ),
-                        new TimeReturning(new TimeScalar(target))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachTimeEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -448,58 +134,7 @@ public sealed class EachEqualityTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime target = new DateTime(2024, 6, 1, 8, 30, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateTimeEquality(
-                        new DateTimeArrayReturning(
-                            new DateTimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new LastLoginColumn().Name.TextValue
-                            )
-                        ),
-                        new DateTimeReturning(new DateTimeScalar(target))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDateTimeEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -513,61 +148,8 @@ public sealed class EachEqualityTests
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
-        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
-        Guid target = userRows.Single(user => user.UserName == "Bob").UserId;
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidReturning(new UuidScalar(target))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachUuidEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

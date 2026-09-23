@@ -1,19 +1,7 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Arithmetics;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Select;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
@@ -34,20 +22,7 @@ public sealed class ScalarUnsupportedTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberParameter("limit"))
-                    ),
-                    "limit"
-                ),
-            ]
-        );
+        Query query = new NumberParameterInSelectQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() =>
             new PureQLProjection(datasets, query)
@@ -60,31 +35,7 @@ public sealed class ScalarUnsupportedTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Arithmetic(
-                                new Add(
-                                    [
-                                        new NumberReturning(new NumberScalar(1)),
-                                        new NumberReturning(
-                                            new NumberParameter("bonus")
-                                        ),
-                                    ]
-                                )
-                            )
-                        )
-                    ),
-                    "sum"
-                ),
-            ]
-        );
+        Query query = new SingleValueArithmeticWithParameterOperandInSelectQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() =>
             new PureQLProjection(datasets, query)
@@ -97,28 +48,7 @@ public sealed class ScalarUnsupportedTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new BooleanReturning(
-                            new Comparison(
-                                new NumberComparison(
-                                    ComparisonOperator.GreaterThan,
-                                    new NumberReturning(new NumberScalar(2)),
-                                    new NumberReturning(new NumberScalar(1))
-                                )
-                            )
-                        )
-                    ),
-                    "flag"
-                ),
-            ]
-        );
+        Query query = new BooleanCompositeInSelectQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() =>
             new PureQLProjection(datasets, query)
@@ -131,43 +61,7 @@ public sealed class ScalarUnsupportedTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringParameter("scope"))
-                    ),
-                    "scope"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "order_count"
-                ),
-            ]
-        );
+        Query query = new ParameterAlongsideAggregateQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() =>
             new PureQLProjection(datasets, query)

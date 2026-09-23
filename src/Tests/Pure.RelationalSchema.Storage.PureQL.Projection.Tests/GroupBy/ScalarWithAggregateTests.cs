@@ -1,20 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.GroupBy;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
@@ -32,43 +22,7 @@ public sealed class ScalarWithAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("all"))
-                    ),
-                    "scope"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "order_count"
-                ),
-            ]
-        );
+        Query query = new ScalarAlongsideWholeSetCountQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -85,62 +39,7 @@ public sealed class ScalarWithAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberScalar(1))
-                    ),
-                    "version"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new NumberAggregate(
-                                new SumNumber(
-                                    new NumberArrayReturning(
-                                        new NumberField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderTotalColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "status_total"
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new StringField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderStatusColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarInGroupModeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -169,78 +68,7 @@ public sealed class ScalarWithAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("2024-06"))
-                    ),
-                    "period"
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new NumberAggregate(
-                                new SumNumber(
-                                    new NumberArrayReturning(
-                                        new NumberField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderTotalColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "status_total"
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new StringField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderStatusColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarGroupKeyFieldAndAggregateQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -276,49 +104,7 @@ public sealed class ScalarWithAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Guid marker = new Guid("9b2b1f6e-3c86-4c50-8f6a-2f6d1a8f2c11");
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new BooleanReturning(new BooleanScalar(true))
-                    ),
-                    "flag"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new UuidReturning(new UuidScalar(marker))
-                    ),
-                    "marker"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "order_count"
-                ),
-            ]
-        );
+        Query query = new BooleanAndUuidScalarsInGroupModeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -336,87 +122,7 @@ public sealed class ScalarWithAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("repeat-buyer"))
-                    ),
-                    "tag"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "order_count"
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new UuidField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderUserIdColumn().Name.TextValue
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(1))
-                    )
-                )
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarWithHavingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

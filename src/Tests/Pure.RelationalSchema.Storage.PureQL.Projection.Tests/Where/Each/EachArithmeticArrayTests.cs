@@ -1,20 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachArithmetics;
-using PureQL.CSharp.Model.EachComparisons;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -31,66 +20,7 @@ public sealed class EachArithmeticArrayTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachAdd(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(200))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachAddOfAFieldToItselfQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -109,65 +39,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachNumberEquality(
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachSubtract(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(0))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachSubtractOfAFieldFromItselfQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -183,66 +55,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachMultiply(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(10000))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachMultiplyOfAFieldByItselfQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

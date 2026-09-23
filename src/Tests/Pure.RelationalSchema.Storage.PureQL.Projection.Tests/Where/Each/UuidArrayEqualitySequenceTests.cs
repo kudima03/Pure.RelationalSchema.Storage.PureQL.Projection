@@ -1,18 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayEqualities;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.ArrayScalars;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -27,24 +18,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 [Trait("Feature", "ArrayEqualitySequence")]
 public sealed class UuidArrayEqualitySequenceTests
 {
-    private static SelectExpression OrderIdSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new UuidArrayReturning(
-                    new UuidField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue, new OrderIdColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
     // Two identical literal arrays: SequenceEqual is true, so the predicate
     // (evaluated once, applied to the whole result) keeps every row.
     [Fact]
@@ -59,32 +32,7 @@ public sealed class UuidArrayEqualitySequenceTests
             .. orderRows.Select(order => order.OrderId).Take(3),
         ];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new UuidArrayEquality(
-                            new UuidArrayReturning(new UuidArrayScalar(threeOrderIds)),
-                            new UuidArrayReturning(new UuidArrayScalar(threeOrderIds))
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeUuidArrayEqualityOfTwoEqualLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -106,36 +54,8 @@ public sealed class UuidArrayEqualitySequenceTests
         [
             .. orderRows.Select(order => order.OrderId).Take(3),
         ];
-        Guid[] reversedThreeOrderIds = [.. threeOrderIds.Reverse()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new UuidArrayEquality(
-                            new UuidArrayReturning(new UuidArrayScalar(threeOrderIds)),
-                            new UuidArrayReturning(
-                                new UuidArrayScalar(reversedThreeOrderIds)
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeUuidArrayEqualityOfTwoReorderedLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -162,32 +82,8 @@ public sealed class UuidArrayEqualitySequenceTests
             .. orderRows.Select(order => order.OrderId).Take(2),
         ];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new UuidArrayEquality(
-                            new UuidArrayReturning(new UuidArrayScalar(threeOrderIds)),
-                            new UuidArrayReturning(new UuidArrayScalar(twoOrderIds))
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query =
+            new WholeUuidArrayEqualityOfDifferentLengthLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -215,45 +111,7 @@ public sealed class UuidArrayEqualitySequenceTests
             .. orderRows.Select(order => order.OrderId).Reverse(),
         ];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new UuidArrayEquality(
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new OrdersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new OrderIdColumn().Name.TextValue
-                                )
-                            ),
-                            new UuidArrayReturning(
-                                new UuidArrayScalar(reversedOrderIds)
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeUuidArrayEqualityOfFieldAgainstLiteralQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -275,45 +133,7 @@ public sealed class UuidArrayEqualitySequenceTests
             .. orderRows.Select(order => order.OrderId).Reverse(),
         ];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new UuidArrayEquality(
-                            new UuidArrayReturning(
-                                new UuidArrayScalar(reversedOrderIds)
-                            ),
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new OrdersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new OrderIdColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeUuidArrayEqualityOfLiteralAgainstFieldQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)

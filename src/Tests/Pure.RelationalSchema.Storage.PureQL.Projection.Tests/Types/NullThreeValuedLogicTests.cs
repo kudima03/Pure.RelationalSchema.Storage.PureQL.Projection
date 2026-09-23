@@ -1,29 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Date;
-using PureQL.CSharp.Model.Aggregates.DateTime;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.Aggregates.String;
-using PureQL.CSharp.Model.ArrayEqualities;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.BooleanOperations;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.EachArithmetics;
-using PureQL.CSharp.Model.EachBooleanOperations;
-using PureQL.CSharp.Model.EachComparisons;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Types;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Types;
 
@@ -46,41 +27,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Types;
 [Trait("Feature", "NullThreeValuedLogic")]
 public sealed class NullThreeValuedLogicTests
 {
-    private static Join UsersToOrdersLeftJoin()
-    {
-        return new Join(
-            JoinType.Left,
-            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                new OrderUserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-    }
-
     // ===== each-comparison over Users.Score (all 4 range operators) =====
 
     // WHERE each user_score > 20: Bob/Dan's NULL Score makes the comparison
@@ -93,49 +39,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserScoreColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(20))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNullableScoreGreaterThanQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -167,49 +71,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThanOrEqual,
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserScoreColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(28))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNullableScoreGreaterThanOrEqualQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -242,49 +104,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachLessThan,
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserScoreColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(29))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNullableScoreLessThanQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -316,49 +136,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachLessThanOrEqual,
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserScoreColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(10))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNullableScoreLessThanOrEqualQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -395,58 +173,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachAdd(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                                new UserScoreColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(1)),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(-1000))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachAddWithNullScoreOperandQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -479,58 +206,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachSubtract(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                                new UserScoreColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(10)),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(15))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachSubtractWithNullScoreOperandQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -563,58 +239,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachMultiply(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                                new UserScoreColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(2)),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(50))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachMultiplyWithNullScoreOperandQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -648,58 +273,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachDivide(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                                new UserScoreColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(2)),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(-1000))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDivideWithNullScoreOperandQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -744,64 +318,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new NotOperator(
-                        new BooleanReturning(
-                            new Equality(
-                                new ArrayEquality(
-                                    new NumberArrayEquality(
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                                new UserAgeColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                                new UserScoreColumn().Name.TextValue
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new NotOfScalarFieldEqualityOverNullableScoreQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -839,52 +356,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachNotOperator(
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachNumberEquality(
-                                new NumberArrayReturning(
-                                    new NumberField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                        new UserScoreColumn().Name.TextValue
-                                    )
-                                ),
-                                new NumberReturning(new NumberScalar(30))
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNotOfEachEqualityOverNullableScoreQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -924,85 +396,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserActiveColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new NumberAggregate(
-                                new AverageNumber(
-                                    new NumberArrayReturning(
-                                        new NumberField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                            new UserScoreColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "avg_score"
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new BooleanField(
-                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                        new UserActiveColumn().Name.TextValue
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        new NumberReturning(
-                            new NumberAggregate(
-                                new AverageNumber(
-                                    new NumberArrayReturning(
-                                        new NumberField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                            new UserScoreColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(15))
-                    )
-                )
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new HavingAverageQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1033,40 +427,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new DateReturning(
-                            new DateAggregate(
-                                new MinDate(
-                                    new DateArrayReturning(
-                                        new DateField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                            new PlacedOnColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "min_placed_on"
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinMinPlacedOnQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1089,40 +450,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new DateTimeReturning(
-                            new DateTimeAggregate(
-                                new MaxDateTime(
-                                    new DateTimeArrayReturning(
-                                        new DateTimeField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                            new PlacedAtColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "max_placed_at"
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinMaxPlacedAtQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1149,40 +477,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(
-                            new StringAggregate(
-                                new MaxString(
-                                    new StringArrayReturning(
-                                        new StringField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                            new OrderStatusColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "max_status"
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinMaxStatusQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1210,40 +505,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(
-                            new StringAggregate(
-                                new MinString(
-                                    new StringArrayReturning(
-                                        new StringField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                            new OrderStatusColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "min_status"
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinMinStatusQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1266,40 +528,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new NumberArrayReturning(
-                                        new NumberField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                            new OrderTotalColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "total_count"
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinCountOfNumericColumnQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1325,40 +554,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new StringArrayReturning(
-                                        new StringField(
-                                            new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                            new OrderStatusColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "status_count"
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinCountOfStringColumnQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

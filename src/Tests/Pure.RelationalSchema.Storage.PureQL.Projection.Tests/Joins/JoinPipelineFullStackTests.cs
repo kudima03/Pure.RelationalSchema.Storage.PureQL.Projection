@@ -1,22 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
-using ModelPagination = PureQL.CSharp.Model.Pagination;
+using PureQL.CSharp.Model.Samples.Queries.Joins;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -35,203 +22,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 [Trait("Feature", "JoinPipelineCombo")]
 public sealed class JoinPipelineFullStackTests
 {
-    private static Join UsersToOrdersInnerJoin()
-    {
-        return new Join(
-            JoinType.Inner,
-            new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-            UsersOrdersCondition()
-        );
-    }
-
-    private static Join UsersToOrdersLeftJoin()
-    {
-        return new Join(JoinType.Left, new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue, UsersOrdersCondition());
-    }
-
-    private static Join OrdersToUsersRightJoin()
-    {
-        return new Join(
-            JoinType.Right,
-            new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-            OrdersUsersCondition()
-        );
-    }
-
-    private static Join OrdersToUsersFullJoin()
-    {
-        return new Join(JoinType.Full, new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, OrdersUsersCondition());
-    }
-
-    private static BooleanArrayReturning UsersOrdersCondition()
-    {
-        return new BooleanArrayReturning(
-            new EachEquality(
-                new EachUuidEquality(
-                    new UuidArrayReturning(
-                        new UuidField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, new UserIdColumn().Name.TextValue)
-                    ),
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                            new OrderUserIdColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static BooleanArrayReturning OrdersUsersCondition()
-    {
-        return new BooleanArrayReturning(
-            new EachEquality(
-                new EachUuidEquality(
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                            new OrderUserIdColumn().Name.TextValue
-                        )
-                    ),
-                    new UuidArrayReturning(
-                        new UuidField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, new UserIdColumn().Name.TextValue)
-                    )
-                )
-            )
-        );
-    }
-
-    private static BooleanArrayReturning UserIsActiveEach()
-    {
-        return new BooleanArrayReturning(
-            new EachEquality(
-                new EachBooleanEquality(
-                    new BooleanArrayReturning(
-                        new BooleanField(
-                            new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                            new UserActiveColumn().Name.TextValue
-                        )
-                    ),
-                    new BooleanReturning(new BooleanScalar(true))
-                )
-            )
-        );
-    }
-
-    private static SelectExpression OrderCountSelect()
-    {
-        return new SelectExpression(
-            new SingleValueReturning(
-                new NumberReturning(
-                    new Count(
-                        new ArrayReturning(
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                    new OrderIdColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            "orderCount"
-        );
-    }
-
-    private static BooleanReturning CountAtLeastOne()
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThanOrEqual,
-                    new NumberReturning(
-                        new NumberAggregate(
-                            new SumNumber(
-                                new NumberArrayReturning(
-                                    new NumberField(
-                                        new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                        new OrderTotalColumn().Name.TextValue
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    new NumberReturning(new NumberScalar(0))
-                )
-            )
-        );
-    }
-
-    // sum(total) >= 0 is only ever true when the group actually has a
-    // matched order (an empty/NULL group folds sum to NULL, and NULL >= 0
-    // is unknown), so this HAVING clause is a clean, aggregate-driven way
-    // to require "at least one order" without a bare count comparison.
-    private static Query FullPipelineQuery(FromExpression from, Join join)
-    {
-        return new Query(
-            from,
-            [OrderCountSelect()],
-            UserIsActiveEach(),
-            [join],
-            [
-                new Field(
-                    new UuidField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, new UserIdColumn().Name.TextValue)
-                ),
-            ],
-            CountAtLeastOne(),
-            [
-                new OrderByItem(
-                    new Field(
-                        new NumberField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, "orderCount")
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            new ModelPagination(1, 5),
-            distinct: true
-        );
-    }
-
     // Active users are Ann, Cara, Dan, Fay (Bob and Eve are inactive and
     // dropped by WHERE). Ann and Cara each place 2 orders, Dan places 1,
     // and Fay places none - Fay's zero-order group is dropped by HAVING.
@@ -265,13 +55,7 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = FullPipelineQuery(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue),
-            UsersToOrdersInnerJoin()
-        );
+        Query query = new InnerJoinFullPipelineQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -292,13 +76,7 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = FullPipelineQuery(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue),
-            UsersToOrdersLeftJoin()
-        );
+        Query query = new LeftJoinFullPipelineQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -319,13 +97,7 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = FullPipelineQuery(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue),
-            OrdersToUsersRightJoin()
-        );
+        Query query = new RightJoinFullPipelineQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -346,13 +118,7 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = FullPipelineQuery(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue),
-            OrdersToUsersFullJoin()
-        );
+        Query query = new FullJoinFullPipelineQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -379,112 +145,7 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
-        Join usersToLoginsLeftJoin = new Join(
-            JoinType.Left,
-            new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-                                new LoginUserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-                                            new LoginIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "loginCount"
-                ),
-            ],
-            where: null,
-            [usersToLoginsLeftJoin],
-            [
-                new Field(
-                    new UuidField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, new UserIdColumn().Name.TextValue)
-                ),
-            ],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThanOrEqual,
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-                                            new LoginIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(1))
-                    )
-                )
-            ),
-            [
-                new OrderByItem(
-                    new Field(
-                        new NumberField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, "loginCount")
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            new ModelPagination(0, 1),
-            distinct: true
-        );
+        Query query = new CrossSchemaLeftJoinFullPipelineQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -519,90 +180,7 @@ public sealed class JoinPipelineFullStackTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<LoginRecord> loginRows = [.. new LoginRecords()];
 
-        Join usersToLoginsInnerJoin = new Join(
-            JoinType.Inner,
-            new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-                                new LoginUserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                    new DotString(),
-                    [new AuditRelationalSchema().Name, new LoginsTable().Name]
-                ).TextValue,
-                                            new LoginIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "loginCount"
-                ),
-            ],
-            where: null,
-            [usersToLoginsInnerJoin],
-            [
-                new Field(
-                    new UuidField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, new UserIdColumn().Name.TextValue)
-                ),
-            ],
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new NumberField(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue, "loginCount")
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            new ModelPagination(0, 5),
-            distinct: true
-        );
+        Query query = new CrossSchemaInnerJoinFullPipelineQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

@@ -1,20 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachBooleanOperations;
-using PureQL.CSharp.Model.EachComparisons;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Joins;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -25,104 +15,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 [Trait("Feature", "CompositeCondition")]
 public sealed class CompositeOuterJoinConditionTests
 {
-    private static BooleanArrayReturning UserKeyMatch()
-    {
-        return new BooleanArrayReturning(
-            new EachEquality(
-                new EachUuidEquality(
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserIdColumn().Name.TextValue
-                        )
-                    ),
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderUserIdColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static BooleanArrayReturning TotalGreaterThan(double threshold)
-    {
-        return new BooleanArrayReturning(
-            new EachComparison(
-                new EachNumberComparison(
-                    EachComparisonOperator.EachGreaterThan,
-                    new NumberArrayReturning(
-                        new NumberField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderTotalColumn().Name.TextValue
-                        )
-                    ),
-                    new NumberReturning(new NumberScalar(threshold))
-                )
-            )
-        );
-    }
-
-    private static Query UsersJoinedToOrders(
-        JoinType joinType,
-        BooleanArrayReturning onCondition
-    )
-    {
-        return new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            [new Join(joinType, new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue, onCondition)],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
-    }
-
     [Fact]
     public void LeftJoinOnKeyAndThresholdPadsUsersWithoutQualifyingOrders()
     {
@@ -132,12 +24,7 @@ public sealed class CompositeOuterJoinConditionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         const double threshold = 100;
 
-        Query query = UsersJoinedToOrders(
-            JoinType.Left,
-            new BooleanArrayReturning(
-                new EachAndOperator([UserKeyMatch(), TotalGreaterThan(threshold)])
-            )
-        );
+        Query query = new LeftJoinOnKeyAndThresholdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -183,37 +70,7 @@ public sealed class CompositeOuterJoinConditionTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         const double markerTotal = 200;
 
-        Query query = UsersJoinedToOrders(
-            JoinType.Inner,
-            new BooleanArrayReturning(
-                new EachOrOperator(
-                    [
-                        UserKeyMatch(),
-                        new BooleanArrayReturning(
-                            new EachEquality(
-                                new EachNumberEquality(
-                                    new NumberArrayReturning(
-                                        new NumberField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderTotalColumn().Name.TextValue
-                                        )
-                                    ),
-                                    new NumberReturning(
-                                        new NumberScalar(markerTotal)
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
+        Query query = new InnerJoinOnDisjunctiveConditionQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -236,10 +93,7 @@ public sealed class CompositeOuterJoinConditionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = UsersJoinedToOrders(
-            JoinType.Inner,
-            new BooleanArrayReturning(new EachNotOperator(UserKeyMatch()))
-        );
+        Query query = new InnerJoinOnNegatedKeyEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

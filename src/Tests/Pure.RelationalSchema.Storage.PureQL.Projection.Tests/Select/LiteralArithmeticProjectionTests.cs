@@ -1,14 +1,8 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Arithmetics;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Select;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
@@ -28,42 +22,7 @@ public sealed class LiteralArithmeticProjectionTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Arithmetic(
-                                new Multiply(
-                                    [
-                                        new NumberReturning(
-                                            new Arithmetic(
-                                                new Add(
-                                                    [
-                                                        new NumberReturning(
-                                                            new NumberScalar(1)
-                                                        ),
-                                                        new NumberReturning(
-                                                            new NumberScalar(2)
-                                                        ),
-                                                    ]
-                                                )
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(3)),
-                                    ]
-                                )
-                            )
-                        )
-                    ),
-                    "result"
-                ),
-            ]
-        );
+        Query query = new NestedArithmeticOfLiteralsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -80,42 +39,7 @@ public sealed class LiteralArithmeticProjectionTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Arithmetic(
-                                new Divide(
-                                    [
-                                        new NumberReturning(
-                                            new Arithmetic(
-                                                new Subtract(
-                                                    [
-                                                        new NumberReturning(
-                                                            new NumberScalar(10)
-                                                        ),
-                                                        new NumberReturning(
-                                                            new NumberScalar(4)
-                                                        ),
-                                                    ]
-                                                )
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(2)),
-                                    ]
-                                )
-                            )
-                        )
-                    ),
-                    "result"
-                ),
-            ]
-        );
+        Query query = new LiteralSubtractThenDivideQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -130,29 +54,7 @@ public sealed class LiteralArithmeticProjectionTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(
-                            new Arithmetic(
-                                new Divide(
-                                    [
-                                        new NumberReturning(new NumberScalar(1)),
-                                        new NumberReturning(new NumberScalar(0)),
-                                    ]
-                                )
-                            )
-                        )
-                    ),
-                    "result"
-                ),
-            ]
-        );
+        Query query = new LiteralArithmeticDivideByZeroQuery().Value;
 
         _ = Assert.Throws<DivideByZeroException>(() =>
             new PureQLProjection(datasets, query)

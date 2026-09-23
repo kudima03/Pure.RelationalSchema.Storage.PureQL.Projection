@@ -1,27 +1,19 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.Schema;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.HashCodes;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Cells;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using Pure.RelationalSchema.Storage.Samples.TableDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
 using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.EachArithmetics;
-using PureQL.CSharp.Model.EachComparisons;
 using PureQL.CSharp.Model.EachEqualities;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Returnings;
+using PureQL.CSharp.Model.Samples.Queries.Errors;
 using PureQL.CSharp.Model.Scalars;
 using String = Pure.Primitives.String.String;
 
@@ -55,32 +47,7 @@ public sealed class NegativePathTests
         // explicit.
         IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new SingleTableRelationalSchema().Name, new String("nonexistent_table")]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new SingleTableRelationalSchema().Name,
-                                        new String("nonexistent_table"),
-                                    ]
-                                ).TextValue,
-                                "whatever"
-                            )
-                        )
-                    )
-                ),
-            ]
-        );
+        Query query = new FromEntityNotInSuppliedDatasetsQuery().Value;
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => new PureQLProjection([dataset], query)
@@ -89,7 +56,7 @@ public sealed class NegativePathTests
         Assert.Contains(
             "Sequence contains no matching element",
             exception.Message,
-            System.StringComparison.Ordinal
+            StringComparison.Ordinal
         );
     }
 
@@ -103,79 +70,7 @@ public sealed class NegativePathTests
     {
         IStoredSchemaDataSet dataset = new SingleTableSchemaDataSet();
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new SingleTableRelationalSchema().Name, new SingleColumnTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new SingleTableRelationalSchema().Name,
-                                        new SingleColumnTable().Name,
-                                    ]
-                                ).TextValue,
-                                new IdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            [
-                new Join(
-                    JoinType.Inner,
-                    new JoinedString(
-                        new DotString(),
-                        [
-                            new SingleTableRelationalSchema().Name,
-                            new String("nonexistent_join_table"),
-                        ]
-                    ).TextValue,
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachUuidEquality(
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                                            new DotString(),
-                                            [
-                                                new SingleTableRelationalSchema().Name,
-                                                new SingleColumnTable().Name,
-                                            ]
-                                        ).TextValue,
-                                        new IdColumn().Name.TextValue
-                                    )
-                                ),
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                                            new DotString(),
-                                            [
-                                                new SingleTableRelationalSchema().Name,
-                                                new String("nonexistent_join_table"),
-                                            ]
-                                        ).TextValue,
-                                        "whatever_id"
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-            ],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new JoinEntityNotInSuppliedDatasetsQuery().Value;
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => new PureQLProjection([dataset], query)
@@ -184,7 +79,7 @@ public sealed class NegativePathTests
         Assert.Contains(
             "Sequence contains no matching element",
             exception.Message,
-            System.StringComparison.Ordinal
+            StringComparison.Ordinal
         );
     }
 
@@ -202,38 +97,13 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                "user_nickname"
-                            )
-                        )
-                    )
-                ),
-            ]
-        );
+        Query query = new SelectFieldNotOnResolvedTableQuery().Value;
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
             () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
-        Assert.Contains("user_nickname", exception.Message, System.StringComparison.Ordinal);
+        Assert.Contains("user_nickname", exception.Message, StringComparison.Ordinal);
     }
 
     // The group-by projection path (GroupByApplicator.ProjectionItemOf) has
@@ -247,76 +117,13 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    ),
-                    "status"
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                "order_notes"
-                            )
-                        )
-                    ),
-                    "notes"
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy:
-            [
-                new Field(
-                    new StringField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderStatusColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new GroupBySelectFieldNotOnResolvedTableQuery().Value;
 
         KeyNotFoundException exception = Assert.Throws<KeyNotFoundException>(
             () => new ProjectionResult(new PureQLProjection(datasets, query))
         );
 
-        Assert.Contains("order_notes", exception.Message, System.StringComparison.Ordinal);
+        Assert.Contains("order_notes", exception.Message, StringComparison.Ordinal);
     }
 
     // ===== Aggregate inside WHERE (documented known execution gap) =====
@@ -333,63 +140,7 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        new NumberReturning(
-                            new Count(
-                                new ArrayReturning(
-                                    new UuidArrayReturning(
-                                        new UuidField(
-                                            new JoinedString(
-                                                new DotString(),
-                                                [
-                                                    new RelationalSchemaWithForeignKeys().Name,
-                                                    new OrdersTable().Name,
-                                                ]
-                                            ).TextValue,
-                                            new OrderIdColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(0))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new AggregateInsideWhereComparisonQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(
             () => new PureQLProjection(datasets, query)
@@ -410,56 +161,7 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachStringEquality(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                "order_notes"
-                            )
-                        ),
-                        new StringReturning(new StringScalar("anything"))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WhereFieldNotOnResolvedTableQuery().Value;
 
         _ = Assert.Throws<KeyNotFoundException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -482,57 +184,7 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(0))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new TypeMismatchNumberFieldAgainstStringColumnQuery().Value;
 
         _ = Assert.Throws<FormatException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -619,67 +271,7 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachDivide(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(
-                                                    new DotString(),
-                                                    [
-                                                        new RelationalSchemaWithForeignKeys()
-                                                            .Name,
-                                                        new OrdersTable().Name,
-                                                    ]
-                                                ).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(0)),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(0))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDivideByZeroQuery().Value;
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -699,55 +291,7 @@ public sealed class NegativePathTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue
-            ),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy:
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            "user_nickname"
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByFieldNotOnResolvedTableQuery().Value;
 
         _ = Assert.Throws<KeyNotFoundException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)

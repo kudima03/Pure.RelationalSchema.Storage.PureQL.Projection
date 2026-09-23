@@ -1,15 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Fields;
+using PureQL.CSharp.Model.Samples.Queries.OrderBy;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.OrderBy;
 
@@ -45,83 +40,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new DateField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new PlacedOnColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByStatusAscThenPlacedOnAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -156,83 +75,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new DateField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new PlacedOnColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByStatusAscThenPlacedOnDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -265,83 +108,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new DateTimeArrayReturning(
-                            new DateTimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedAtColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new DateTimeField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new PlacedAtColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByStatusAscThenPlacedAtAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -376,83 +143,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new DateTimeArrayReturning(
-                            new DateTimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedAtColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new DateTimeField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new PlacedAtColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByStatusAscThenPlacedAtDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -485,67 +176,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new BooleanField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserActiveColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new TimeField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new ShiftStartColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByActiveAscThenShiftStartAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -575,67 +206,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new BooleanField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserActiveColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Desc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new TimeField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new ShiftStartColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByActiveDescThenShiftStartAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -660,80 +231,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new UuidField(new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue, new OrderIdColumn().Name.TextValue)
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByStatusAscThenIdAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -771,80 +269,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new UuidField(new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue, new OrderIdColumn().Name.TextValue)
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByStatusAscThenIdDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -881,52 +306,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new NullField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserNameColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByNullFieldAscendingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -948,52 +328,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new NullField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserNameColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByNullFieldDescendingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1017,67 +352,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new BooleanField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserActiveColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new NullField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserNameColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new NullFieldAsSecondaryKeyAscendingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1102,67 +377,7 @@ public sealed class OrderByThenByTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new BooleanField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserActiveColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new NullField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserNameColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Desc
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new NullFieldAsSecondaryKeyDescendingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

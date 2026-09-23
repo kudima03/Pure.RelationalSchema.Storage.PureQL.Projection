@@ -1,19 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.ArrayScalars;
-using PureQL.CSharp.Model.EachBooleanOperations;
-using PureQL.CSharp.Model.EachComparisons;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -31,60 +22,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 [Trait("Feature", "EachLiteralOperand")]
 public sealed class EachLiteralOperandTypeMatrixTests
 {
-    private static SelectExpression ProductNameSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new StringArrayReturning(
-                    new StringField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new ProductsTable().Name,
-                            ]
-                        ).TextValue, new ProductNameColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
-    private static SelectExpression OrderTotalSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new NumberArrayReturning(
-                    new NumberField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue, new OrderTotalColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
-    private static SelectExpression UserNameSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new StringArrayReturning(
-                    new StringField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new UsersTable().Name,
-                            ]
-                        ).TextValue, new UserNameColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
     // ===== Boolean: Products.InStock (Widget=true, Gadget=false, =====
     // ===== Gizmo=true, Deluxe=true)                                =====
 
@@ -95,41 +32,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new ProductsTable().Name,
-                    ]
-                ).TextValue),
-            [ProductNameSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachBooleanEquality(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new ProductsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ProductInStockColumn().Name.TextValue
-                            )
-                        ),
-                        new BooleanArrayReturning(new BooleanArrayScalar([true]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualBooleanLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -154,43 +57,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new ProductsTable().Name,
-                    ]
-                ).TextValue),
-            [ProductNameSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachBooleanEquality(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new ProductsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ProductInStockColumn().Name.TextValue
-                            )
-                        ),
-                        new BooleanArrayReturning(
-                            new BooleanArrayScalar([false, true, true, true, true])
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualBooleanMultiElementLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -214,46 +81,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new ProductsTable().Name,
-                    ]
-                ).TextValue),
-            [ProductNameSelect()],
-            new BooleanArrayReturning(
-                new EachNotOperator(
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachBooleanEquality(
-                                new BooleanArrayReturning(
-                                    new BooleanField(
-                                        new JoinedString(
-                                            new DotString(),
-                                            [
-                                                new RelationalSchemaWithForeignKeys()
-                                                    .Name,
-                                                new ProductsTable().Name,
-                                            ]
-                                        ).TextValue,
-                                        new ProductInStockColumn().Name.TextValue
-                                    )
-                                ),
-                                new BooleanArrayReturning(new BooleanArrayScalar([true]))
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachNotOfBooleanLiteralArrayEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -277,39 +105,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Guid target = orderRows.Single(order => order.OrderTotal == 200.00).OrderId;
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue, new OrderIdColumn().Name.TextValue)
-                        ),
-                        new UuidArrayReturning(new UuidArrayScalar([target]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualUuidLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -333,44 +129,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         Guid target = orderRows.Single(order => order.OrderTotal == 200.00).OrderId;
-        Guid decoyOne = orderRows.Single(order => order.OrderTotal == 50.00).OrderId;
-        Guid decoyTwo = orderRows.Single(order => order.OrderTotal == 75.25).OrderId;
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue, new OrderIdColumn().Name.TextValue)
-                        ),
-                        new UuidArrayReturning(
-                            new UuidArrayScalar([target, decoyOne, decoyTwo])
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualUuidMultiElementLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -394,41 +154,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly target = new DateOnly(2024, 6, 1);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateEquality(
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        ),
-                        new DateArrayReturning(new DateArrayScalar([target]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualDateLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -453,49 +179,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly target = new DateOnly(2024, 6, 1);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateEquality(
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        ),
-                        new DateArrayReturning(
-                            new DateArrayScalar(
-                                [
-                                    target,
-                                    new DateOnly(2024, 6, 2),
-                                    new DateOnly(2024, 6, 3),
-                                ]
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualDateMultiElementLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -516,42 +200,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachDateComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        ),
-                        new DateArrayReturning(new DateArrayScalar([threshold]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachGreaterThanDateLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -577,44 +226,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 3);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachDateComparison(
-                        EachComparisonOperator.EachLessThan,
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        ),
-                        new DateArrayReturning(
-                            new DateArrayScalar([threshold, new DateOnly(2024, 6, 1)])
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachLessThanDateMultiElementLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -632,43 +244,8 @@ public sealed class EachLiteralOperandTypeMatrixTests
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
-        DateOnly target = new DateOnly(2099, 1, 1);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateEquality(
-                        new DateArrayReturning(
-                            new DateField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedOnColumn().Name.TextValue
-                            )
-                        ),
-                        new DateArrayReturning(new DateArrayScalar([target]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualDateLiteralArrayWithNoMatchQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -688,41 +265,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime target = new DateTime(2024, 6, 1, 10, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateTimeEquality(
-                        new DateTimeArrayReturning(
-                            new DateTimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedAtColumn().Name.TextValue
-                            )
-                        ),
-                        new DateTimeArrayReturning(new DateTimeArrayScalar([target]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualDateTimeLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -746,45 +289,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime target = new DateTime(2024, 6, 1, 10, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateTimeEquality(
-                        new DateTimeArrayReturning(
-                            new DateTimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedAtColumn().Name.TextValue
-                            )
-                        ),
-                        new DateTimeArrayReturning(
-                            new DateTimeArrayScalar(
-                                [target, new DateTime(2024, 6, 2, 11, 0, 0)]
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualDateTimeMultiElementLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -805,42 +310,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateTime threshold = new DateTime(2024, 6, 3, 12, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderTotalSelect()],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachDateTimeComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new DateTimeArrayReturning(
-                            new DateTimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new PlacedAtColumn().Name.TextValue
-                            )
-                        ),
-                        new DateTimeArrayReturning(new DateTimeArrayScalar([threshold]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachGreaterThanDateTimeLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -865,41 +335,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly target = new TimeOnly(9, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [UserNameSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachTimeEquality(
-                        new TimeArrayReturning(
-                            new TimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ShiftStartColumn().Name.TextValue
-                            )
-                        ),
-                        new TimeArrayReturning(new TimeArrayScalar([target]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualTimeLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -924,45 +360,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly target = new TimeOnly(9, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [UserNameSelect()],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachTimeEquality(
-                        new TimeArrayReturning(
-                            new TimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ShiftStartColumn().Name.TextValue
-                            )
-                        ),
-                        new TimeArrayReturning(
-                            new TimeArrayScalar(
-                                [target, new TimeOnly(11, 30, 0), new TimeOnly(8, 0, 0)]
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachEqualTimeMultiElementLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -983,42 +381,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [UserNameSelect()],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachTimeComparison(
-                        EachComparisonOperator.EachLessThan,
-                        new TimeArrayReturning(
-                            new TimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ShiftStartColumn().Name.TextValue
-                            )
-                        ),
-                        new TimeArrayReturning(new TimeArrayScalar([threshold]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachLessThanTimeLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1040,42 +403,7 @@ public sealed class EachLiteralOperandTypeMatrixTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly threshold = new TimeOnly(9, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new UsersTable().Name,
-                    ]
-                ).TextValue),
-            [UserNameSelect()],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachTimeComparison(
-                        EachComparisonOperator.EachGreaterThanOrEqual,
-                        new TimeArrayReturning(
-                            new TimeField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ShiftStartColumn().Name.TextValue
-                            )
-                        ),
-                        new TimeArrayReturning(new TimeArrayScalar([threshold]))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachGreaterThanOrEqualTimeLiteralArrayQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

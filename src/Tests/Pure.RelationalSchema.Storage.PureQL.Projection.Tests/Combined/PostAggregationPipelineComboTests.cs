@@ -1,21 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
-using ModelPagination = PureQL.CSharp.Model.Pagination;
+using PureQL.CSharp.Model.Samples.Queries.Combined;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Combined;
 
@@ -31,196 +20,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Combined;
 [Trait("Feature", "PostAggregationPipelineCombo")]
 public sealed class PostAggregationPipelineComboTests
 {
-    private static Field OrderUserIdField()
-    {
-        return new Field(
-            new UuidField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)
-        );
-    }
-
-    private static Field OrderStatusField()
-    {
-        return new Field(
-            new StringField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)
-        );
-    }
-
-    private static Field UserActiveField()
-    {
-        return new Field(
-            new BooleanField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)
-        );
-    }
-
-    private static SelectExpression OrderUserIdSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new UuidArrayReturning(
-                    new UuidField(
-                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                        new OrderUserIdColumn().Name.TextValue
-                    )
-                )
-            )
-        );
-    }
-
-    private static SelectExpression OrderStatusSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new StringArrayReturning(
-                    new StringField(
-                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                        new OrderStatusColumn().Name.TextValue
-                    )
-                )
-            )
-        );
-    }
-
-    private static SelectExpression UserActiveSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new BooleanArrayReturning(
-                    new BooleanField(
-                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                        new UserActiveColumn().Name.TextValue
-                    )
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning OrderTotals()
-    {
-        return new NumberArrayReturning(
-            new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderTotalColumn().Name.TextValue)
-        );
-    }
-
-    private static NumberArrayReturning UserAges()
-    {
-        return new NumberArrayReturning(
-            new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue)
-        );
-    }
-
-    private static NumberReturning OrderCountReturning()
-    {
-        return new NumberReturning(
-            new Count(
-                new ArrayReturning(
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                            new OrderIdColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static NumberReturning SumTotalReturning()
-    {
-        return new NumberReturning(
-            new NumberAggregate(new SumNumber(OrderTotals()))
-        );
-    }
-
-    private static NumberReturning MaxTotalReturning()
-    {
-        return new NumberReturning(
-            new NumberAggregate(new MaxNumber(OrderTotals()))
-        );
-    }
-
-    private static NumberReturning MaxAgeReturning()
-    {
-        return new NumberReturning(
-            new NumberAggregate(new MaxNumber(UserAges()))
-        );
-    }
-
-    private static SelectExpression OrderCountSelect(string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(OrderCountReturning()),
-            alias
-        );
-    }
-
-    private static SelectExpression SumTotalSelect(string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(SumTotalReturning()),
-            alias
-        );
-    }
-
-    private static SelectExpression MaxTotalSelect(string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(MaxTotalReturning()),
-            alias
-        );
-    }
-
-    private static SelectExpression MaxAgeSelect(string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(MaxAgeReturning()),
-            alias
-        );
-    }
-
-    private static OrderByItem AliasNumberOrderBy(
-        string alias,
-        SortDirection direction,
-        string entity
-    )
-    {
-        return new OrderByItem(
-            new Field(new NumberField(entity, alias)),
-            direction
-        );
-    }
-
-    private static BooleanReturning SumTotalCompare(
-        ComparisonOperator @operator,
-        double threshold
-    )
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    @operator,
-                    SumTotalReturning(),
-                    new NumberReturning(new NumberScalar(threshold))
-                )
-            )
-        );
-    }
-
-    private static BooleanReturning OrderCountCompare(
-        ComparisonOperator @operator,
-        double threshold
-    )
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    @operator,
-                    OrderCountReturning(),
-                    new NumberReturning(new NumberScalar(threshold))
-                )
-            )
-        );
-    }
-
     // --- ORDER BY target: group key, aggregate alias, a second aggregate ---
 
     [Fact]
@@ -230,16 +29,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderUserIdSelect(), SumTotalSelect("totalSum")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [new OrderByItem(OrderUserIdField(), SortDirection.Asc)],
-            pagination: null
-        );
+        Query query = new OrderByGroupKeyUuidAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -270,16 +60,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderUserIdSelect(), SumTotalSelect("totalSum")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [new OrderByItem(OrderUserIdField(), SortDirection.Desc)],
-            pagination: null
-        );
+        Query query = new OrderByGroupKeyUuidDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -310,16 +91,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), SumTotalSelect("statusSum")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            having: null,
-            [AliasNumberOrderBy("statusSum", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            pagination: null
-        );
+        Query query = new OrderByAggregateAliasAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -345,16 +117,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), SumTotalSelect("statusSum")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            having: null,
-            [AliasNumberOrderBy("statusSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            pagination: null
-        );
+        Query query = new OrderByAggregateAliasDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -382,16 +145,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderUserIdSelect(), OrderCountSelect("orderCount"), MaxTotalSelect("maxTotal")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [AliasNumberOrderBy("maxTotal", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            pagination: null
-        );
+        Query query = new OrderBySecondAggregateNotUsedElsewhereQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -427,19 +181,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderUserIdSelect(), OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [
-                AliasNumberOrderBy("orderCount", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-                new OrderByItem(OrderUserIdField(), SortDirection.Asc),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByAggregateDescThenGroupKeyAscQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -473,23 +215,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                OrderUserIdSelect(),
-                OrderCountSelect("orderCount"),
-                SumTotalSelect("totalSum"),
-            ],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [
-                AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-                AliasNumberOrderBy("totalSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByAggregateAscThenDifferentAggregateDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -524,24 +250,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                OrderUserIdSelect(),
-                OrderCountSelect("orderCount"),
-                SumTotalSelect("totalSum"),
-            ],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [
-                AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-                AliasNumberOrderBy("totalSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-                new OrderByItem(OrderUserIdField(), SortDirection.Asc),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByThreeKeysCountSumThenKeyQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -576,16 +285,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderUserIdSelect(), SumTotalSelect("totalSum")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            SumTotalCompare(ComparisonOperator.GreaterThan, 150),
-            [AliasNumberOrderBy("totalSum", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            pagination: null
-        );
+        Query query = new HavingThenOrderByAggregateAliasQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -618,16 +318,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            OrderCountCompare(ComparisonOperator.GreaterThanOrEqual, 2),
-            [new OrderByItem(OrderStatusField(), SortDirection.Desc)],
-            pagination: null
-        );
+        Query query = new HavingCountThresholdThenOrderByGroupKeyDescQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -659,17 +350,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            orderBy: null,
-            pagination: null,
-            distinct: true
-        );
+        Query query = new DistinctOverGroupProjectionQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -704,17 +385,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            pagination: null,
-            distinct: true
-        );
+        Query query = new DistinctAfterOrderByAscOverGroupProjectionQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -744,17 +415,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            having: null,
-            [AliasNumberOrderBy("orderCount", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            pagination: null,
-            distinct: true
-        );
+        Query query = new DistinctAfterOrderByDescOverGroupProjectionQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -788,16 +449,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            having: null,
-            [new OrderByItem(OrderStatusField(), SortDirection.Asc)],
-            new ModelPagination(0, 10)
-        );
+        Query query = new PaginationSkipZeroTakeAllQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -823,16 +475,7 @@ public sealed class PostAggregationPipelineComboTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            having: null,
-            [new OrderByItem(OrderStatusField(), SortDirection.Asc)],
-            new ModelPagination(10, 5)
-        );
+        Query query = new PaginationSkipPastEndOfOrderedGroupsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -848,16 +491,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            having: null,
-            [new OrderByItem(OrderStatusField(), SortDirection.Asc)],
-            new ModelPagination(1, 10)
-        );
+        Query query = new PaginationTakeBeyondEndOfOrderedGroupsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -887,16 +521,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderUserIdSelect(), SumTotalSelect("totalSum")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            OrderCountCompare(ComparisonOperator.GreaterThanOrEqual, 1),
-            [AliasNumberOrderBy("totalSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            new ModelPagination(1, 2)
-        );
+        Query query = new PaginationWindowAfterHavingAndOrderByQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -936,17 +561,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderCountSelect("orderCount")],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            OrderCountCompare(ComparisonOperator.GreaterThanOrEqual, 1),
-            [AliasNumberOrderBy("orderCount", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            new ModelPagination(0, 1),
-            distinct: true
-        );
+        Query query = new FullTailWithTrivialHavingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -983,17 +598,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [OrderStatusSelect(), SumTotalSelect("statusSum")],
-            where: null,
-            join: null,
-            [OrderStatusField()],
-            SumTotalCompare(ComparisonOperator.GreaterThan, 100),
-            [AliasNumberOrderBy("statusSum", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue)],
-            new ModelPagination(1, 5),
-            distinct: true
-        );
+        Query query = new FullTailWithRealHavingQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1031,24 +636,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                OrderUserIdSelect(),
-                OrderCountSelect("orderCount"),
-                SumTotalSelect("totalSum"),
-            ],
-            where: null,
-            join: null,
-            [OrderUserIdField()],
-            SumTotalCompare(ComparisonOperator.GreaterThanOrEqual, 150),
-            [
-                AliasNumberOrderBy("orderCount", SortDirection.Desc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-                AliasNumberOrderBy("totalSum", SortDirection.Asc, new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            ],
-            new ModelPagination(0, 2),
-            distinct: true
-        );
+        Query query = new FullTailWithTwoKeyOrderByQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1092,22 +680,7 @@ public sealed class PostAggregationPipelineComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
-            [UserActiveSelect(), MaxAgeSelect("maxAge")],
-            where: null,
-            join: null,
-            [UserActiveField()],
-            having: null,
-            [
-                AliasNumberOrderBy(
-                    "maxAge",
-                    SortDirection.Desc,
-                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue
-                ),
-            ],
-            pagination: null
-        );
+        Query query = new OrderByAggregateAliasOverBooleanGroupKeyQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

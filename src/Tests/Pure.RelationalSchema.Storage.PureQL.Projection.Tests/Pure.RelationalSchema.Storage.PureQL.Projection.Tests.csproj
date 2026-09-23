@@ -18,6 +18,10 @@
       Include="Pure.RelationalSchema.Storage.Samples"
       Version="0.1.0-preview.1.0.0"
     />
+    <PackageReference
+      Include="PureQL.CSharp.Model.Samples"
+      Version="0.1.0-preview.0.1.0"
+    />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>

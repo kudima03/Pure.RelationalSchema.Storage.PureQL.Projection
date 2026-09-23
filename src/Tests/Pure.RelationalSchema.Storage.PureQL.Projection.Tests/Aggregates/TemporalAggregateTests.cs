@@ -1,19 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates.Date;
-using PureQL.CSharp.Model.Aggregates.DateTime;
-using PureQL.CSharp.Model.Aggregates.Time;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
+using PureQL.CSharp.Model.Samples.Queries.Aggregates;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
@@ -31,41 +21,7 @@ public sealed class TemporalAggregateTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new DateReturning(
-                            new DateAggregate(
-                                new MaxDate(
-                                    new DateArrayReturning(
-                                        new DateField(
-                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                            new PlacedOnColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "max_placed_on"
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new UuidField(
-                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                        new OrderUserIdColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MaxPlacedOnPerUserQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -94,41 +50,7 @@ public sealed class TemporalAggregateTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new DateTimeReturning(
-                            new DateTimeAggregate(
-                                new MinDateTime(
-                                    new DateTimeArrayReturning(
-                                        new DateTimeField(
-                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                            new PlacedAtColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "min_placed_at"
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new UuidField(
-                        new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                        new OrderUserIdColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinPlacedAtPerUserQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -158,28 +80,7 @@ public sealed class TemporalAggregateTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new TimeReturning(
-                            new TimeAggregate(
-                                new MaxTime(
-                                    new TimeArrayReturning(
-                                        new TimeField(
-                                            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                                            new ShiftStartColumn().Name.TextValue
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    "max_shift_start"
-                ),
-            ]
-        );
+        Query query = new MaxShiftStartOverAllUsersQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
