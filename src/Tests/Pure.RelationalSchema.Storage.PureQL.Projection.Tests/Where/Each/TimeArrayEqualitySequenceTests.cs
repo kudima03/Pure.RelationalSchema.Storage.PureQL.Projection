@@ -1,18 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayEqualities;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.ArrayScalars;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -27,24 +18,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 [Trait("Feature", "ArrayEqualitySequence")]
 public sealed class TimeArrayEqualitySequenceTests
 {
-    private static SelectExpression OrderIdSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new UuidArrayReturning(
-                    new UuidField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue, new OrderIdColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
     // Two identical literal arrays: SequenceEqual is true, so the predicate
     // (evaluated once, applied to the whole result) keeps every row.
     [Fact]
@@ -54,48 +27,7 @@ public sealed class TimeArrayEqualitySequenceTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new TimeArrayEquality(
-                            new TimeArrayReturning(
-                                new TimeArrayScalar(
-                                    [
-                                        new TimeOnly(8, 0, 0),
-                                        new TimeOnly(9, 0, 0),
-                                        new TimeOnly(10, 0, 0),
-                                    ]
-                                )
-                            ),
-                            new TimeArrayReturning(
-                                new TimeArrayScalar(
-                                    [
-                                        new TimeOnly(8, 0, 0),
-                                        new TimeOnly(9, 0, 0),
-                                        new TimeOnly(10, 0, 0),
-                                    ]
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeTimeArrayEqualityOfTwoEqualLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -112,48 +44,7 @@ public sealed class TimeArrayEqualitySequenceTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new TimeArrayEquality(
-                            new TimeArrayReturning(
-                                new TimeArrayScalar(
-                                    [
-                                        new TimeOnly(8, 0, 0),
-                                        new TimeOnly(9, 0, 0),
-                                        new TimeOnly(10, 0, 0),
-                                    ]
-                                )
-                            ),
-                            new TimeArrayReturning(
-                                new TimeArrayScalar(
-                                    [
-                                        new TimeOnly(10, 0, 0),
-                                        new TimeOnly(9, 0, 0),
-                                        new TimeOnly(8, 0, 0),
-                                    ]
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeTimeArrayEqualityOfTwoReorderedLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -181,45 +72,7 @@ public sealed class TimeArrayEqualitySequenceTests
             .. userRows.Select(user => user.ShiftStart).Reverse(),
         ];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new TimeArrayEquality(
-                            new TimeArrayReturning(
-                                new TimeField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new UsersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new ShiftStartColumn().Name.TextValue
-                                )
-                            ),
-                            new TimeArrayReturning(
-                                new TimeArrayScalar(reversedShiftStarts)
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeTimeArrayEqualityOfFieldAgainstLiteralQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -241,45 +94,7 @@ public sealed class TimeArrayEqualitySequenceTests
             .. userRows.Select(user => user.ShiftStart).Reverse(),
         ];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new TimeArrayEquality(
-                            new TimeArrayReturning(
-                                new TimeArrayScalar(reversedShiftStarts)
-                            ),
-                            new TimeArrayReturning(
-                                new TimeField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new UsersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new ShiftStartColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeTimeArrayEqualityOfLiteralAgainstFieldQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)

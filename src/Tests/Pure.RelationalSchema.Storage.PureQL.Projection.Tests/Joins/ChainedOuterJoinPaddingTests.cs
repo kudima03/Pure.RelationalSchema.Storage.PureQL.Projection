@@ -1,16 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
+using PureQL.CSharp.Model.Samples.Queries.Joins;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -22,88 +16,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 [Trait("Feature", "ChainedOuterJoin")]
 public sealed class ChainedOuterJoinPaddingTests
 {
-    private static Join UsersToOrdersLeftJoin()
-    {
-        return new Join(
-            JoinType.Left,
-            new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderUserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static Join OrdersToItemsLeftJoin()
-    {
-        return new Join(
-            JoinType.Left,
-            new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
-            ).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrderItemsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ItemOrderIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-    }
-
     [Fact]
     public void SecondLeftJoinPadsRowsAlreadyPaddedByTheFirst()
     {
@@ -112,36 +24,7 @@ public sealed class ChainedOuterJoinPaddingTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            [UsersToOrdersLeftJoin(), OrdersToItemsLeftJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ChainedLeftJoinsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

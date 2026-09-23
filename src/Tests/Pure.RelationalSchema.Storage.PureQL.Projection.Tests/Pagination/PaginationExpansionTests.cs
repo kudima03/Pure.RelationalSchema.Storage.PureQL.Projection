@@ -1,20 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachComparisons;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
-using ModelPagination = PureQL.CSharp.Model.Pagination;
+using PureQL.CSharp.Model.Samples.Queries.Pagination;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Pagination;
 
@@ -32,47 +22,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Pagination;
 [Trait("Feature", "Pagination")]
 public sealed class PaginationExpansionTests
 {
-    private static Join OrderItemsToProductsJoin()
-    {
-        return new Join(
-            JoinType.Inner,
-            new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
-            ).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrderItemsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ItemProductIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new ProductsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ProductIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-    }
-
     [Fact]
     public void PaginationAfterGroupByWindowsGroupProjectedRowsNotSourceRows()
     {
@@ -80,65 +29,7 @@ public sealed class PaginationExpansionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new StringField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderStatusColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            new ModelPagination(1, 1)
-        );
+        Query query = new PaginationAfterGroupByQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -167,84 +58,7 @@ public sealed class PaginationExpansionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserAgeColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new BooleanArrayReturning(
-                            new BooleanField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserActiveColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new NumberField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserAgeColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-                new OrderByItem(
-                    new Field(
-                        new BooleanField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new UsersTable().Name,
-                                ]
-                            ).TextValue,
-                            new UserActiveColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            new ModelPagination(1, 2),
-            distinct: true
-        );
+        Query query = new PaginationAfterDistinctOnMultiColumnTuplesQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -281,71 +95,7 @@ public sealed class PaginationExpansionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrderItemsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ItemQtyColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrderItemsTable().Name,
-                                    ]
-                                ).TextValue,
-                                new ItemQtyColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(1))
-                    )
-                )
-            ),
-            [OrderItemsToProductsJoin()],
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new NumberField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrderItemsTable().Name,
-                                ]
-                            ).TextValue,
-                            new ItemQtyColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            new ModelPagination(1, 1)
-        );
+        Query query = new PaginationAfterJoinQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -385,77 +135,11 @@ public sealed class PaginationExpansionTests
             orderRows.Single(order => order.OrderId == Id(101)).OrderTotal
         );
 
-        Query BuildQuery()
-        {
-            return new Query(
-                new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue),
-                [
-                    new SelectExpression(
-                        new ArrayReturning(
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new OrdersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new OrderIdColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    ),
-                    new SelectExpression(
-                        new ArrayReturning(
-                            new NumberArrayReturning(
-                                new NumberField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new OrdersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new OrderTotalColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    ),
-                ],
-                where: null,
-                join: null,
-                groupBy: null,
-                having: null,
-                [
-                    new OrderByItem(
-                        new Field(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        ),
-                        SortDirection.Asc
-                    ),
-                ],
-                new ModelPagination(2, 2)
-            );
-        }
-
         ProjectionResult firstRun = new ProjectionResult(
-            new PureQLProjection(datasets, BuildQuery())
+            new PureQLProjection(datasets, new PaginationWindowOverTiesQuery().Value)
         );
         ProjectionResult secondRun = new ProjectionResult(
-            new PureQLProjection(datasets, BuildQuery())
+            new PureQLProjection(datasets, new PaginationWindowOverTiesQuery().Value)
         );
 
         Guid[] expected = [Id(101), Id(106)];
@@ -488,52 +172,7 @@ public sealed class PaginationExpansionTests
         // Pagination does not validate skip >= 0 at construction. RowsFromDatasets
         // clamps skip into [0, int.MaxValue] before calling Skip, so a negative
         // skip behaves exactly like skip = 0 rather than throwing or wrapping.
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            [
-                new OrderByItem(
-                    new Field(
-                        new NumberField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderTotalColumn().Name.TextValue
-                        )
-                    ),
-                    SortDirection.Asc
-                ),
-            ],
-            new ModelPagination(-5, 3)
-        );
+        Query query = new NegativeSkipQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -561,67 +200,9 @@ public sealed class PaginationExpansionTests
         // Pagination does not validate take >= 1 at construction. A take of
         // zero or a negative value clamps to 0, so Take(0) yields an empty
         // page rather than throwing or returning every remaining row.
-        Query zeroTakeQuery = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            new ModelPagination(0, 0)
-        );
+        Query zeroTakeQuery = new ZeroTakeQuery().Value;
 
-        Query negativeTakeQuery = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            new ModelPagination(3, -2)
-        );
+        Query negativeTakeQuery = new NegativeTakeQuery().Value;
 
         ProjectionResult zeroTakeResult = new ProjectionResult(
             new PureQLProjection(datasets, zeroTakeQuery)

@@ -1,21 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Arithmetics;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.BooleanOperations;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Equalities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Where.Scalar;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Scalar;
 
@@ -40,62 +28,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator(
-                        [
-                            new BooleanReturning(new BooleanScalar(true)),
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new OrOperator(
-                                        [
-                                            new BooleanReturning(
-                                                new BooleanScalar(false)
-                                            ),
-                                            new BooleanReturning(
-                                                new BooleanScalar(true)
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarAndOfTrueAndOrOfFalseTrueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -113,59 +46,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new NotOperator(
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new AndOperator(
-                                    [
-                                        new BooleanReturning(
-                                            new BooleanScalar(true)
-                                        ),
-                                        new BooleanReturning(
-                                            new BooleanScalar(false)
-                                        ),
-                                    ]
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarNotOfAndOfTrueAndFalseQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -184,80 +65,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        BooleanReturning a = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    new NumberReturning(new NumberScalar(5)),
-                    new NumberReturning(new NumberScalar(3))
-                )
-            )
-        );
-        BooleanReturning b = new BooleanReturning(
-            new Equality(
-                new SingleValueEquality(
-                    new StringEquality(
-                        new StringReturning(new StringScalar("x")),
-                        new StringReturning(new StringScalar("y"))
-                    )
-                )
-            )
-        );
-        BooleanReturning c = new BooleanReturning(new BooleanScalar(false));
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new OrOperator(
-                        [
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new NotOperator(
-                                        new BooleanReturning(
-                                            new BooleanOperator(
-                                                new AndOperator([a, b])
-                                            )
-                                        )
-                                    )
-                                )
-                            ),
-                            c,
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarOrOfNotAndAtThreeLevelsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -275,80 +83,7 @@ public sealed class NestedBooleanTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        BooleanReturning a = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.LessThan,
-                    new NumberReturning(new NumberScalar(1)),
-                    new NumberReturning(new NumberScalar(2))
-                )
-            )
-        );
-        BooleanReturning b = new BooleanReturning(
-            new Equality(
-                new SingleValueEquality(
-                    new StringEquality(
-                        new StringReturning(new StringScalar("x")),
-                        new StringReturning(new StringScalar("y"))
-                    )
-                )
-            )
-        );
-        BooleanReturning c = new BooleanReturning(new BooleanScalar(true));
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator(
-                        [
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new NotOperator(
-                                        new BooleanReturning(
-                                            new BooleanOperator(
-                                                new OrOperator([a, b])
-                                            )
-                                        )
-                                    )
-                                )
-                            ),
-                            c,
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarAndOfNotOrAtThreeLevelsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -365,56 +100,7 @@ public sealed class NestedBooleanTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(true));
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new NotOperator(
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new NotOperator(
-                                    new BooleanReturning(
-                                        new BooleanOperator(new NotOperator(a))
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarTripleNotChainOfTrueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -434,93 +120,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning b = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning c = new BooleanReturning(
-            new Comparison(
-                new DateComparison(
-                    ComparisonOperator.GreaterThan,
-                    new DateReturning(new DateScalar(new DateOnly(2024, 1, 2))),
-                    new DateReturning(new DateScalar(new DateOnly(2024, 1, 1)))
-                )
-            )
-        );
-        TimeOnly noon = new TimeOnly(12, 0, 0);
-        BooleanReturning d = new BooleanReturning(
-            new Equality(
-                new SingleValueEquality(
-                    new TimeEquality(
-                        new TimeReturning(new TimeScalar(noon)),
-                        new TimeReturning(new TimeScalar(noon))
-                    )
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator(
-                        [
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new OrOperator(
-                                        [
-                                            new BooleanReturning(
-                                                new BooleanOperator(
-                                                    new NotOperator(
-                                                        new BooleanReturning(
-                                                            new BooleanOperator(
-                                                                new AndOperator(
-                                                                    [a, b]
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                            c,
-                                        ]
-                                    )
-                                )
-                            ),
-                            d,
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarAndOrNotAtFourLevelsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -539,92 +139,7 @@ public sealed class NestedBooleanTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning b = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning c = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    new NumberReturning(new NumberScalar(1)),
-                    new NumberReturning(new NumberScalar(2))
-                )
-            )
-        );
-        BooleanReturning d = new BooleanReturning(
-            new Equality(
-                new SingleValueEquality(
-                    new StringEquality(
-                        new StringReturning(new StringScalar("x")),
-                        new StringReturning(new StringScalar("y"))
-                    )
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new OrOperator(
-                        [
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new AndOperator(
-                                        [
-                                            new BooleanReturning(
-                                                new BooleanOperator(
-                                                    new NotOperator(
-                                                        new BooleanReturning(
-                                                            new BooleanOperator(
-                                                                new OrOperator(
-                                                                    [a, b]
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                            c,
-                                        ]
-                                    )
-                                )
-                            ),
-                            d,
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarOrAndNotAtFourLevelsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -642,64 +157,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(true));
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new NotOperator(
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new NotOperator(
-                                    new BooleanReturning(
-                                        new BooleanOperator(
-                                            new NotOperator(
-                                                new BooleanReturning(
-                                                    new BooleanOperator(
-                                                        new NotOperator(a)
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarQuadrupleNotChainOfTrueQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -721,84 +179,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning b = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning c = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning d = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning e = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning f = new BooleanReturning(new BooleanScalar(true));
-
-        BooleanReturning leftBranch = new BooleanReturning(
-            new BooleanOperator(
-                new OrOperator(
-                    [
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new NotOperator(
-                                    new BooleanReturning(
-                                        new BooleanOperator(new AndOperator([a, b]))
-                                    )
-                                )
-                            )
-                        ),
-                        c,
-                    ]
-                )
-            )
-        );
-        BooleanReturning rightBranch = new BooleanReturning(
-            new BooleanOperator(
-                new OrOperator(
-                    [
-                        new BooleanReturning(
-                            new BooleanOperator(new NotOperator(d))
-                        ),
-                        new BooleanReturning(
-                            new BooleanOperator(new AndOperator([e, f]))
-                        ),
-                    ]
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator([leftBranch, rightBranch])
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarFiveLevelAndRootedTreeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -819,82 +200,7 @@ public sealed class NestedBooleanTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning b = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning c = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning d = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning e = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning f = new BooleanReturning(new BooleanScalar(false));
-
-        BooleanReturning leftBranch = new BooleanReturning(
-            new BooleanOperator(
-                new AndOperator(
-                    [
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new NotOperator(
-                                    new BooleanReturning(
-                                        new BooleanOperator(new OrOperator([a, b]))
-                                    )
-                                )
-                            )
-                        ),
-                        c,
-                    ]
-                )
-            )
-        );
-        BooleanReturning rightBranch = new BooleanReturning(
-            new BooleanOperator(
-                new AndOperator(
-                    [
-                        new BooleanReturning(
-                            new BooleanOperator(new NotOperator(d))
-                        ),
-                        new BooleanReturning(
-                            new BooleanOperator(new OrOperator([e, f]))
-                        ),
-                    ]
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(new OrOperator([leftBranch, rightBranch]))
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarFiveLevelOrRootedTreeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -918,124 +224,9 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        BooleanReturning x = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning b = new BooleanReturning(new BooleanScalar(false));
+        Query queryA = new DeMorganNotOfAndAtThreeLevelsQuery().Value;
 
-        Query queryA = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator(
-                        [
-                            x,
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new NotOperator(
-                                        new BooleanReturning(
-                                            new BooleanOperator(
-                                                new AndOperator([a, b])
-                                            )
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
-
-        Query queryB = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator(
-                        [
-                            x,
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new OrOperator(
-                                        [
-                                            new BooleanReturning(
-                                                new BooleanOperator(
-                                                    new NotOperator(a)
-                                                )
-                                            ),
-                                            new BooleanReturning(
-                                                new BooleanOperator(
-                                                    new NotOperator(b)
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query queryB = new DeMorganOrOfNotsAtThreeLevelsQuery().Value;
 
         ProjectionResult resultA = new ProjectionResult(
             new PureQLProjection(datasets, queryA)
@@ -1061,124 +252,9 @@ public sealed class NestedBooleanTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        BooleanReturning y = new BooleanReturning(new BooleanScalar(false));
-        BooleanReturning a = new BooleanReturning(new BooleanScalar(true));
-        BooleanReturning b = new BooleanReturning(new BooleanScalar(false));
+        Query queryA = new DeMorganNotOfOrAtFourLevelsQuery().Value;
 
-        Query queryA = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new OrOperator(
-                        [
-                            y,
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new NotOperator(
-                                        new BooleanReturning(
-                                            new BooleanOperator(
-                                                new OrOperator([a, b])
-                                            )
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
-
-        Query queryB = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new OrOperator(
-                        [
-                            y,
-                            new BooleanReturning(
-                                new BooleanOperator(
-                                    new AndOperator(
-                                        [
-                                            new BooleanReturning(
-                                                new BooleanOperator(
-                                                    new NotOperator(a)
-                                                )
-                                            ),
-                                            new BooleanReturning(
-                                                new BooleanOperator(
-                                                    new NotOperator(b)
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ]
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query queryB = new DeMorganAndOfNotsAtFourLevelsQuery().Value;
 
         ProjectionResult resultA = new ProjectionResult(
             new PureQLProjection(datasets, queryA)
@@ -1204,100 +280,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        BooleanReturning branch1 = new BooleanReturning(
-            new BooleanOperator(
-                new OrOperator(
-                    [
-                        new BooleanReturning(new BooleanScalar(false)),
-                        new BooleanReturning(new BooleanScalar(true)),
-                    ]
-                )
-            )
-        );
-        BooleanReturning branch2 = new BooleanReturning(
-            new BooleanOperator(
-                new AndOperator(
-                    [
-                        new BooleanReturning(new BooleanScalar(true)),
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new NotOperator(
-                                    new BooleanReturning(new BooleanScalar(false))
-                                )
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-        BooleanReturning branch3 = new BooleanReturning(
-            new BooleanOperator(
-                new OrOperator(
-                    [
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new NotOperator(
-                                    new BooleanReturning(new BooleanScalar(false))
-                                )
-                            )
-                        ),
-                        new BooleanReturning(
-                            new BooleanOperator(
-                                new AndOperator(
-                                    [
-                                        new BooleanReturning(
-                                            new BooleanScalar(true)
-                                        ),
-                                        new BooleanReturning(
-                                            new BooleanScalar(true)
-                                        ),
-                                    ]
-                                )
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator([branch1, branch2, branch3])
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new DeeplyNestedAlwaysTrueTreeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1318,79 +301,7 @@ public sealed class NestedBooleanTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        BooleanReturning branch1 = new BooleanReturning(
-            new BooleanOperator(
-                new AndOperator(
-                    [
-                        new BooleanReturning(new BooleanScalar(true)),
-                        new BooleanReturning(new BooleanScalar(false)),
-                    ]
-                )
-            )
-        );
-        BooleanReturning branch2 = new BooleanReturning(
-            new BooleanOperator(
-                new AndOperator(
-                    [
-                        new BooleanReturning(new BooleanScalar(false)),
-                        new BooleanReturning(new BooleanScalar(true)),
-                    ]
-                )
-            )
-        );
-        BooleanReturning branch3 = new BooleanReturning(
-            new BooleanOperator(
-                new NotOperator(
-                    new BooleanReturning(
-                        new BooleanOperator(
-                            new OrOperator(
-                                [
-                                    new BooleanReturning(new BooleanScalar(true)),
-                                    new BooleanReturning(new BooleanScalar(true)),
-                                ]
-                            )
-                        )
-                    )
-                )
-            )
-        );
-
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new BooleanOperator(new OrOperator([branch1, branch2, branch3]))
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new DeeplyNestedAlwaysFalseTreeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1411,57 +322,7 @@ public sealed class NestedBooleanTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(
-                new JoinedString(
-                    new DotString(),
-                    [
-                        new RelationalSchemaWithForeignKeys().Name,
-                        new OrdersTable().Name,
-                    ]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        new NumberReturning(
-                            new Arithmetic(
-                                new Add(
-                                    [
-                                        new NumberReturning(new NumberScalar(1)),
-                                        new NumberReturning(new NumberScalar(2)),
-                                    ]
-                                )
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(0))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarArithmeticInComparisonPredicateQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

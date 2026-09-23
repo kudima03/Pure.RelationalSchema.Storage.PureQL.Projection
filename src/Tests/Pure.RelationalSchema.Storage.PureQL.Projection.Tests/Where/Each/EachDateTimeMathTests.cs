@@ -1,22 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachComparisons;
-using PureQL.CSharp.Model.EachDateArithmetics;
-using PureQL.CSharp.Model.EachDateTimeArithmetics;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.EachTimeArithmetics;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -35,53 +22,7 @@ public sealed class EachDateTimeMathTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly expectedAfterShift = new DateOnly(2024, 6, 2);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateEquality(
-                        new DateArrayReturning(
-                            new EachDateAddDays(
-                                new DateArrayReturning(
-                                    new DateField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                        new PlacedOnColumn().Name.TextValue
-                                    )
-                                ),
-                                new NumberReturning(new NumberScalar(1))
-                            )
-                        ),
-                        new DateReturning(new DateScalar(expectedAfterShift))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDateAddDaysInEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -101,54 +42,7 @@ new DotString(),
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly origin = new DateOnly(2024, 6, 1);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                new OrderStatusColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachDateDiffDays(
-                                new DateArrayReturning(
-                                    new DateField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                        new PlacedOnColumn().Name.TextValue
-                                    )
-                                ),
-                                new DateReturning(new DateScalar(origin))
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(2))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDateDiffDaysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -170,53 +64,7 @@ new DotString(),
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly expectedAfterShift = new TimeOnly(10, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachTimeEquality(
-                        new TimeArrayReturning(
-                            new EachTimeAddSeconds(
-                                new TimeArrayReturning(
-                                    new TimeField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                        new ShiftStartColumn().Name.TextValue
-                                    )
-                                ),
-                                new NumberReturning(new NumberScalar(3600))
-                            )
-                        ),
-                        new TimeReturning(new TimeScalar(expectedAfterShift))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachTimeAddSecondsInEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -238,54 +86,7 @@ new DotString(),
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachTimeDiffSeconds(
-                                new TimeArrayReturning(
-                                    new TimeField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                        new ShiftStartColumn().Name.TextValue
-                                    )
-                                ),
-                                new TimeReturning(new TimeScalar(origin))
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(3600))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachTimeDiffSecondsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -307,53 +108,7 @@ new DotString(),
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime expectedAfterShift = new DateTime(2024, 6, 1, 9, 30, 0);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachDateTimeEquality(
-                        new DateTimeArrayReturning(
-                            new EachDateTimeAddSeconds(
-                                new DateTimeArrayReturning(
-                                    new DateTimeField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                        new LastLoginColumn().Name.TextValue
-                                    )
-                                ),
-                                new NumberReturning(new NumberScalar(3600))
-                            )
-                        ),
-                        new DateTimeReturning(new DateTimeScalar(expectedAfterShift))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDateTimeAddSecondsInEqualityQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -375,54 +130,7 @@ new DotString(),
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         DateTime origin = new DateTime(2024, 6, 2, 0, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            new BooleanArrayReturning(
-                new EachComparison(
-                    new EachNumberComparison(
-                        EachComparisonOperator.EachGreaterThan,
-                        new NumberArrayReturning(
-                            new EachDateTimeDiffSeconds(
-                                new DateTimeArrayReturning(
-                                    new DateTimeField(
-                                        new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-).TextValue,
-                                        new LastLoginColumn().Name.TextValue
-                                    )
-                                ),
-                                new DateTimeReturning(new DateTimeScalar(origin))
-                            )
-                        ),
-                        new NumberReturning(new NumberScalar(0))
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new EachDateTimeDiffSecondsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

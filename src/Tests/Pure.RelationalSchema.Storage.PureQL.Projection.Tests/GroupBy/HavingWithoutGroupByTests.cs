@@ -1,19 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.GroupBy;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
@@ -25,101 +15,12 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 [Trait("Feature", "Having")]
 public sealed class HavingWithoutGroupByTests
 {
-    private static BooleanReturning UserCountComparedTo(
-        ComparisonOperator comparisonOperator,
-        double threshold
-    )
-    {
-        return new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    comparisonOperator,
-                    new NumberReturning(
-                        new Count(
-                            new ArrayReturning(
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                                            new DotString(),
-                                            [
-                                                new RelationalSchemaWithForeignKeys().Name,
-                                                new UsersTable().Name,
-                                            ]
-                                        ).TextValue,
-                                        new UserIdColumn().Name.TextValue
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    new NumberReturning(new NumberScalar(threshold))
-                )
-            )
-        );
-    }
-
-    private static SelectExpression CountOfUserIds(string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(
-                new NumberReturning(
-                    new Count(
-                        new ArrayReturning(
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(
-                                        new DotString(),
-                                        [
-                                            new RelationalSchemaWithForeignKeys().Name,
-                                            new UsersTable().Name,
-                                        ]
-                                    ).TextValue,
-                                    new UserIdColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            alias
-        );
-    }
-
     [Fact]
     public void HavingWithoutGroupByFiltersTheImplicitWholeSetGroup()
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            new BooleanReturning(new BooleanScalar(false)),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new HavingWithoutGroupByQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -134,22 +35,7 @@ public sealed class HavingWithoutGroupByTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [CountOfUserIds("userCount")],
-            where: null,
-            join: null,
-            groupBy: null,
-            UserCountComparedTo(
-                ComparisonOperator.GreaterThanOrEqual,
-                userRows.Count
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeSetHavingGreaterThanOrEqualQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -164,23 +50,7 @@ public sealed class HavingWithoutGroupByTests
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
-        IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [CountOfUserIds("userCount")],
-            where: null,
-            join: null,
-            groupBy: null,
-            UserCountComparedTo(
-                ComparisonOperator.GreaterThan,
-                userRows.Count
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeSetHavingGreaterThanQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

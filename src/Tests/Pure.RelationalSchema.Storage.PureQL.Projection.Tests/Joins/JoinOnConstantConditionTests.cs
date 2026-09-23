@@ -1,17 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
-using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Joins;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -23,46 +15,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 [Trait("Feature", "ConstantCondition")]
 public sealed class JoinOnConstantConditionTests
 {
-    private static Query UsersJoinedToProducts(JoinType joinType, bool condition)
-    {
-        return new Query(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            [
-                new Join(
-                    joinType,
-                    new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
-                ).TextValue,
-                    new BooleanReturning(new BooleanScalar(condition))
-                ),
-            ],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
-    }
-
     [Fact]
     public void InnerJoinOnConstantTrueProducesTheCrossProduct()
     {
@@ -74,7 +26,7 @@ public sealed class JoinOnConstantConditionTests
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
                 datasets,
-                UsersJoinedToProducts(JoinType.Inner, condition: true)
+                new InnerJoinOnConstantTrueQuery().Value
             )
         );
 
@@ -90,7 +42,7 @@ public sealed class JoinOnConstantConditionTests
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
                 datasets,
-                UsersJoinedToProducts(JoinType.Inner, condition: false)
+                new InnerJoinOnConstantFalseQuery().Value
             )
         );
 
@@ -107,7 +59,7 @@ public sealed class JoinOnConstantConditionTests
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
                 datasets,
-                UsersJoinedToProducts(JoinType.Left, condition: false)
+                new LeftJoinOnConstantFalseQuery().Value
             )
         );
 
@@ -135,7 +87,7 @@ public sealed class JoinOnConstantConditionTests
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
                 datasets,
-                UsersJoinedToProducts(JoinType.Full, condition: false)
+                new FullJoinOnConstantFalseQuery().Value
             )
         );
 

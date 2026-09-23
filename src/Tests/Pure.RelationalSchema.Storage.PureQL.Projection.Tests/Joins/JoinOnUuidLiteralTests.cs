@@ -1,18 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Joins;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Joins;
 
@@ -32,58 +23,7 @@ public sealed class JoinOnUuidLiteralTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        )
-                    ),
-                    "hours"
-                ),
-            ],
-            where: null,
-            [
-                new Join(
-                    JoinType.Inner,
-                    new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachUuidEquality(
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                        new OrderUserIdColumn().Name.TextValue
-                                    )
-                                ),
-                                new UuidReturning(new UuidScalar(Guid.Empty))
-                            )
-                        )
-                    )
-                ),
-            ],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new InnerJoinOnNeverMatchingUuidLiteralQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -102,58 +42,7 @@ public sealed class JoinOnUuidLiteralTests
 
         Guid annId = userRows[0].UserId;
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        )
-                    ),
-                    "hours"
-                ),
-            ],
-            where: null,
-            [
-                new Join(
-                    JoinType.Inner,
-                    new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachUuidEquality(
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                        new OrderUserIdColumn().Name.TextValue
-                                    )
-                                ),
-                                new UuidReturning(new UuidScalar(annId))
-                            )
-                        )
-                    )
-                ),
-            ],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new InnerJoinOnMatchingUuidLiteralQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -191,72 +80,7 @@ public sealed class JoinOnUuidLiteralTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        )
-                    ),
-                    "hours"
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    ),
-                    "customer"
-                ),
-            ],
-            where: null,
-            [
-                new Join(
-                    JoinType.Left,
-                    new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-                ).TextValue,
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachUuidEquality(
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                    new DotString(),
-                    [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-                ).TextValue,
-                                        new OrderUserIdColumn().Name.TextValue
-                                    )
-                                ),
-                                new UuidReturning(new UuidScalar(Guid.Empty))
-                            )
-                        )
-                    )
-                ),
-            ],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new LeftJoinOnNeverMatchingUuidLiteralQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

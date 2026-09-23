@@ -1,16 +1,8 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
-using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Fields;
-using ModelPagination = PureQL.CSharp.Model.Pagination;
+using PureQL.CSharp.Model.Samples.Queries.Pagination;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Pagination;
 
@@ -21,40 +13,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Pagination;
 [Trait("Feature", "Range")]
 public sealed class PaginationRangeTests
 {
-    private static Query AllUserNames(ModelPagination pagination)
-    {
-        return new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination
-        );
-    }
-
     [Fact]
     public void TakeBeyondIntMaxReturnsEveryRow()
     {
@@ -65,7 +23,7 @@ public sealed class PaginationRangeTests
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
                 datasets,
-                AllUserNames(new ModelPagination(0, long.MaxValue))
+                new TakeBeyondIntMaxQuery().Value
             )
         );
 
@@ -81,7 +39,7 @@ public sealed class PaginationRangeTests
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(
                 datasets,
-                AllUserNames(new ModelPagination(long.MaxValue, 1))
+                new SkipBeyondIntMaxQuery().Value
             )
         );
 

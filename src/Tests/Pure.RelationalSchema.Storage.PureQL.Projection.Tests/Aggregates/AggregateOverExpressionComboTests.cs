@@ -1,23 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.EachArithmetics;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Equalities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Aggregates;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
@@ -41,294 +28,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 [Trait("Feature", "AggregateOverExpressionCombo")]
 public sealed class AggregateOverExpressionComboTests
 {
-    // ===== Join chains =====
-
-    private static IReadOnlyList<Join> OrdersToItemsToProductsJoin()
-    {
-        return
-        [
-            new Join(
-                JoinType.Inner,
-                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
-                new BooleanArrayReturning(
-                    new EachEquality(
-                        new EachUuidEquality(
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
-                                    new ItemOrderIdColumn().Name.TextValue
-                                )
-                            ),
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                    new OrderIdColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            new Join(
-                JoinType.Inner,
-                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
-                new BooleanArrayReturning(
-                    new EachEquality(
-                        new EachUuidEquality(
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
-                                    new ItemProductIdColumn().Name.TextValue
-                                )
-                            ),
-                            new UuidArrayReturning(
-                                new UuidField(
-                                    new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
-                                    new ProductIdColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-        ];
-    }
-
-    private static Join OrdersToUsersJoin()
-    {
-        return new Join(
-            JoinType.Inner,
-            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                new OrderUserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    // ===== each-arithmetic arguments =====
-
-    private static NumberArrayReturning QtyTimesPrice()
-    {
-        return new NumberArrayReturning(
-            new EachArithmetic(
-                new EachMultiply(
-                    [
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrderItemsTable().Name]).TextValue,
-                                new ItemQtyColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]).TextValue,
-                                new ProductPriceColumn().Name.TextValue
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning TotalPlusAge()
-    {
-        return new NumberArrayReturning(
-            new EachArithmetic(
-                new EachAdd(
-                    [
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                                new UserAgeColumn().Name.TextValue
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning TotalMinusAge()
-    {
-        return new NumberArrayReturning(
-            new EachArithmetic(
-                new EachSubtract(
-                    [
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                                new UserAgeColumn().Name.TextValue
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning TotalDividedByScore()
-    {
-        return new NumberArrayReturning(
-            new EachArithmetic(
-                new EachDivide(
-                    [
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                                new UserScoreColumn().Name.TextValue
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-    }
-
-    // Denominator is zero exactly for orders whose total is 100.50 (orders
-    // 101 and 106), to pin the aggregate-context divide-by-zero fail-fast.
-    private static NumberArrayReturning TotalDividedByTotalMinusThreshold()
-    {
-        return new NumberArrayReturning(
-            new EachArithmetic(
-                new EachDivide(
-                    [
-                        new NumberArrayReturning(
-                            new NumberField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                new OrderTotalColumn().Name.TextValue
-                            )
-                        ),
-                        new NumberArrayReturning(
-                            new EachArithmetic(
-                                new EachSubtract(
-                                    [
-                                        new NumberArrayReturning(
-                                            new NumberField(
-                                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                                new OrderTotalColumn().Name.TextValue
-                                            )
-                                        ),
-                                        new NumberReturning(new NumberScalar(100.50)),
-                                    ]
-                                )
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
-    }
-
-    // ===== select / group-by builders =====
-
-    private static SelectExpression AggregateSelect(
-        NumberAggregate aggregate,
-        string alias
-    )
-    {
-        return new SelectExpression(
-            new SingleValueReturning(new NumberReturning(aggregate)),
-            alias
-        );
-    }
-
-    private static NumberReturning SumOf(NumberArrayReturning argument)
-    {
-        return new NumberReturning(new NumberAggregate(new SumNumber(argument)));
-    }
-
-    private static NumberReturning AverageOf(NumberArrayReturning argument)
-    {
-        return new NumberReturning(new NumberAggregate(new AverageNumber(argument)));
-    }
-
-    private static NumberReturning CountOf(NumberArrayReturning argument)
-    {
-        return new NumberReturning(new Count(new ArrayReturning(argument)));
-    }
-
-    private static SelectExpression CountSelect(NumberArrayReturning argument, string alias)
-    {
-        return new SelectExpression(new SingleValueReturning(CountOf(argument)), alias);
-    }
-
-    private static SelectExpression UuidGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new UuidArrayReturning(new UuidField(entity, field)))
-        );
-    }
-
-    private static SelectExpression StringGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new StringArrayReturning(new StringField(entity, field)))
-        );
-    }
-
-    private static SelectExpression BoolGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new BooleanArrayReturning(new BooleanField(entity, field)))
-        );
-    }
-
-    private static SelectExpression NumberGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new NumberArrayReturning(new NumberField(entity, field)))
-        );
-    }
-
-    private static Field UuidGroupKeyField(string entity, string field)
-    {
-        return new Field(new UuidField(entity, field));
-    }
-
-    private static Field StringGroupKeyField(string entity, string field)
-    {
-        return new Field(new StringField(entity, field));
-    }
-
-    private static Field BoolGroupKeyField(string entity, string field)
-    {
-        return new Field(new BooleanField(entity, field));
-    }
-
     // ===== SQL NULL-aware folds over a nullable-double sequence =====
 
     private static double? SqlSum(IEnumerable<double?> values)
@@ -365,19 +64,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue"),
-            ],
-            where: null,
-            OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new SumOfEachMultiplyGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -410,22 +97,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                AggregateSelect(
-                    new NumberAggregate(new AverageNumber(QtyTimesPrice())),
-                    "meanLineValue"
-                ),
-            ],
-            where: null,
-            OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new AverageOfEachMultiplyGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -457,26 +129,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                AggregateSelect(
-                    new NumberAggregate(new MinNumber(QtyTimesPrice())),
-                    "minLineValue"
-                ),
-                AggregateSelect(
-                    new NumberAggregate(new MaxNumber(QtyTimesPrice())),
-                    "maxLineValue"
-                ),
-            ],
-            where: null,
-            OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinAndMaxOfEachMultiplyGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -521,19 +174,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                CountSelect(QtyTimesPrice(), "lineCount"),
-            ],
-            where: null,
-            OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new CountOfEachMultiplyGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -565,16 +206,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue")],
-            where: null,
-            OrdersToItemsToProductsJoin(),
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeSetSumOfEachMultiplyQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -602,22 +234,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
-                AggregateSelect(
-                    new NumberAggregate(new SumNumber(TotalPlusAge())),
-                    "totalPlusAge"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new SumOfEachAddGroupedByUserActiveQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -648,22 +265,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                NumberGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue),
-                AggregateSelect(
-                    new NumberAggregate(new AverageNumber(TotalPlusAge())),
-                    "meanTotalPlusAge"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [new Field(new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue))],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new AverageOfEachAddGroupedByUserAgeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -697,20 +299,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
-                AggregateSelect(new NumberAggregate(new MinNumber(TotalMinusAge())), "minDiff"),
-                AggregateSelect(new NumberAggregate(new MaxNumber(TotalMinusAge())), "maxDiff"),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinAndMaxOfEachSubtractGroupedByUserActiveQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -752,19 +341,7 @@ public sealed class AggregateOverExpressionComboTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                StringGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue),
-                CountSelect(TotalMinusAge(), "diffCount"),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [StringGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new CountOfEachSubtractGroupedByOrderStatusQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -791,16 +368,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [AggregateSelect(new NumberAggregate(new AverageNumber(TotalMinusAge())), "meanDiff")],
-            where: null,
-            [OrdersToUsersJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeSetAverageOfEachSubtractQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -827,23 +395,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                AggregateSelect(
-                    new NumberAggregate(new SumNumber(TotalDividedByScore())),
-                    "sumRatio"
-                ),
-                CountSelect(TotalDividedByScore(), "ratioCount"),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new SumAndCountOfEachDivideGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -896,16 +448,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [AggregateSelect(new NumberAggregate(new MinNumber(TotalDividedByScore())), "minRatio")],
-            where: null,
-            [OrdersToUsersJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinOfEachDivideWholeSetQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -933,16 +476,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [AggregateSelect(new NumberAggregate(new MaxNumber(TotalDividedByScore())), "maxRatio")],
-            where: null,
-            [OrdersToUsersJoin()],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MaxOfEachDivideWholeSetQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -968,15 +502,7 @@ public sealed class AggregateOverExpressionComboTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                AggregateSelect(
-                    new NumberAggregate(new SumNumber(TotalDividedByTotalMinusThreshold())),
-                    "sumRatio"
-                ),
-            ]
-        );
+        Query query = new AggregateOverEachDivideByZeroDenominatorQuery().Value;
 
         _ = Assert.Throws<DivideByZeroException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -994,27 +520,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
         IReadOnlyList<OrderItemRecord> orderItemRows = [.. new OrderItemRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                AggregateSelect(new NumberAggregate(new SumNumber(QtyTimesPrice())), "revenue"),
-            ],
-            where: null,
-            OrdersToItemsToProductsJoin(),
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        SumOf(QtyTimesPrice()),
-                        new NumberReturning(new NumberScalar(25))
-                    )
-                )
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new HavingSumOfEachMultiplyGreaterThanQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1051,30 +557,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
-                AggregateSelect(
-                    new NumberAggregate(new AverageNumber(TotalMinusAge())),
-                    "meanDiff"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.LessThanOrEqual,
-                        AverageOf(TotalMinusAge()),
-                        new NumberReturning(new NumberScalar(100))
-                    )
-                )
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new HavingAverageOfEachSubtractLessThanOrEqualQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -1109,28 +592,7 @@ public sealed class AggregateOverExpressionComboTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                CountSelect(TotalDividedByScore(), "ratioCount"),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new NumberEquality(
-                            CountOf(TotalDividedByScore()),
-                            new NumberReturning(new NumberScalar(0))
-                        )
-                    )
-                )
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new HavingCountOfEachDivideEqualToZeroQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

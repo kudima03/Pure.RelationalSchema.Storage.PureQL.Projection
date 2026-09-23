@@ -1,18 +1,9 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayEqualities;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.ArrayScalars;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
+using PureQL.CSharp.Model.Samples.Queries.Where.Each;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 
@@ -38,20 +29,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Where.Each;
 [Trait("Feature", "ArrayEqualitySequence")]
 public sealed class ArrayEqualitySequenceTests
 {
-    private static SelectExpression OrderIdSelect()
-    {
-        return new SelectExpression(
-            new ArrayReturning(
-                new UuidArrayReturning(
-                    new UuidField(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue, new OrderIdColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
     // Two identical literal arrays: SequenceEqual is true, so the predicate
     // (evaluated once, applied to the whole result) keeps every row.
     [Fact]
@@ -61,32 +38,7 @@ new DotString(),
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new NumberArrayEquality(
-                            new NumberArrayReturning(
-                                new NumberArrayScalar([1, 2, 3])
-                            ),
-                            new NumberArrayReturning(
-                                new NumberArrayScalar([1, 2, 3])
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeArrayEqualityOfTwoEqualLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -103,32 +55,8 @@ new DotString(),
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new NumberArrayEquality(
-                            new NumberArrayReturning(
-                                new NumberArrayScalar([1, 2, 3])
-                            ),
-                            new NumberArrayReturning(
-                                new NumberArrayScalar([3, 2, 1])
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query =
+            new WholeArrayEqualityOfTwoDifferentlyOrderedLiteralArraysQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -156,38 +84,7 @@ new DotString(),
             .. orderRows.Select(order => order.OrderTotal).Reverse(),
         ];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new NumberArrayEquality(
-                            new NumberArrayReturning(
-                                new NumberField(
-                                    new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                    new OrderTotalColumn().Name.TextValue
-                                )
-                            ),
-                            new NumberArrayReturning(
-                                new NumberArrayScalar(reversedTotals)
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeArrayEqualityOfFieldAgainstLiteralQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -209,38 +106,7 @@ new DotString(),
             .. orderRows.Select(order => order.OrderTotal).Reverse(),
         ];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue),
-            [OrderIdSelect()],
-            new BooleanReturning(
-                new Equality(
-                    new ArrayEquality(
-                        new NumberArrayEquality(
-                            new NumberArrayReturning(
-                                new NumberArrayScalar(reversedTotals)
-                            ),
-                            new NumberArrayReturning(
-                                new NumberField(
-                                    new JoinedString(
-new DotString(),
-[new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-).TextValue,
-                                    new OrderTotalColumn().Name.TextValue
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new WholeArrayEqualityOfLiteralAgainstFieldQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)

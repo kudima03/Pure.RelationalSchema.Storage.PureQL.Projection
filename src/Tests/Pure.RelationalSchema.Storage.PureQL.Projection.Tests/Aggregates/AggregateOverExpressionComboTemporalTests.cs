@@ -1,27 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Date;
-using PureQL.CSharp.Model.Aggregates.DateTime;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.Aggregates.Time;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.EachDateArithmetics;
-using PureQL.CSharp.Model.EachDateTimeArithmetics;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.EachTimeArithmetics;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Aggregates;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 
@@ -39,210 +22,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Aggregates;
 [Trait("Feature", "AggregateOverExpressionCombo")]
 public sealed class AggregateOverExpressionComboTemporalTests
 {
-    private static Join OrdersToUsersJoin()
-    {
-        return new Join(
-            JoinType.Inner,
-            new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-            new BooleanArrayReturning(
-                new EachEquality(
-                    new EachUuidEquality(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue,
-                                new OrderUserIdColumn().Name.TextValue
-                            )
-                        ),
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue,
-                                new UserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    // ===== each-temporal-diff arguments (return NumberArrayReturning) =====
-
-    private static NumberArrayReturning PlacedOnMinusSignupDate()
-    {
-        return new NumberArrayReturning(
-            new EachDateDiffDays(
-                new DateArrayReturning(
-                    new DateField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new PlacedOnColumn().Name.TextValue)
-                ),
-                new DateArrayReturning(
-                    new DateField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new SignupDateColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning ShiftStartMinusOrigin(TimeOnly origin)
-    {
-        return new NumberArrayReturning(
-            new EachTimeDiffSeconds(
-                new TimeArrayReturning(
-                    new TimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new ShiftStartColumn().Name.TextValue)
-                ),
-                new TimeReturning(new TimeScalar(origin))
-            )
-        );
-    }
-
-    private static NumberArrayReturning PlacedAtMinusLastLogin()
-    {
-        return new NumberArrayReturning(
-            new EachDateTimeDiffSeconds(
-                new DateTimeArrayReturning(
-                    new DateTimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new PlacedAtColumn().Name.TextValue)
-                ),
-                new DateTimeArrayReturning(
-                    new DateTimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new LastLoginColumn().Name.TextValue)
-                )
-            )
-        );
-    }
-
-    // ===== each-temporal-add arguments =====
-
-    private static DateArrayReturning SignupDatePlusDays(double days)
-    {
-        return new DateArrayReturning(
-            new EachDateAddDays(
-                new DateArrayReturning(
-                    new DateField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new SignupDateColumn().Name.TextValue)
-                ),
-                new NumberReturning(new NumberScalar(days))
-            )
-        );
-    }
-
-    private static TimeArrayReturning ShiftStartPlusSeconds(double seconds)
-    {
-        return new TimeArrayReturning(
-            new EachTimeAddSeconds(
-                new TimeArrayReturning(
-                    new TimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new ShiftStartColumn().Name.TextValue)
-                ),
-                new NumberReturning(new NumberScalar(seconds))
-            )
-        );
-    }
-
-    private static DateTimeArrayReturning PlacedAtPlusSeconds(double seconds)
-    {
-        return new DateTimeArrayReturning(
-            new EachDateTimeAddSeconds(
-                new DateTimeArrayReturning(
-                    new DateTimeField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new PlacedAtColumn().Name.TextValue)
-                ),
-                new NumberReturning(new NumberScalar(seconds))
-            )
-        );
-    }
-
-    // ===== select / group-by builders =====
-
-    private static SelectExpression NumberAggregateSelect(
-        NumberAggregate aggregate,
-        string alias
-    )
-    {
-        return new SelectExpression(
-            new SingleValueReturning(new NumberReturning(aggregate)),
-            alias
-        );
-    }
-
-    private static SelectExpression DateAggregateSelect(DateAggregate aggregate, string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(new DateReturning(aggregate)),
-            alias
-        );
-    }
-
-    private static SelectExpression TimeAggregateSelect(TimeAggregate aggregate, string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(new TimeReturning(aggregate)),
-            alias
-        );
-    }
-
-    private static SelectExpression DateTimeAggregateSelect(
-        DateTimeAggregate aggregate,
-        string alias
-    )
-    {
-        return new SelectExpression(
-            new SingleValueReturning(new DateTimeReturning(aggregate)),
-            alias
-        );
-    }
-
-    private static NumberReturning MaxOf(NumberArrayReturning argument)
-    {
-        return new NumberReturning(new NumberAggregate(new MaxNumber(argument)));
-    }
-
-    private static SelectExpression CountSelect(NumberArrayReturning argument, string alias)
-    {
-        return new SelectExpression(
-            new SingleValueReturning(
-                new NumberReturning(new Count(new ArrayReturning(argument)))
-            ),
-            alias
-        );
-    }
-
-    private static SelectExpression UuidGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new UuidArrayReturning(new UuidField(entity, field)))
-        );
-    }
-
-    private static SelectExpression StringGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new StringArrayReturning(new StringField(entity, field)))
-        );
-    }
-
-    private static SelectExpression BoolGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new BooleanArrayReturning(new BooleanField(entity, field)))
-        );
-    }
-
-    private static SelectExpression NumberGroupKeySelect(string entity, string field)
-    {
-        return new SelectExpression(
-            new ArrayReturning(new NumberArrayReturning(new NumberField(entity, field)))
-        );
-    }
-
-    private static Field UuidGroupKeyField(string entity, string field)
-    {
-        return new Field(new UuidField(entity, field));
-    }
-
-    private static Field StringGroupKeyField(string entity, string field)
-    {
-        return new Field(new StringField(entity, field));
-    }
-
-    private static Field BoolGroupKeyField(string entity, string field)
-    {
-        return new Field(new BooleanField(entity, field));
-    }
-
     // ===== E: numeric aggregates over each-temporal-diff =====
 
     [Fact]
@@ -253,22 +32,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                NumberAggregateSelect(
-                    new NumberAggregate(new SumNumber(PlacedOnMinusSignupDate())),
-                    "totalSpanDays"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new SumOfEachDateDiffDaysGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -302,22 +66,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                StringGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue),
-                NumberAggregateSelect(
-                    new NumberAggregate(new AverageNumber(PlacedOnMinusSignupDate())),
-                    "meanSpanDays"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [StringGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new AverageOfEachDateDiffDaysGroupedByOrderStatusQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -352,26 +101,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
-                NumberAggregateSelect(
-                    new NumberAggregate(new MinNumber(PlacedOnMinusSignupDate())),
-                    "minSpanDays"
-                ),
-                NumberAggregateSelect(
-                    new NumberAggregate(new MaxNumber(PlacedOnMinusSignupDate())),
-                    "maxSpanDays"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinAndMaxOfEachDateDiffDaysGroupedByUserActiveQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -417,19 +147,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                NumberGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue),
-                CountSelect(PlacedOnMinusSignupDate(), "spanCount"),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [new Field(new NumberField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserAgeColumn().Name.TextValue))],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new CountOfEachDateDiffDaysGroupedByUserAgeQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -462,15 +180,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         TimeOnly origin = new TimeOnly(8, 0, 0);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
-            [
-                NumberAggregateSelect(
-                    new NumberAggregate(new SumNumber(ShiftStartMinusOrigin(origin))),
-                    "totalGapSeconds"
-                ),
-            ]
-        );
+        Query query = new SumOfEachTimeDiffSecondsWholeSetQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -490,22 +200,8 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                NumberAggregateSelect(
-                    new NumberAggregate(new AverageNumber(PlacedAtMinusLastLogin())),
-                    "meanGapSeconds"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query =
+            new AverageOfEachDateTimeDiffSecondsGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -540,22 +236,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
-            [
-                BoolGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue),
-                DateAggregateSelect(
-                    new DateAggregate(new MaxDate(SignupDatePlusDays(30))),
-                    "latestProjectedDate"
-                ),
-            ],
-            where: null,
-            join: null,
-            [BoolGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue, new UserActiveColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MaxOfEachDateAddDaysGroupedByUserActiveQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -582,22 +263,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                StringGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue),
-                DateAggregateSelect(
-                    new DateAggregate(new MinDate(SignupDatePlusDays(30))),
-                    "earliestProjectedDate"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [StringGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderStatusColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinOfEachDateAddDaysGroupedByOrderStatusQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -627,15 +293,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
-            [
-                TimeAggregateSelect(
-                    new TimeAggregate(new MaxTime(ShiftStartPlusSeconds(3600))),
-                    "latestProjectedTime"
-                ),
-            ]
-        );
+        Query query = new MaxOfEachTimeAddSecondsWholeSetQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -656,22 +314,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                DateTimeAggregateSelect(
-                    new DateTimeAggregate(new MinDateTime(PlacedAtPlusSeconds(1800))),
-                    "earliestProjectedInstant"
-                ),
-            ],
-            where: null,
-            join: null,
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new MinOfEachDateTimeAddSecondsGroupedByOrderUserIdQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -702,30 +345,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue),
-            [
-                UuidGroupKeySelect(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue),
-                NumberAggregateSelect(
-                    new NumberAggregate(new MaxNumber(PlacedOnMinusSignupDate())),
-                    "maxSpanDays"
-                ),
-            ],
-            where: null,
-            [OrdersToUsersJoin()],
-            [UuidGroupKeyField(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]).TextValue, new OrderUserIdColumn().Name.TextValue)],
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        MaxOf(PlacedOnMinusSignupDate()),
-                        new NumberReturning(new NumberScalar(1500))
-                    )
-                )
-            ),
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new HavingMaxOfEachDateDiffDaysComparisonQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -766,15 +386,7 @@ public sealed class AggregateOverExpressionComboTemporalTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(new DotString(), [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]).TextValue),
-            [
-                DateAggregateSelect(
-                    new DateAggregate(new AverageDate(SignupDatePlusDays(30))),
-                    "meanProjectedDate"
-                ),
-            ]
-        );
+        Query query = new AverageOfEachDateAddDaysQuery().Value;
 
         _ = Assert.Throws<NotSupportedException>(() => new ProjectionResult(
             new PureQLProjection(datasets, query)

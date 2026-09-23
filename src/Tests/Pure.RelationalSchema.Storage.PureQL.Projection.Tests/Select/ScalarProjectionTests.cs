@@ -1,18 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.EachEqualities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.Select;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Select;
 
@@ -31,20 +23,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberScalar(5))
-                    ),
-                    "version"
-                ),
-            ]
-        );
+        Query query = new NumberScalarQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -66,56 +45,7 @@ public sealed class ScalarProjectionTests
         DateTime builtAt = new DateTime(2024, 12, 31, 23, 59, 58);
         TimeOnly cutoff = new TimeOnly(17, 30, 15);
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new BooleanReturning(new BooleanScalar(true))
-                    ),
-                    "active"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new DateReturning(new DateScalar(release))
-                    ),
-                    "release"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new DateTimeReturning(new DateTimeScalar(builtAt))
-                    ),
-                    "built_at"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberScalar(42.5))
-                    ),
-                    "amount"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("v2"))
-                    ),
-                    "label"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new TimeReturning(new TimeScalar(cutoff))
-                    ),
-                    "cutoff"
-                ),
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new UuidReturning(new UuidScalar(marker))
-                    ),
-                    "marker"
-                ),
-            ]
-        );
+        Query query = new AllSevenScalarTypesQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -144,36 +74,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("v2"))
-                    ),
-                    "release"
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ]
-        );
+        Query query = new ScalarAlongsideFieldColumnQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -198,19 +99,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberScalar(7))
-                    )
-                ),
-            ]
-        );
+        Query query = new ScalarWithoutAliasQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -228,37 +117,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("active-user"))
-                    ),
-                    "tag"
-                ),
-            ],
-            new BooleanArrayReturning(
-                new BooleanField(
-                    new JoinedString(
-                        new DotString(),
-                        [
-                            new RelationalSchemaWithForeignKeys().Name,
-                            new UsersTable().Name,
-                        ]
-                    ).TextValue,
-                    new UserActiveColumn().Name.TextValue
-                )
-            ),
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarUnderWhereQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -274,27 +133,7 @@ public sealed class ScalarProjectionTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("tag"))
-                    ),
-                    "tag"
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null,
-            distinct: true
-        );
+        Query query = new DistinctScalarOnlyQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -310,26 +149,7 @@ public sealed class ScalarProjectionTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberScalar(9))
-                    ),
-                    "page_marker"
-                ),
-            ],
-            where: null,
-            join: null,
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            new global::PureQL.CSharp.Model.Pagination(1, 2)
-        );
+        Query query = new ScalarWithPaginationQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -346,20 +166,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<ProductRecord> productRows = [.. new ProductRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new ProductsTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new NumberReturning(new NumberScalar(-12.75))
-                    ),
-                    "adjustment"
-                ),
-            ]
-        );
+        Query query = new NegativeFractionalNumberScalarQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -376,83 +183,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new StringReturning(new StringScalar("joined"))
-                    ),
-                    "source"
-                ),
-                new SelectExpression(
-                    new ArrayReturning(
-                        new StringArrayReturning(
-                            new StringField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new UsersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new UserNameColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-            ],
-            where: null,
-            [
-                new Join(
-                    JoinType.Inner,
-                    new JoinedString(
-                        new DotString(),
-                        [
-                            new RelationalSchemaWithForeignKeys().Name,
-                            new UsersTable().Name,
-                        ]
-                    ).TextValue,
-                    new BooleanArrayReturning(
-                        new EachEquality(
-                            new EachUuidEquality(
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                                            new DotString(),
-                                            [
-                                                new RelationalSchemaWithForeignKeys().Name,
-                                                new OrdersTable().Name,
-                                            ]
-                                        ).TextValue,
-                                        new OrderUserIdColumn().Name.TextValue
-                                    )
-                                ),
-                                new UuidArrayReturning(
-                                    new UuidField(
-                                        new JoinedString(
-                                            new DotString(),
-                                            [
-                                                new RelationalSchemaWithForeignKeys().Name,
-                                                new UsersTable().Name,
-                                            ]
-                                        ).TextValue,
-                                        new UserIdColumn().Name.TextValue
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-            ],
-            groupBy: null,
-            having: null,
-            orderBy: null,
-            pagination: null
-        );
+        Query query = new ScalarOverJoinQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -469,20 +200,7 @@ public sealed class ScalarProjectionTests
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<UserRecord> userRows = [.. new UserRecords()];
 
-        Query query = new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new UsersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new SingleValueReturning(
-                        new BooleanReturning(new BooleanScalar(false))
-                    ),
-                    "flag"
-                ),
-            ]
-        );
+        Query query = new FalseBooleanScalarQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)

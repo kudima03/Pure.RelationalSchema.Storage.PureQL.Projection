@@ -1,24 +1,10 @@
-using Pure.Primitives.String;
-using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Samples.Columns;
-using Pure.RelationalSchema.Samples.Schemas;
-using Pure.RelationalSchema.Samples.Tables;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.Records;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Aggregates;
-using PureQL.CSharp.Model.Aggregates.Date;
-using PureQL.CSharp.Model.Aggregates.Numeric;
-using PureQL.CSharp.Model.Aggregates.String;
-using PureQL.CSharp.Model.ArrayReturnings;
-using PureQL.CSharp.Model.BooleanOperations;
-using PureQL.CSharp.Model.Comparisons;
-using PureQL.CSharp.Model.Equalities;
-using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.Returnings;
-using PureQL.CSharp.Model.Scalars;
+using PureQL.CSharp.Model.Samples.Queries.GroupBy;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 
@@ -31,165 +17,13 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.GroupBy;
 [Trait("Feature", "Having")]
 public sealed class HavingAggregateTests
 {
-    private static NumberReturning OrderCount()
-    {
-        return new NumberReturning(
-            new Count(
-                new ArrayReturning(
-                    new UuidArrayReturning(
-                        new UuidField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderIdColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static NumberArrayReturning Totals()
-    {
-        return new NumberArrayReturning(
-            new NumberField(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue, new OrderTotalColumn().Name.TextValue)
-        );
-    }
-
-    private static NumberReturning SumTotal()
-    {
-        return new NumberReturning(new NumberAggregate(new SumNumber(Totals())));
-    }
-
-    private static NumberReturning AverageTotal()
-    {
-        return new NumberReturning(new NumberAggregate(new AverageNumber(Totals())));
-    }
-
-    private static NumberReturning MaxTotal()
-    {
-        return new NumberReturning(new NumberAggregate(new MaxNumber(Totals())));
-    }
-
-    private static StringReturning MinStatus()
-    {
-        return new StringReturning(
-            new StringAggregate(
-                new MinString(
-                    new StringArrayReturning(
-                        new StringField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new OrderStatusColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static DateReturning MaxPlacedOn()
-    {
-        return new DateReturning(
-            new DateAggregate(
-                new MaxDate(
-                    new DateArrayReturning(
-                        new DateField(
-                            new JoinedString(
-                                new DotString(),
-                                [
-                                    new RelationalSchemaWithForeignKeys().Name,
-                                    new OrdersTable().Name,
-                                ]
-                            ).TextValue,
-                            new PlacedOnColumn().Name.TextValue
-                        )
-                    )
-                )
-            )
-        );
-    }
-
-    private static Query OrdersGroupedByUser(
-        BooleanReturning having,
-        string countAlias = "orderCount"
-    )
-    {
-        return new Query(
-            new FromExpression(new JoinedString(
-                new DotString(),
-                [new RelationalSchemaWithForeignKeys().Name, new OrdersTable().Name]
-            ).TextValue),
-            [
-                new SelectExpression(
-                    new ArrayReturning(
-                        new UuidArrayReturning(
-                            new UuidField(
-                                new JoinedString(
-                                    new DotString(),
-                                    [
-                                        new RelationalSchemaWithForeignKeys().Name,
-                                        new OrdersTable().Name,
-                                    ]
-                                ).TextValue,
-                                new OrderUserIdColumn().Name.TextValue
-                            )
-                        )
-                    )
-                ),
-                new SelectExpression(new SingleValueReturning(OrderCount()), countAlias),
-            ],
-            where: null,
-            join: null,
-            [
-                new Field(
-                    new UuidField(
-                        new JoinedString(
-                            new DotString(),
-                            [
-                                new RelationalSchemaWithForeignKeys().Name,
-                                new OrdersTable().Name,
-                            ]
-                        ).TextValue,
-                        new OrderUserIdColumn().Name.TextValue
-                    )
-                ),
-            ],
-            having,
-            orderBy: null,
-            pagination: null
-        );
-    }
-
     [Fact]
     public void HavingSumGreaterThanKeepsQualifyingGroups()
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        SumTotal(),
-                        new NumberReturning(new NumberScalar(150))
-                    )
-                )
-            )
-        );
+        Query query = new HavingSumGreaterThanQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -219,17 +53,7 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.LessThanOrEqual,
-                        AverageTotal(),
-                        new NumberReturning(new NumberScalar(100.50))
-                    )
-                )
-            )
-        );
+        Query query = new HavingAverageLessThanOrEqualQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -259,17 +83,7 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Comparison(
-                    new global::PureQL.CSharp.Model.Comparisons.StringComparison(
-                        ComparisonOperator.GreaterThanOrEqual,
-                        MinStatus(),
-                        new StringReturning(new StringScalar("pending"))
-                    )
-                )
-            )
-        );
+        Query query = new HavingMinStringComparisonQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -306,17 +120,7 @@ public sealed class HavingAggregateTests
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
         DateOnly threshold = new DateOnly(2024, 6, 4);
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Comparison(
-                    new DateComparison(
-                        ComparisonOperator.LessThan,
-                        MaxPlacedOn(),
-                        new DateReturning(new DateScalar(threshold))
-                    )
-                )
-            )
-        );
+        Query query = new HavingMaxDateComparisonQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -346,32 +150,8 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        BooleanReturning countGreaterThanOne = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    OrderCount(),
-                    new NumberReturning(new NumberScalar(1))
-                )
-            )
-        );
-        BooleanReturning sumGreaterThan150 = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    SumTotal(),
-                    new NumberReturning(new NumberScalar(150))
-                )
-            )
-        );
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new BooleanOperator(
-                    new AndOperator([countGreaterThanOne, sumGreaterThan150])
-                )
-            )
-        );
+        Query query = new HavingAndOfCountAndSumComparisonsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -403,32 +183,8 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        BooleanReturning countGreaterThanOne = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    OrderCount(),
-                    new NumberReturning(new NumberScalar(1))
-                )
-            )
-        );
-        BooleanReturning sumGreaterThan150 = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    SumTotal(),
-                    new NumberReturning(new NumberScalar(150))
-                )
-            )
-        );
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new BooleanOperator(
-                    new OrOperator([countGreaterThanOne, sumGreaterThan150])
-                )
-            )
-        );
+        Query query = new HavingOrOfCountAndSumComparisonsQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -460,21 +216,8 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        BooleanReturning countGreaterThanOne = new BooleanReturning(
-            new Comparison(
-                new NumberComparison(
-                    ComparisonOperator.GreaterThan,
-                    OrderCount(),
-                    new NumberReturning(new NumberScalar(1))
-                )
-            )
-        );
 
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new BooleanOperator(new NotOperator(countGreaterThanOne))
-            )
-        );
+        Query query = new HavingNotWithProjectedCountQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -504,17 +247,7 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Comparison(
-                    new NumberComparison(
-                        ComparisonOperator.GreaterThan,
-                        MaxTotal(),
-                        AverageTotal()
-                    )
-                )
-            )
-        );
+        Query query = new HavingComparingTwoAggregatesOfSameGroupQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -549,18 +282,7 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(
-                new Equality(
-                    new SingleValueEquality(
-                        new NumberEquality(
-                            OrderCount(),
-                            new NumberReturning(new NumberScalar(2))
-                        )
-                    )
-                )
-            )
-        );
+        Query query = new HavingEqualityOverCountQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -590,9 +312,7 @@ public sealed class HavingAggregateTests
     {
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(new BooleanScalar(false))
-        );
+        Query query = new HavingRejectingEveryGroupQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
@@ -607,9 +327,7 @@ public sealed class HavingAggregateTests
         IEnumerable<IStoredSchemaDataSet> datasets =
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()];
         IReadOnlyList<OrderRecord> orderRows = [.. new OrderRecords()];
-        Query query = OrdersGroupedByUser(
-            new BooleanReturning(new BooleanScalar(true))
-        );
+        Query query = new HavingAcceptingEveryGroupQuery().Value;
 
         ProjectionResult result = new ProjectionResult(
             new PureQLProjection(datasets, query)
