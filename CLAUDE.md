@@ -21,47 +21,41 @@ Mutation testing (run by CI, slow locally):
 
 ```bash
 dotnet tool install -g dotnet-stryker
-dotnet stryker --mutation-level Complete --break-at 32
+dotnet stryker --mutation-level Complete --break-at 48
 ```
 
 ## Architecture
 
-`PureQLProjection` is the single public entry point — a `sealed record` that implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`, and `IQueryable<IRow>`. Its constructor takes an `IEnumerable<IStoredSchemaDataSet>` (the data source) and a `Query` (the PureQL AST), and produces a fully enumerable result set.
+`PureQLProjection` is the single public entry point — a `sealed record` that implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`, and `IQueryable<IRow>`. Its constructor takes an `IEnumerable<IStoredSchemaDataSet>` (the data source) and a `PureQLQuery` (or a subquery-less `Query`) from `PureQL.CSharp.Model`, which models PureQL specification `0.1.0-preview.1.0.0`. The query is validated when the projection is built and runs on every enumeration.
 
-All translation work is done by internal classes:
+The interpreter works on runtime values: `null`, `long` (integer), `decimal`, `string`, `bool`, `DateOnly`, `TimeOnly`, `DateTime` (a UTC instant) and `Guid`.
 
-- **`TableFromQuery`** — derives the virtual `ITable` schema from the query's SELECT expressions
-- **`RowsFromDatasets`** — orchestrates the full query pipeline: locates the source table dataset by `schema.table` path, then applies each clause in order
-- **`JoinApplicator`** — materializes joined datasets into lists and applies join conditions (supports INNER, LEFT, RIGHT, FULL). Tags the joined table's columns with their entity path (`QualifiedColumn`) so same-named columns from both sides stay distinct in merged rows, and pads unmatched outer-join rows with empty cells for the missing side
-- **`QualifiedColumn`** — an `IColumn` wrapper carrying the "schema.table" entity a joined column came from; deliberately a class (not a record) because the wrapped column types' `Equals`/`GetHashCode` throw by design
-- **`WhereExpressionBuilder`** — compiles a `BooleanReturning` *or* per-row `BooleanArrayReturning` AST node from `PureQL.CSharp.Model` into a `Func<IRow, bool>` LINQ predicate (entry point: `BuildPredicate(OneOf<BooleanReturning, BooleanArrayReturning>)`). Implements the per-row `each*` family — `EachEquality`, `EachComparison`, `EachAnd`/`EachOr`/`EachNot`, plus per-row arithmetic (`EachArithmetic`, `EachDateAddDays`/`EachDateDiffDays`, `EachTimeAddSeconds`/`EachTimeDiffSeconds`, `EachDateTimeAddSeconds`/`EachDateTimeDiffSeconds`)
-- **`OrderByApplicator`** — applies `IEnumerable<OrderByItem>` ordering, honouring per-item `SortDirection` (`Asc`/`Desc`)
-- **`GroupByApplicator`** — groups rows by the GROUP BY fields (or the whole set when only aggregates are selected), filters groups with HAVING, and emits one projected row per group (aggregate select expressions fold the group; field select expressions take the group key value; scalar select expressions repeat their constant)
-- **`ScalarCell`** — builds the constant output cell of a scalar select expression (`SELECT 5 AS version`), repeated on every output row in both the per-row and group projection paths; text formatted via `ValueText` so it round-trips through `CellValueExtractor`
-- **`AggregateEvaluator`** — evaluates single-value expressions over a group of rows: `Count`, `NumberAggregate` (sum/min/max/avg), `StringAggregate` (min/max, ordinal), `Date`/`DateTime`/`TimeAggregate` (min/max), plus HAVING boolean composites (equality/comparison/and/or/not over constants and aggregates)
-- **`DistinctApplicator`** — deduplicates the *projected* row set when `Query.Distinct == true` (SQL `SELECT DISTINCT` semantics)
-- **`CellValueExtractor`** — resolves a field reference (entity + field name) against a row and extracts typed .NET values from `ICell` for the seven supported column types: bool, date, datetime, double, string, time, uuid. Resolution prefers a `QualifiedColumn` matching the reference's entity, then the base table's (untagged) same-named column, then any same-named column
-- **`SelectColumns`** — the single source of truth for output columns: one per `SelectExpression`, named by the alias (falling back to the field name) and typed by the value type; used by both the schema and the row projection
-- **`ValueText`** — formats computed (aggregate) values as canonical invariant cell text that `CellValueExtractor` round-trips
+- **Query shape** — `QueryProgram` (main query + named subqueries) and `QueryClauses` normalize the four query records (`MainPlainQuery`, `MainGroupedQuery`, `PlainQuery`, `GroupedQuery`); `Source`, `JoinClause`, `TypedExpression` (select column / group key) and `OrderKey` are its parts
+- **`ModelNode`** — structural access to model nodes: unwraps `OneOf` unions, reads operands by property name, and walks a tree (`Nodes`) for validation and analysis
+- **`Operator`** — dispatch. The model names every operator record after its operator, result type and context (`AddIntegerRow`, `SumDecimalGroup`, …), and an operator has the same operands in every context, so the longest matching type-name prefix selects the handler. Where integer and decimal results differ (`add`, `subtract`, `multiply`, `sum`, `round`) the prefix carries the result type
+- **Operator families** — `Arithmetic` (incl. `concat`), `Temporal`, `Logic` (and/or/not/if/coalesce, lazy), `Comparison` (incl. `in`), `Aggregates`; `Lifted` holds the null-propagating unary/binary helpers, `Lists` the list operand of `in`, `Literals` literal values
+- **`Scope`** — what an expression is evaluated against: a joined row (row context), a row plus all rows (projection), or a group's rows and key values (group). Evaluates fields, keys, literals and operators; parameters raise `NotSupportedException` (`UnboundParameter`)
+- **`QueryRun`** — runs one query in spec order: from/joins (`JoinedRow`: one `IRecord` per source, none for an unmatched outer side) → where → groupBy/having or plain projection → distinct → orderBy → pagination. A plain query yields one row per row only when a select column reads a field outside an aggregate, otherwise exactly one row. Aggregates over all rows are computed once per query
+- **`Execution`** — one run of a document; runs each subquery once, on first read. **`QueryResult`** holds a query's rows as values
+- **Records** — `StoredRecord` (a stored `IRow`, cells parsed by column type on read) and `ValueRecord` (a subquery row)
+- **`Values` / `ValueKey`** — the spec's equality, ordering and hashing (code-point strings, uuid by hex digits, null first); `ValueKey` keys groups and distinct rows
+- **`CellText` / `ValueTypes`** — parse stored cell text and format result cells; map column types to PureQL types and back (`integer` → `LongColumnType`, `decimal` → `DoubleColumnType`)
+- **`QueryValidator`** — the interpreter-side checks of the spec (entities, sources, fields and their types, outer-join nullability, group keys, unique names, subquery order, pagination range); throws `ArgumentException`
+- **`Catalog`** — finds `schema.table` across all datasets; **`ResultTable`** / **`ResultRows`** — the output schema and rows
 
-The pipeline order in `RowsFromDatasets.Build` is: locate table → JOIN → WHERE →
-(GROUP BY + HAVING + projection → ORDER BY | ORDER BY → per-row projection) →
-DISTINCT → pagination. ORDER BY runs after GROUP BY/HAVING/projection when the
-query is in group mode (so it can order by an aggregate alias against the
-post-aggregation row), and before projection otherwise (so it can order by a
-column that isn't in the SELECT list, against the raw joined/filtered rows).
+The library is **not AOT-compatible** (`IsAotCompatible = false`): operands are read by reflection and results are exposed through `IQueryable` composition.
 
-The library is **not AOT-compatible** (`IsAotCompatible = false`) because the query translation relies on LINQ expression trees and reflection-based `IQueryable` composition.
-
-**Package validation:** `EnablePackageValidation = true` with `PackageValidationBaselineVersion = 0.1.0-preview.1.0.0`. Breaking API changes fail the build.
+**Package validation:** `EnablePackageValidation = true` with `PackageValidationBaselineVersion` set in the csproj. Breaking API changes fail `dotnet pack`.
 
 **Multi-targeting:** net8.0, net9.0, net10.0.
 
 **Publishing:** triggered by pushing a semver tag matching `*.*.*`. The tag value becomes the `PackageVersion`.
 
-**CI thresholds:** code coverage warning at 99%, failure below 52%; mutation score failure below 32%.
+**CI thresholds:** code coverage warning at 99%, failure below 94%; mutation score failure below 48%.
 
-**Known execution gaps:** parameter binding (no public binding API), computed `select` columns, single-value `Arithmetic`, temporal `Average` aggregates (undefined rounding semantics), and aggregates inside WHERE are not implemented. These constructs raise `NotSupportedException` rather than silently producing wrong results.
+**Tests:** `Samples/SampleCatalogueTests` runs every query of `PureQL.CSharp.Model.Samples` over the `Pure.RelationalSchema.Storage.Samples` fixtures and compares it with the sample's expected `Result`. A sample whose expected result contradicts the specification is excluded there and asserted against the spec by its own test. The other tests build their own small tables with `Data/InlineTable`.
+
+**Known execution gaps:** parameter binding (no public binding API) — evaluating a parameter raises `NotSupportedException`. Times and datetimes have 100 ns precision.
 
 ## Code Style
 
