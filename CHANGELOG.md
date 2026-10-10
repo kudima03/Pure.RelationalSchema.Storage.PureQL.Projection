@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** rewritten for `PureQL.CSharp.Model` `0.1.0-preview.12.0.0`,
+  which models PureQL specification `0.1.0-preview.1.0.0`. The constructor
+  now takes a `PureQLQuery` (or a subquery-less `Query`); the previous
+  expression model is gone.
+- The interpreter follows the specification's semantics: `null` equals
+  `null`, exact `decimal` and checked 64-bit `integer` arithmetic,
+  code-point string ordering, datetimes as UTC instants, lazy `if`,
+  `coalesce`, `and` and `or`.
+- Integer result columns are `LongColumnType`; decimal result columns are
+  `DoubleColumnType`.
+
+### Added
+
+- Every clause and operator of the specification: aliases and self-joins,
+  computed group keys, `having`, `orderBy` over any expression, aggregates
+  with `predicate` and `over`, `any`/`all`, `in` over lists and subquery
+  columns, `if`, `coalesce`, `concat`, rounding, integer division and all
+  date/time arithmetic.
+- Subqueries read through `from`, `join` and `in`.
+- Query validation against the datasets' schemas when the projection is
+  built (`ArgumentException`).
+
+### Known gaps
+
+- Parameters cannot be bound; evaluating one raises
+  `NotSupportedException`.
+
 ## [0.1.0-preview.2.0.0] — 2026-05-28
 
 ### Changed
