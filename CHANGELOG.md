@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.3.0.0] — 2026-10-10
+
 ### Changed
 
 - **Breaking:** rewritten for `PureQL.CSharp.Model` `0.1.0-preview.12.0.0`,
@@ -18,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `coalesce`, `and` and `or`.
 - Integer result columns are `LongColumnType`; decimal result columns are
   `DoubleColumnType`.
+- The NuGet package now ships `README.md`.
 
 ### Added
 
