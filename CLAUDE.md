@@ -53,7 +53,7 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`): operands are 
 
 **CI thresholds:** code coverage warning at 99%, failure below 94%; mutation score failure below 48%.
 
-**Tests:** `Samples/SampleCatalogueTests` runs every query of `PureQL.CSharp.Model.Samples` over the `Pure.RelationalSchema.Storage.Samples` fixtures and compares it with the sample's expected `Result`. A sample whose expected result contradicts the specification is excluded there and asserted against the spec by its own test. The other tests build their own small tables with `Data/InlineTable`.
+**Tests:** `Samples/SampleCatalogueTests` runs every query of `PureQL.CSharp.Model.Samples` over the `Pure.RelationalSchema.Storage.Samples` fixtures and compares it with the sample's expected `Result`. The other tests build their own small tables with `Data/InlineTable`.
 
 **Known execution gaps:** parameter binding (no public binding API) — evaluating a parameter raises `NotSupportedException`. Times and datetimes have 100 ns precision.
 
