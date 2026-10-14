@@ -32,7 +32,7 @@ internal sealed class Scope(
         return leaf switch
         {
             IField field => Field(field),
-            IKey key => _keys[key.Key],
+            IKey key => _keys[_run.Key(key.Key)],
             IParameter parameter => throw UnboundParameter.Error(parameter.Name),
             ILiteral literal => Literals.Value(literal),
             _ => Operator.Of(leaf.GetType()).Evaluate(leaf, this),

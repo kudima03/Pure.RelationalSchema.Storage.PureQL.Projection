@@ -178,17 +178,17 @@ public sealed class ArithmeticTests
                             new SelectItemProjectionNonNullable(
                                 new SelectItemProjectionDecimal(
                                     "ratio",
-                                    new DecimalProjection(
+                                    new ExactDecimalProjection(
                                         new ArithmeticDecimalProjection(
                                             new DivideDecimalProjection(
                                                 [
                                                     new DecimalProjection(
-                                                        new FieldAsDecimal(
+                                                        new ExactDecimalProjection(
                                                             new FieldDecimal("t.numbers", "d")
                                                         )
                                                     ),
                                                     new DecimalProjection(
-                                                        new LiteralAsDecimal(
+                                                        new IntegerProjection(
                                                             new LiteralInteger(0)
                                                         )
                                                     ),
@@ -225,25 +225,27 @@ public sealed class ArithmeticTests
                                             new EqualProjection(
                                                 new EqualDecimalProjection(
                                                     new DecimalNullableProjection(
-                                                        new ArithmeticDecimalNullableProjection(
-                                                            new AddDecimalNullableProjection(
-                                                                [
-                                                                    new DecimalNullableProjection(
-                                                                        new LiteralAsDecimalNullable(
-                                                                            new LiteralDecimal(0.1m)
-                                                                        )
-                                                                    ),
-                                                                    new DecimalNullableProjection(
-                                                                        new LiteralAsDecimalNullable(
-                                                                            new LiteralDecimal(0.2m)
-                                                                        )
-                                                                    ),
-                                                                ]
+                                                        new ExactDecimalProjection(
+                                                            new ArithmeticDecimalProjection(
+                                                                new AddDecimalProjection(
+                                                                    [
+                                                                        new DecimalProjection(
+                                                                            new ExactDecimalProjection(
+                                                                                new LiteralDecimal(0.1m)
+                                                                            )
+                                                                        ),
+                                                                        new DecimalProjection(
+                                                                            new ExactDecimalProjection(
+                                                                                new LiteralDecimal(0.2m)
+                                                                            )
+                                                                        ),
+                                                                    ]
+                                                                )
                                                             )
                                                         )
                                                     ),
                                                     new DecimalNullableProjection(
-                                                        new LiteralAsDecimalNullable(
+                                                        new ExactDecimalProjection(
                                                             new LiteralDecimal(0.3m)
                                                         )
                                                     )
@@ -259,7 +261,7 @@ public sealed class ArithmeticTests
             )
         );
 
-        Assert.Equal(["True"], ResultColumn.Texts(projection, "exact"));
+        Assert.Equal(["True", "True"], ResultColumn.Texts(projection, "exact"));
     }
 
     [Fact]
@@ -279,7 +281,7 @@ public sealed class ArithmeticTests
                                         new RoundingIntegerProjection(
                                             new RoundIntegerProjection(
                                                 new DecimalProjection(
-                                                    new FieldAsDecimal(
+                                                    new ExactDecimalProjection(
                                                         new FieldDecimal("t.numbers", "d")
                                                     )
                                                 )
@@ -297,7 +299,7 @@ public sealed class ArithmeticTests
                                         new RoundingIntegerProjection(
                                             new FloorIntegerProjection(
                                                 new DecimalProjection(
-                                                    new FieldAsDecimal(
+                                                    new ExactDecimalProjection(
                                                         new FieldDecimal("t.numbers", "d")
                                                     )
                                                 )
@@ -315,7 +317,7 @@ public sealed class ArithmeticTests
                                         new RoundingIntegerProjection(
                                             new CeilingIntegerProjection(
                                                 new DecimalProjection(
-                                                    new FieldAsDecimal(
+                                                    new ExactDecimalProjection(
                                                         new FieldDecimal("t.numbers", "d")
                                                     )
                                                 )
@@ -354,20 +356,18 @@ public sealed class ArithmeticTests
                             new SelectItemProjectionNullable(
                                 new SelectItemProjectionDecimalNullable(
                                     "rounded",
-                                    new DecimalNullableProjection(
-                                        new RoundingDecimalNullableProjection(
-                                            new RoundDecimalDigitsNullableProjection(
-                                                new DecimalNullableProjection(
-                                                    new FieldAsDecimalNullable(
-                                                        new FieldDecimalNullable(
-                                                            "t.numbers",
-                                                            "m"
-                                                        )
+                                    new ExactDecimalNullableProjection(
+                                        new RoundDecimalNullableProjection(
+                                            new DecimalNullableProjection(
+                                                new ExactDecimalNullableProjection(
+                                                    new FieldDecimalNullable(
+                                                        "t.numbers",
+                                                        "m"
                                                     )
-                                                ),
-                                                new IntegerProjection(
-                                                    new LiteralInteger(digits)
                                                 )
+                                            ),
+                                            new IntegerProjection(
+                                                new LiteralInteger(digits)
                                             )
                                         )
                                     )
@@ -395,12 +395,12 @@ public sealed class ArithmeticTests
                             new SelectItemProjectionNullable(
                                 new SelectItemProjectionDecimalNullable(
                                     "product",
-                                    new DecimalNullableProjection(
+                                    new ExactDecimalNullableProjection(
                                         new ArithmeticDecimalNullableProjection(
                                             new MultiplyDecimalNullableProjection(
                                                 [
                                                     new DecimalNullableProjection(
-                                                        new FieldAsDecimalNullable(
+                                                        new ExactDecimalNullableProjection(
                                                             new FieldDecimalNullable(
                                                                 "t.numbers",
                                                                 "m"
@@ -408,7 +408,7 @@ public sealed class ArithmeticTests
                                                         )
                                                     ),
                                                     new DecimalNullableProjection(
-                                                        new LiteralAsDecimalNullable(
+                                                        new IntegerProjection(
                                                             new LiteralInteger(2)
                                                         )
                                                     ),
@@ -423,16 +423,16 @@ public sealed class ArithmeticTests
                             new SelectItemProjectionNullable(
                                 new SelectItemProjectionIntegerNullable(
                                     "quotient",
-                                    new IntegerNullableProjection(
+                                    new ExactIntegerNullableProjection(
                                         new ArithmeticIntegerNullableProjection(
                                             new IntegerDivideIntegerNullableProjection(
                                                 new IntegerNullableProjection(
-                                                    new LiteralAsIntegerNullable(
+                                                    new ExactIntegerNullableProjection(
                                                         new LiteralIntegerNullable()
                                                     )
                                                 ),
                                                 new IntegerNullableProjection(
-                                                    new LiteralAsIntegerNullable(
+                                                    new IntegerProjection(
                                                         new LiteralInteger(0)
                                                     )
                                                 )
@@ -464,16 +464,16 @@ public sealed class ArithmeticTests
                             new SelectItemProjectionNullable(
                                 new SelectItemProjectionStringNullable(
                                     "label",
-                                    new StringNullableProjection(
+                                    new ExactStringNullableProjection(
                                         new ConcatStringNullableProjection(
                                             [
                                                 new StringNullableProjection(
-                                                    new LiteralAsStringNullable(
+                                                    new StringProjection(
                                                         new LiteralString("a")
                                                     )
                                                 ),
                                                 new StringNullableProjection(
-                                                    new LiteralAsStringNullable(
+                                                    new ExactStringNullableProjection(
                                                         new LiteralStringNullable()
                                                     )
                                                 ),
@@ -488,6 +488,6 @@ public sealed class ArithmeticTests
             )
         );
 
-        Assert.Equal([""], ResultColumn.Texts(projection, "label"));
+        Assert.Equal(["", ""], ResultColumn.Texts(projection, "label"));
     }
 }

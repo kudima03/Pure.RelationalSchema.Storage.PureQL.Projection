@@ -2,7 +2,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // Date and time arithmetic. dateDiffDays and the *DiffSeconds operators are
 // left - right; timeAddSeconds wraps around midnight. Seconds are rounded half
-// away from zero to the 100 ns tick, the precision of .NET times. A date or
+// away from zero to the microsecond, the specification's precision. A date or
 // datetime outside the representable years raises and fails the query.
 internal static class Temporal
 {
@@ -71,9 +71,9 @@ internal static class Temporal
     private static long Ticks(object seconds)
     {
         return (long)decimal.Round(
-            Values.Decimal(seconds) * TimeSpan.TicksPerSecond,
-            MidpointRounding.AwayFromZero
-        );
+                Values.Decimal(seconds) * 1_000_000,
+                MidpointRounding.AwayFromZero
+            ) * TimeSpan.TicksPerMicrosecond;
     }
 
     private static decimal Seconds(long ticks)

@@ -26,21 +26,21 @@ dotnet stryker --mutation-level Complete --break-at 48
 
 ## Architecture
 
-`PureQLProjection` is the single public entry point — a `sealed record` that implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`, and `IQueryable<IRow>`. Its constructor takes an `IEnumerable<IStoredSchemaDataSet>` (the data source) and a `PureQLQuery` (or a subquery-less `Query`) from `PureQL.CSharp.Model`, which models PureQL specification `0.1.0-preview.1.0.0`. The query is validated when the projection is built and runs on every enumeration.
+`PureQLProjection` is the single public entry point — a `sealed record` that implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`, and `IQueryable<IRow>`. Its constructor takes an `IEnumerable<IStoredSchemaDataSet>` (the data source) and a `PureQLQuery` (or a subquery-less `Query`) from `PureQL.CSharp.Model`, which models PureQL specification `0.1.0-preview.2.0.0` (the interpreter follows `0.1.0-preview.2.0.1`, which adds microsecond precision). The query is validated when the projection is built and runs on every enumeration.
 
 The interpreter works on runtime values: `null`, `long` (integer), `decimal`, `string`, `bool`, `DateOnly`, `TimeOnly`, `DateTime` (a UTC instant) and `Guid`.
 
-- **Query shape** — `QueryProgram` (main query + named subqueries) and `QueryClauses` normalize the four query records (`MainPlainQuery`, `MainGroupedQuery`, `PlainQuery`, `GroupedQuery`); `Source`, `JoinClause`, `TypedExpression` (select column / group key) and `OrderKey` are its parts
+- **Query shape** — `QueryProgram` (main query + named subqueries) and `QueryClauses` normalize the six query records (`MainPlainQuery`, `MainGroupedQuery`, `MainTotalQuery`, `PlainQuery`, `GroupedQuery`, `TotalQuery`; a total query's `aggregate` columns become `Select`); `Source`, `JoinClause`, `TypedExpression` (select / aggregate column or group key, each with its alias) and `OrderKey` are its parts
 - **`ModelNode`** — structural access to model nodes: unwraps `OneOf` unions, reads operands by property name, and walks a tree (`Nodes`) for validation and analysis
 - **`Operator`** — dispatch. The model names every operator record after its operator, result type and context (`AddIntegerRow`, `SumDecimalGroup`, …), and an operator has the same operands in every context, so the longest matching type-name prefix selects the handler. Where integer and decimal results differ (`add`, `subtract`, `multiply`, `sum`, `round`) the prefix carries the result type
 - **Operator families** — `Arithmetic` (incl. `concat`), `Temporal`, `Logic` (and/or/not/if/coalesce, lazy), `Comparison` (incl. `in`), `Aggregates`; `Lifted` holds the null-propagating unary/binary helpers, `Lists` the list operand of `in`, `Literals` literal values
-- **`Scope`** — what an expression is evaluated against: a joined row (row context), a row plus all rows (projection), or a group's rows and key values (group). Evaluates fields, keys, literals and operators; parameters raise `NotSupportedException` (`UnboundParameter`)
-- **`QueryRun`** — runs one query in spec order: from/joins (`JoinedRow`: one `IRecord` per source, none for an unmatched outer side) → where → groupBy/having or plain projection → distinct → orderBy → pagination. A plain query yields one row per row only when a select column reads a field outside an aggregate, otherwise exactly one row. Aggregates over all rows are computed once per query
+- **`Scope`** — what an expression is evaluated against: a joined row (row context), a row plus all rows (projection), all rows (total), or a group's rows and key values (group). Evaluates fields, keys, literals and operators; parameters raise `NotSupportedException` (`UnboundParameter`)
+- **`QueryRun`** — runs one query in spec order: from/joins (`JoinedRow`: one `IRecord` per source, none for an unmatched outer side) → where → groupBy/having, plain or total projection → orderBy → distinctBy → pagination. A plain query yields one row per row, a total query exactly one row, a grouped query one row per group; group keys are resolved by alias. Aggregates over all rows are computed once per query
 - **`Execution`** — one run of a document; runs each subquery once, on first read. **`QueryResult`** holds a query's rows as values
 - **Records** — `StoredRecord` (a stored `IRow`, cells parsed by column type on read) and `ValueRecord` (a subquery row)
-- **`Values` / `ValueKey`** — the spec's equality, ordering and hashing (code-point strings, uuid by hex digits, null first); `ValueKey` keys groups and distinct rows
+- **`Values` / `ValueKey`** — the spec's equality, ordering and hashing (code-point strings, uuid by hex digits, null first); `ValueKey` keys groups and `distinctBy` rows
 - **`CellText` / `ValueTypes`** — parse stored cell text and format result cells; map column types to PureQL types and back (`integer` → `LongColumnType`, `decimal` → `DoubleColumnType`)
-- **`QueryValidator`** — the interpreter-side checks of the spec (entities, sources, fields and their types, outer-join nullability, group keys, unique names, subquery order, pagination range); throws `ArgumentException`
+- **`QueryValidator`** — the interpreter-side checks of the spec (entities, sources, fields and their types, outer-join nullability, group key references and aliases, unique names, `distinctBy` aliases, subquery order, pagination range); throws `ArgumentException`
 - **`Catalog`** — finds `schema.table` across all datasets; **`ResultTable`** / **`ResultRows`** — the output schema and rows
 
 The library is **not AOT-compatible** (`IsAotCompatible = false`): operands are read by reflection and results are exposed through `IQueryable` composition.
@@ -55,7 +55,7 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`): operands are 
 
 **Tests:** `Samples/SampleCatalogueTests` runs every query of `PureQL.CSharp.Model.Samples` over the `Pure.RelationalSchema.Storage.Samples` fixtures and compares it with the sample's expected `Result`. The other tests build their own small tables with `Data/InlineTable`.
 
-**Known execution gaps:** parameter binding (no public binding API) — evaluating a parameter raises `NotSupportedException`. Times and datetimes have 100 ns precision.
+**Known execution gaps:** parameter binding (no public binding API) — evaluating a parameter raises `NotSupportedException`. Stored times and datetimes are read to 100 ns; arithmetic and averages round to the microsecond, as the spec requires.
 
 ## Code Style
 

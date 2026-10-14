@@ -46,10 +46,8 @@ public sealed class ProjectionApiTests
                             new SelectItemProjectionNonNullable(
                                 new SelectItemProjectionDecimal(
                                     "ratio",
-                                    new DecimalProjection(
-                                        new FieldAsDecimal(
-                                            new FieldDecimal("t.counters", "ratio")
-                                        )
+                                    new ExactDecimalProjection(
+                                        new FieldDecimal("t.counters", "ratio")
                                     )
                                 )
                             )
@@ -92,10 +90,8 @@ public sealed class ProjectionApiTests
                             new SelectItemProjectionNonNullable(
                                 new SelectItemProjectionDecimal(
                                     "ratio",
-                                    new DecimalProjection(
-                                        new FieldAsDecimal(
-                                            new FieldDecimal("t.counters", "ratio")
-                                        )
+                                    new ExactDecimalProjection(
+                                        new FieldDecimal("t.counters", "ratio")
                                     )
                                 )
                             )
@@ -231,7 +227,7 @@ public sealed class ProjectionApiTests
         );
 
         Assert.Equal(typeof(IRow), projection.ElementType);
-        Assert.Equal(1, projection.Provider.Execute<int>(
+        Assert.Equal(2, projection.Provider.Execute<int>(
             System.Linq.Expressions.Expression.Call(
                 typeof(Queryable),
                 nameof(Queryable.Count),
@@ -241,6 +237,7 @@ public sealed class ProjectionApiTests
         ));
 
         IEnumerator untyped = ((IEnumerable)projection).GetEnumerator();
+        Assert.True(untyped.MoveNext());
         Assert.True(untyped.MoveNext());
         Assert.False(untyped.MoveNext());
     }

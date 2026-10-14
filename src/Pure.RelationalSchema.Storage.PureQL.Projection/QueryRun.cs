@@ -1,11 +1,10 @@
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Parameters;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // Runs one query in the specification's order: from and joins, where,
-// groupBy, having, select, distinct, orderBy, pagination.
+// groupBy, having, select (or aggregate), orderBy, distinctBy, pagination.
 internal sealed class QueryRun(Execution execution, QueryClauses query)
 {
     private readonly Execution _execution = execution;
@@ -17,6 +16,10 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
             .Select((source, index) => KeyValuePair.Create(source.Name, index))
             .ToDictionary(StringComparer.Ordinal);
 
+    private readonly IReadOnlyDictionary<string, int> _keys = (query.GroupBy ?? [])
+        .Select((key, index) => KeyValuePair.Create(key.Alias, index))
+        .ToDictionary(StringComparer.Ordinal);
+
     private readonly Dictionary<object, object?> _aggregates = new(
         ReferenceEqualityComparer.Instance
     );
@@ -27,6 +30,11 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
     public int Source(string name)
     {
         return _sources[name];
+    }
+
+    public int Key(string alias)
+    {
+        return _keys[alias];
     }
 
     public object? Once(object node, Func<object?> evaluate)
@@ -53,18 +61,9 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
             ? rows
             : [.. rows.Where(row => RowScope(row).Test(_query.Where))];
 
-        IEnumerable<ProjectedRow> projected = _query.GroupBy is null
-            ? Plain()
-            : Grouped(_query.GroupBy);
-
-        if (_query.Distinct)
-        {
-            projected = projected.DistinctBy(row => new ValueKey(row.Values));
-        }
-
         return new QueryResult(
             _query.Select,
-            [.. Page(Ordered(projected)).Select(row => row.Values)]
+            [.. Page(Distinct(Ordered(Projected()))).Select(row => row.Values)]
         );
     }
 
@@ -112,13 +111,13 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
                 }
             }
 
-            if (!matched && join.Type is JoinType.Left or JoinType.Full)
+            if (!matched && join.Kind is JoinKind.Left or JoinKind.Full)
             {
                 result.Add(row);
             }
         }
 
-        if (join.Type is JoinType.Right or JoinType.Full)
+        if (join.Kind is JoinKind.Right or JoinKind.Full)
         {
             result.AddRange(
                 right
@@ -130,17 +129,15 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
         return result;
     }
 
-    // One row per row when a column reads a field outside an aggregate,
-    // otherwise exactly one row, even over no rows.
-    private IEnumerable<ProjectedRow> Plain()
+    // A plain query has one row per row and a total query exactly one row,
+    // even over no rows; aggregates of both run over all rows.
+    private IEnumerable<ProjectedRow> Projected()
     {
-        bool perRow = _query.Select.Any(column => ReadsRowField(column.Expression));
-
-        IEnumerable<Scope> scopes = perRow
-            ? AllRows.Select(row => new Scope(this, row, AllRows, []))
-            : [new Scope(this, null, AllRows, [])];
-
-        return scopes.Select(Project);
+        return _query.GroupBy is not null
+            ? Grouped(_query.GroupBy)
+            : _query.IsTotal
+            ? [Project(new Scope(this, null, AllRows, []))]
+            : AllRows.Select(row => Project(new Scope(this, row, AllRows, [])));
     }
 
     // Groups by keys compared with equal, in order of first appearance. A
@@ -204,6 +201,26 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
         return ordered ?? rows;
     }
 
+    // Keeps, of the rows equal on the distinctBy columns, the first in order.
+    private IEnumerable<ProjectedRow> Distinct(IEnumerable<ProjectedRow> rows)
+    {
+        if (_query.DistinctBy.Count == 0)
+        {
+            return rows;
+        }
+
+        int[] columns =
+        [
+            .. _query.DistinctBy.Select(alias =>
+                _query.Select.Select(column => column.Alias).ToList().IndexOf(alias)
+            ),
+        ];
+
+        return rows.DistinctBy(row =>
+            new ValueKey([.. columns.Select(column => row.Values[column])])
+        );
+    }
+
     private IEnumerable<ProjectedRow> Page(IEnumerable<ProjectedRow> rows)
     {
         if (_query.Pagination is null)
@@ -229,16 +246,6 @@ internal sealed class QueryRun(Execution execution, QueryClauses query)
     private Scope RowScope(JoinedRow row)
     {
         return new Scope(this, row, [], []);
-    }
-
-    private static bool ReadsRowField(object expression)
-    {
-        return ModelNode
-            .Nodes(
-                expression,
-                node => Operator.Find(node.GetType()) is not { IsAggregate: true }
-            )
-            .Any(node => node is IField);
     }
 
     private sealed record ProjectedRow(

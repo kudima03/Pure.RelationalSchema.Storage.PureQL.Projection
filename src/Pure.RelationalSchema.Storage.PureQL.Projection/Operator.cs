@@ -29,7 +29,7 @@ internal sealed class Operator
             ["Floor"] = Arithmetic.Floor,
             ["Ceiling"] = Arithmetic.Ceiling,
             ["RoundInteger"] = Arithmetic.Round,
-            ["RoundDecimalDigits"] = Arithmetic.RoundToDigits,
+            ["RoundDecimal"] = Arithmetic.RoundToDigits,
             ["Concat"] = Arithmetic.Concat,
             ["DateAddDays"] = Temporal.DateAddDays,
             ["DateDiffDays"] = Temporal.DateDiffDays,
@@ -59,36 +59,21 @@ internal sealed class Operator
             ["All"] = Aggregates.All,
         };
 
-    private static readonly IReadOnlySet<string> AggregateNames = new HashSet<string>(
-        ["Count", "SumInteger", "SumDecimal", "Average", "Min", "Max", "Any", "All"],
-        StringComparer.Ordinal
-    );
-
     private static readonly ConcurrentDictionary<Type, Operator?> Resolved = new();
 
     private readonly Func<object, Scope, object?> _evaluate;
 
-    private Operator(string name, Func<object, Scope, object?> evaluate)
+    private Operator(Func<object, Scope, object?> evaluate)
     {
-        Name = name;
         _evaluate = evaluate;
     }
 
-    public string Name { get; }
-
-    public bool IsAggregate => AggregateNames.Contains(Name);
-
     public static Operator Of(Type type)
     {
-        return Find(type)
+        return Resolved.GetOrAdd(type, Resolve)
             ?? throw new NotSupportedException(
                 $"{type.Name} is not a PureQL operator this interpreter knows."
             );
-    }
-
-    public static Operator? Find(Type type)
-    {
-        return Resolved.GetOrAdd(type, Resolve);
     }
 
     public object? Evaluate(object node, Scope scope)
@@ -102,6 +87,6 @@ internal sealed class Operator
             .Keys.Where(prefix => type.Name.StartsWith(prefix, StringComparison.Ordinal))
             .MaxBy(prefix => prefix.Length);
 
-        return name is null ? null : new Operator(name, All[name]);
+        return name is null ? null : new Operator(All[name]);
     }
 }

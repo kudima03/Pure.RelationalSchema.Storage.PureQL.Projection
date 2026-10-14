@@ -7,13 +7,15 @@ using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 using PureQL.CSharp.Model.SelectItems;
+using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
 // Dates, times and datetimes: a datetime is an instant, read as UTC when
 // stored without an offset and written in UTC; timeAddSeconds wraps around
-// midnight; the *Diff operators are left - right; averages round to the
-// unit of their type, half away from zero.
+// midnight; the *Diff operators are left - right; seconds and averages round
+// half away from zero to the unit of their type, the microsecond for times
+// and datetimes.
 public sealed class TemporalTests
 {
     private static readonly IStoredSchemaDataSet Events = new InlineTable(
@@ -61,6 +63,9 @@ public sealed class TemporalTests
     [InlineData(-3600, "23:30:00", "22:59:59")]
     [InlineData(0.5, "00:30:00.5", "23:59:59.5")]
     [InlineData(1, "00:30:01", "00:00:00")]
+    [InlineData(0.0000005, "00:30:00.000001", "23:59:59.000001")]
+    [InlineData(-0.0000005, "00:29:59.999999", "23:59:58.999999")]
+    [InlineData(0.0000004, "00:30:00", "23:59:59")]
     public void TimeAddSecondsWrapsAroundMidnight(
         double seconds,
         string first,
@@ -83,7 +88,7 @@ public sealed class TemporalTests
                                                 new FieldTime("t.events", "clock")
                                             ),
                                             new DecimalProjection(
-                                                new LiteralAsDecimal(
+                                                new ExactDecimalProjection(
                                                     new LiteralDecimal((decimal)seconds)
                                                 )
                                             )
@@ -113,7 +118,7 @@ public sealed class TemporalTests
                             new SelectItemProjectionNonNullable(
                                 new SelectItemProjectionDecimal(
                                     "seconds",
-                                    new DecimalProjection(
+                                    new ExactDecimalProjection(
                                         new DifferenceDecimalProjection(
                                             new TimeDiffSecondsDecimalProjection(
                                                 new TimeProjection(
@@ -149,7 +154,7 @@ public sealed class TemporalTests
                             new SelectItemProjectionNonNullable(
                                 new SelectItemProjectionDecimal(
                                     "elapsed",
-                                    new DecimalProjection(
+                                    new ExactDecimalProjection(
                                         new DifferenceDecimalProjection(
                                             new DatetimeDiffSecondsDecimalProjection(
                                                 new DatetimeProjection(
@@ -161,10 +166,10 @@ public sealed class TemporalTests
                                                             2024,
                                                             1,
                                                             1,
-                                                            2,
                                                             0,
                                                             0,
-                                                            TimeSpan.FromHours(2)
+                                                            0,
+                                                            TimeSpan.Zero
                                                         )
                                                     )
                                                 )
@@ -184,7 +189,7 @@ public sealed class TemporalTests
                                                 new FieldDatetime("t.events", "at")
                                             ),
                                             new DecimalProjection(
-                                                new LiteralAsDecimal(
+                                                new ExactDecimalProjection(
                                                     new LiteralDecimal(1.5m)
                                                 )
                                             )
@@ -245,18 +250,18 @@ public sealed class TemporalTests
         PureQLProjection projection = new(
             [Events],
             new PureQLQuery(
-                new MainPlainQuery(
+                new MainTotalQuery(
                     new From(new FromEntity("t.events")),
                     [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionDateNullable(
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalDateNullable(
                                     "mean_day",
-                                    new DateNullableProjection(
-                                        new AggregateDateProjection(
-                                            new AverageDateNullableProjection(
+                                    new ExactDateNullableTotal(
+                                        new AggregateDateNullableTotal(
+                                            new AverageDateNullableTotal(
                                                 new DateNullableRow(
-                                                    new FieldAsDateNullable(
+                                                    new DateRow(
                                                         new FieldDate("t.events", "on")
                                                     )
                                                 )
@@ -266,15 +271,15 @@ public sealed class TemporalTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionTimeNullable(
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalTimeNullable(
                                     "mean_clock",
-                                    new TimeNullableProjection(
-                                        new AggregateTimeProjection(
-                                            new AverageTimeNullableProjection(
+                                    new ExactTimeNullableTotal(
+                                        new AggregateTimeNullableTotal(
+                                            new AverageTimeNullableTotal(
                                                 new TimeNullableRow(
-                                                    new FieldAsTimeNullable(
+                                                    new TimeRow(
                                                         new FieldTime("t.events", "clock")
                                                     )
                                                 )
@@ -284,15 +289,15 @@ public sealed class TemporalTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionDatetimeNullable(
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalDatetimeNullable(
                                     "mean_at",
-                                    new DatetimeNullableProjection(
-                                        new AggregateDatetimeProjection(
-                                            new AverageDatetimeNullableProjection(
+                                    new ExactDatetimeNullableTotal(
+                                        new AggregateDatetimeNullableTotal(
+                                            new AverageDatetimeNullableTotal(
                                                 new DatetimeNullableRow(
-                                                    new FieldAsDatetimeNullable(
+                                                    new DatetimeRow(
                                                         new FieldDatetime("t.events", "at")
                                                     )
                                                 )
@@ -310,5 +315,72 @@ public sealed class TemporalTests
         Assert.Equal(["2024-01-02"], ResultColumn.Texts(projection, "mean_day"));
         Assert.Equal(["12:14:59.5"], ResultColumn.Texts(projection, "mean_clock"));
         Assert.Equal(["2024-01-01T00:00:00.5"], ResultColumn.Texts(projection, "mean_at"));
+    }
+
+    [Fact]
+    public void TimeAndDatetimeAveragesRoundToTheMicrosecond()
+    {
+        PureQLProjection projection = new(
+            [
+                new InlineTable(
+                    "t",
+                    "ticks",
+                    ("at", new DateTimeColumnType()),
+                    ("clock", new TimeColumnType())
+                ).With(
+                    ["2024-01-01T00:00:00", "00:00:00"],
+                    ["2024-01-01T00:00:00.000001", "00:00:00.000001"]
+                ),
+            ],
+            new PureQLQuery(
+                new MainTotalQuery(
+                    new From(new FromEntity("t.ticks")),
+                    [
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalTimeNullable(
+                                    "mean_clock",
+                                    new ExactTimeNullableTotal(
+                                        new AggregateTimeNullableTotal(
+                                            new AverageTimeNullableTotal(
+                                                new TimeNullableRow(
+                                                    new TimeRow(
+                                                        new FieldTime("t.ticks", "clock")
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalDatetimeNullable(
+                                    "mean_at",
+                                    new ExactDatetimeNullableTotal(
+                                        new AggregateDatetimeNullableTotal(
+                                            new AverageDatetimeNullableTotal(
+                                                new DatetimeNullableRow(
+                                                    new DatetimeRow(
+                                                        new FieldDatetime("t.ticks", "at")
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        Assert.Equal(["00:00:00.000001"], ResultColumn.Texts(projection, "mean_clock"));
+        Assert.Equal(
+            ["2024-01-01T00:00:00.000001"],
+            ResultColumn.Texts(projection, "mean_at")
+        );
     }
 }

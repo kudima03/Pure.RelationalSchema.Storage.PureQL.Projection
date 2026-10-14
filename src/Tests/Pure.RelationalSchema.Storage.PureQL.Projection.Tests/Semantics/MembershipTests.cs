@@ -41,7 +41,7 @@ public sealed class MembershipTests
                                             new InProjection(
                                                 new InDecimalProjection(
                                                     new DecimalNullableProjection(
-                                                        new FieldAsDecimalNullable(
+                                                        new ExactDecimalProjection(
                                                             new FieldDecimal(
                                                                 "t.items",
                                                                 "weight"
@@ -86,7 +86,7 @@ public sealed class MembershipTests
                                             new InProjection(
                                                 new InStringProjection(
                                                     new StringNullableProjection(
-                                                        new FieldAsStringNullable(
+                                                        new ExactStringNullableProjection(
                                                             new FieldStringNullable(
                                                                 "t.items",
                                                                 "code"
@@ -116,7 +116,7 @@ public sealed class MembershipTests
                                             new InProjection(
                                                 new InStringProjection(
                                                     new StringNullableProjection(
-                                                        new FieldAsStringNullable(
+                                                        new ExactStringNullableProjection(
                                                             new FieldStringNullable(
                                                                 "t.items",
                                                                 "code"
@@ -146,12 +146,10 @@ public sealed class MembershipTests
                                             new SelectItemProjectionNullable(
                                                 new SelectItemProjectionStringNullable(
                                                     "code",
-                                                    new StringNullableProjection(
-                                                        new FieldAsStringNullable(
-                                                            new FieldStringNullable(
-                                                                "t.items",
-                                                                "code"
-                                                            )
+                                                    new ExactStringNullableProjection(
+                                                        new FieldStringNullable(
+                                                            "t.items",
+                                                            "code"
                                                         )
                                                     )
                                                 )
@@ -164,7 +162,7 @@ public sealed class MembershipTests
                                             new NotEqualRow(
                                                 new NotEqualStringRow(
                                                     new StringNullableRow(
-                                                        new FieldAsStringNullable(
+                                                        new ExactStringNullableRow(
                                                             new FieldStringNullable(
                                                                 "t.items",
                                                                 "code"
@@ -172,7 +170,7 @@ public sealed class MembershipTests
                                                         )
                                                     ),
                                                     new StringNullableRow(
-                                                        new LiteralAsStringNullable(
+                                                        new StringRow(
                                                             new LiteralString("b")
                                                         )
                                                     )
@@ -182,7 +180,7 @@ public sealed class MembershipTests
                                     ),
                                     orderBy: null,
                                     pagination: null,
-                                    distinct: false
+                                    distinctBy: null
                                 )
                             )
                         ),
@@ -191,7 +189,7 @@ public sealed class MembershipTests
                     where: null,
                     orderBy: null,
                     pagination: null,
-                    distinct: false
+                    distinctBy: null
                 )
             )
         );

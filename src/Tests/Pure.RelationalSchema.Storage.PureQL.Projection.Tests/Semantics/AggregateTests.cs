@@ -10,6 +10,7 @@ using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 using PureQL.CSharp.Model.SelectItems;
+using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
@@ -33,33 +34,33 @@ public sealed class AggregateTests
     );
 
     [Fact]
-    public void AggregatesOverNoRowsGiveTheirEmptyValuesInOneRow()
+    public void TotalQueryOverNoRowsGivesTheEmptyValuesInOneRow()
     {
         PureQLProjection projection = new(
             [Sales],
             new PureQLQuery(
-                new MainPlainQuery(
+                new MainTotalQuery(
                     new From(new FromEntity("t.sales")),
                     [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
+                        new SelectItemTotal(
+                            new SelectItemTotalNonNullable(
+                                new SelectItemTotalInteger(
                                     "count",
-                                    new IntegerProjection(
-                                        new AggregateIntegerProjection(new CountProjection())
+                                    new IntegerTotal(
+                                        new AggregateIntegerTotal(new CountTotal())
                                     )
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
+                        new SelectItemTotal(
+                            new SelectItemTotalNonNullable(
+                                new SelectItemTotalInteger(
                                     "units",
-                                    new IntegerProjection(
-                                        new AggregateIntegerProjection(
-                                            new SumIntegerProjection(
+                                    new IntegerTotal(
+                                        new AggregateIntegerTotal(
+                                            new SumIntegerTotal(
                                                 new IntegerNullableRow(
-                                                    new FieldAsIntegerNullable(
+                                                    new IntegerRow(
                                                         new FieldInteger("t.sales", "amount")
                                                     )
                                                 )
@@ -69,19 +70,17 @@ public sealed class AggregateTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
+                        new SelectItemTotal(
+                            new SelectItemTotalNonNullable(
+                                new SelectItemTotalDecimal(
                                     "revenue",
-                                    new DecimalProjection(
-                                        new AggregateDecimalProjection(
-                                            new SumDecimalProjection(
-                                                new DecimalNullableRow(
-                                                    new FieldAsDecimalNullable(
-                                                        new FieldDecimalNullable(
-                                                            "t.sales",
-                                                            "price"
-                                                        )
+                                    new ExactDecimalTotal(
+                                        new SumDecimalTotal(
+                                            new DecimalNullableRow(
+                                                new ExactDecimalNullableRow(
+                                                    new FieldDecimalNullable(
+                                                        "t.sales",
+                                                        "price"
                                                     )
                                                 )
                                             )
@@ -90,15 +89,15 @@ public sealed class AggregateTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalStringNullable(
                                     "first",
-                                    new StringNullableProjection(
-                                        new AggregateStringProjection(
-                                            new MinStringNullableProjection(
+                                    new ExactStringNullableTotal(
+                                        new AggregateStringNullableTotal(
+                                            new MinStringNullableTotal(
                                                 new StringNullableRow(
-                                                    new FieldAsStringNullable(
+                                                    new ExactStringNullableRow(
                                                         new FieldStringNullable(
                                                             "t.sales",
                                                             "region"
@@ -111,15 +110,15 @@ public sealed class AggregateTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionDecimalNullable(
+                        new SelectItemTotal(
+                            new SelectItemTotalNullable(
+                                new SelectItemTotalDecimalNullable(
                                     "mean",
-                                    new DecimalNullableProjection(
-                                        new AggregateDecimalNullableProjection(
-                                            new AverageDecimalNullableProjection(
+                                    new ExactDecimalNullableTotal(
+                                        new AggregateDecimalNullableTotal(
+                                            new AverageDecimalNullableTotal(
                                                 new DecimalNullableRow(
-                                                    new FieldAsDecimalNullable(
+                                                    new ExactDecimalNullableRow(
                                                         new FieldDecimalNullable(
                                                             "t.sales",
                                                             "price"
@@ -132,13 +131,13 @@ public sealed class AggregateTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
+                        new SelectItemTotal(
+                            new SelectItemTotalNonNullable(
+                                new SelectItemTotalBoolean(
                                     "any",
-                                    new BooleanProjection(
-                                        new AggregateBooleanProjection(
-                                            new AnyProjection(
+                                    new BooleanTotal(
+                                        new AggregateBooleanTotal(
+                                            new AnyTotal(
                                                 new BooleanRow(new LiteralBoolean(true))
                                             )
                                         )
@@ -146,13 +145,13 @@ public sealed class AggregateTests
                                 )
                             )
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
+                        new SelectItemTotal(
+                            new SelectItemTotalNonNullable(
+                                new SelectItemTotalBoolean(
                                     "all",
-                                    new BooleanProjection(
-                                        new AggregateBooleanProjection(
-                                            new AllProjection(
+                                    new BooleanTotal(
+                                        new AggregateBooleanTotal(
+                                            new AllTotal(
                                                 new BooleanRow(new LiteralBoolean(false))
                                             )
                                         )
@@ -163,10 +162,7 @@ public sealed class AggregateTests
                     ],
                     subqueries: null,
                     joins: null,
-                    where: new BooleanRow(new LiteralBoolean(false)),
-                    orderBy: null,
-                    pagination: null,
-                    distinct: false
+                    where: new BooleanRow(new LiteralBoolean(false))
                 )
             )
         );
@@ -181,7 +177,7 @@ public sealed class AggregateTests
     }
 
     [Fact]
-    public void IntegerSumBeyondSixtyFourBitsFailsTheQuery()
+    public void PlainQueryRepeatsAggregatesOverAllRowsOnEveryRow()
     {
         PureQLProjection projection = new(
             [Sales],
@@ -192,12 +188,147 @@ public sealed class AggregateTests
                         new SelectItemProjection(
                             new SelectItemProjectionNonNullable(
                                 new SelectItemProjectionInteger(
-                                    "units",
+                                    "count",
                                     new IntegerProjection(
                                         new AggregateIntegerProjection(
-                                            new SumIntegerProjection(
+                                            new CountProjection()
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionInteger(
+                                    "smallest",
+                                    new IntegerProjection(
+                                        new AggregateIntegerProjection(
+                                            new MinIntegerProjection(
+                                                new IntegerRow(
+                                                    new FieldInteger("t.sales", "amount")
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        Assert.Equal(
+            ["5", "5", "5", "5", "5"],
+            ResultColumn.Texts(projection, "count")
+        );
+        Assert.Equal(
+            ["1", "1", "1", "1", "1"],
+            ResultColumn.Texts(projection, "smallest")
+        );
+    }
+
+    [Fact]
+    public void TotalSubqueryIsAOneRowSourceJoinedToEveryRow()
+    {
+        PureQLProjection projection = new(
+            [Sales],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.sales")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionInteger(
+                                    "amount",
+                                    new IntegerProjection(
+                                        new FieldInteger("t.sales", "amount")
+                                    )
+                                )
+                            )
+                        ),
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionInteger(
+                                    "sales",
+                                    new IntegerProjection(
+                                        new FieldInteger("totals", "sales")
+                                    )
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries:
+                    [
+                        new Subquery(
+                            "totals",
+                            new Query(
+                                new TotalQuery(
+                                    new From(new FromEntity("t.sales")),
+                                    [
+                                        new SelectItemTotal(
+                                            new SelectItemTotalNonNullable(
+                                                new SelectItemTotalInteger(
+                                                    "sales",
+                                                    new IntegerTotal(
+                                                        new AggregateIntegerTotal(
+                                                            new CountTotal()
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        ),
+                                    ]
+                                )
+                            )
+                        ),
+                    ],
+                    joins:
+                    [
+                        new Join(
+                            new JoinSubquery(
+                                JoinKind.Inner,
+                                "totals",
+                                new BooleanRow(new LiteralBoolean(true))
+                            )
+                        ),
+                    ],
+                    where: null,
+                    orderBy: null,
+                    pagination: null,
+                    distinctBy: null
+                )
+            )
+        );
+
+        Assert.Equal(
+            ["5", "2", "3", "9223372036854775807", "1"],
+            ResultColumn.Texts(projection, "amount")
+        );
+        Assert.Equal(
+            ["5", "5", "5", "5", "5"],
+            ResultColumn.Texts(projection, "sales")
+        );
+    }
+
+    [Fact]
+    public void IntegerSumBeyondSixtyFourBitsFailsTheQuery()
+    {
+        PureQLProjection projection = new(
+            [Sales],
+            new PureQLQuery(
+                new MainTotalQuery(
+                    new From(new FromEntity("t.sales")),
+                    [
+                        new SelectItemTotal(
+                            new SelectItemTotalNonNullable(
+                                new SelectItemTotalInteger(
+                                    "units",
+                                    new IntegerTotal(
+                                        new AggregateIntegerTotal(
+                                            new SumIntegerTotal(
                                                 new IntegerNullableRow(
-                                                    new FieldAsIntegerNullable(
+                                                    new IntegerRow(
                                                         new FieldInteger("t.sales", "amount")
                                                     )
                                                 )
@@ -227,10 +358,9 @@ public sealed class AggregateTests
                         new GroupKey(
                             new GroupKeyNullable(
                                 new GroupKeyStringNullable(
-                                    new StringNullableRow(
-                                        new FieldAsStringNullable(
-                                            new FieldStringNullable("t.sales", "region")
-                                        )
+                                    "region",
+                                    new ExactStringNullableRow(
+                                        new FieldStringNullable("t.sales", "region")
                                     )
                                 )
                             )
@@ -241,8 +371,8 @@ public sealed class AggregateTests
                             new SelectItemGroupNullable(
                                 new SelectItemGroupStringNullable(
                                     "region",
-                                    new StringNullableGroup(
-                                        new KeyAsStringNullable(new KeyStringNullable(0))
+                                    new ExactStringNullableGroup(
+                                        new KeyStringNullable("region")
                                     )
                                 )
                             )
@@ -275,7 +405,7 @@ public sealed class AggregateTests
                                                         new LessThanRow(
                                                             new LessThanDecimalRow(
                                                                 new DecimalNullableRow(
-                                                                    new FieldAsDecimalNullable(
+                                                                    new IntegerRow(
                                                                         new FieldInteger(
                                                                             "t.sales",
                                                                             "amount"
@@ -283,7 +413,7 @@ public sealed class AggregateTests
                                                                     )
                                                                 ),
                                                                 new DecimalNullableRow(
-                                                                    new LiteralAsDecimalNullable(
+                                                                    new IntegerRow(
                                                                         new LiteralInteger(4)
                                                                     )
                                                                 )
@@ -310,7 +440,7 @@ public sealed class AggregateTests
                                                         new NotEqualRow(
                                                             new NotEqualDecimalRow(
                                                                 new DecimalNullableRow(
-                                                                    new FieldAsDecimalNullable(
+                                                                    new ExactDecimalNullableRow(
                                                                         new FieldDecimalNullable(
                                                                             "t.sales",
                                                                             "price"
@@ -318,7 +448,7 @@ public sealed class AggregateTests
                                                                     )
                                                                 ),
                                                                 new DecimalNullableRow(
-                                                                    new LiteralAsDecimalNullable(
+                                                                    new ExactDecimalNullableRow(
                                                                         new LiteralDecimalNullable()
                                                                     )
                                                                 )
@@ -340,15 +470,17 @@ public sealed class AggregateTests
                     orderBy:
                     [
                         new OrderItemGroup(
-                            new ValueGroup(
+                            new ExprGroup(
                                 new StringNullableGroup(
-                                    new KeyAsStringNullable(new KeyStringNullable(0))
+                                    new ExactStringNullableGroup(
+                                        new KeyStringNullable("region")
+                                    )
                                 )
                             )
                         ),
                     ],
                     pagination: null,
-                    distinct: false
+                    distinctBy: null
                 )
             )
         );
@@ -371,10 +503,9 @@ public sealed class AggregateTests
                         new GroupKey(
                             new GroupKeyNullable(
                                 new GroupKeyStringNullable(
-                                    new StringNullableRow(
-                                        new FieldAsStringNullable(
-                                            new FieldStringNullable("t.sales", "region")
-                                        )
+                                    "region",
+                                    new ExactStringNullableRow(
+                                        new FieldStringNullable("t.sales", "region")
                                     )
                                 )
                             )
@@ -398,7 +529,7 @@ public sealed class AggregateTests
                     having: null,
                     orderBy: null,
                     pagination: null,
-                    distinct: false
+                    distinctBy: null
                 )
             )
         );

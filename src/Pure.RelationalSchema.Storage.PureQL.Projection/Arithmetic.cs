@@ -87,7 +87,7 @@ internal static class Arithmetic
     // digits on either side of the point, so further digits change nothing.
     public static object? RoundToDigits(object node, Scope scope)
     {
-        object? value = scope.Evaluate(ModelNode.Child(node, "Value"));
+        object? value = scope.Evaluate(ModelNode.Child(node, "Operand"));
 
         if (value is null)
         {
