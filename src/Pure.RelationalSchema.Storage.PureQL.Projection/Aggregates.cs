@@ -36,7 +36,7 @@ internal static class Aggregates
 
     // Numbers average as divide does. A date averages its day numbers and
     // rounds half away from zero to a whole day; a time or datetime averages
-    // its ticks, the time as seconds since midnight without wrapping.
+    // its microseconds the same way, the time since midnight without wrapping.
     public static object? Average(object node, Scope scope)
     {
         return Fold(node, scope, rows => Mean([.. Selected(node, rows)]));
@@ -127,14 +127,23 @@ internal static class Aggregates
                     (int)RoundedMean(values, value => ((DateOnly)value).DayNumber)
                 ),
                 TimeOnly => new TimeOnly(
-                    (long)RoundedMean(values, value => ((TimeOnly)value).Ticks)
+                    MeanTicks(values, value => ((TimeOnly)value).Ticks)
                 ),
                 DateTime => new DateTime(
-                    (long)RoundedMean(values, value => ((DateTime)value).Ticks),
+                    MeanTicks(values, value => ((DateTime)value).Ticks),
                     DateTimeKind.Utc
                 ),
                 _ => values.Sum(Values.Decimal) / values.Count,
             };
+    }
+
+    // The mean of ticks, rounded half away from zero to a whole microsecond.
+    private static long MeanTicks(List<object> values, Func<object, long> ticks)
+    {
+        return (long)RoundedMean(
+                values,
+                value => (decimal)ticks(value) / TimeSpan.TicksPerMicrosecond
+            ) * TimeSpan.TicksPerMicrosecond;
     }
 
     private static decimal RoundedMean(List<object> values, Func<object, decimal> number)

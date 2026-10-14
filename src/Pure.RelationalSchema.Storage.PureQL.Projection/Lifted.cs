@@ -6,7 +6,7 @@ internal static class Lifted
 {
     public static object? Unary(object node, Scope scope, Func<object, object> operation)
     {
-        object? value = scope.Evaluate(ModelNode.Child(node, "Value"));
+        object? value = scope.Evaluate(ModelNode.Child(node, "Operand"));
         return value is null ? null : operation(value);
     }
 

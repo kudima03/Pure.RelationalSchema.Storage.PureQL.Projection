@@ -172,10 +172,10 @@ public sealed class ValidationTests
     }
 
     [Theory]
-    [InlineData(JoinType.Left, "boss")]
-    [InlineData(JoinType.Right, "people")]
-    [InlineData(JoinType.Full, "people")]
-    public void NonNullFieldOfAnOptionalJoinSideIsRejected(JoinType type, string source)
+    [InlineData(JoinKind.Left, "boss")]
+    [InlineData(JoinKind.Right, "people")]
+    [InlineData(JoinKind.Full, "people")]
+    public void NonNullFieldOfAnOptionalJoinSideIsRejected(JoinKind type, string source)
     {
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
@@ -207,7 +207,7 @@ public sealed class ValidationTests
                                             new EqualRow(
                                                 new EqualUuidRow(
                                                     new UuidNullableRow(
-                                                        new FieldAsUuidNullable(
+                                                        new ExactUuidNullableRow(
                                                             new FieldUuidNullable(
                                                                 "people",
                                                                 "boss"
@@ -215,7 +215,7 @@ public sealed class ValidationTests
                                                         )
                                                     ),
                                                     new UuidNullableRow(
-                                                        new FieldAsUuidNullable(
+                                                        new UuidRow(
                                                             new FieldUuid("boss", "id")
                                                         )
                                                     )
@@ -230,7 +230,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -261,7 +261,7 @@ public sealed class ValidationTests
                         [
                             new Join(
                                 new JoinEntity(
-                                    JoinType.Inner,
+                                    JoinKind.Inner,
                                     "t.people",
                                     new BooleanRow(new FieldBoolean("c", "name")),
                                     "b"
@@ -269,7 +269,7 @@ public sealed class ValidationTests
                             ),
                             new Join(
                                 new JoinEntity(
-                                    JoinType.Inner,
+                                    JoinKind.Inner,
                                     "t.people",
                                     new BooleanRow(new LiteralBoolean(true)),
                                     "c"
@@ -279,7 +279,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -312,7 +312,7 @@ public sealed class ValidationTests
                         [
                             new Join(
                                 new JoinEntity(
-                                    JoinType.Inner,
+                                    JoinKind.Inner,
                                     "t.people",
                                     new BooleanRow(new LiteralBoolean(true))
                                 )
@@ -321,7 +321,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -431,7 +431,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -504,7 +504,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -525,10 +525,8 @@ public sealed class ValidationTests
                                 new SelectItemProjectionNullable(
                                     new SelectItemProjectionUuidNullable(
                                         "id",
-                                        new UuidNullableProjection(
-                                            new FieldAsUuidNullable(
-                                                new FieldUuidNullable("ids", "id")
-                                            )
+                                        new ExactUuidNullableProjection(
+                                            new FieldUuidNullable("ids", "id")
                                         )
                                     )
                                 )
@@ -561,7 +559,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -625,7 +623,7 @@ public sealed class ValidationTests
                                 new InRow(
                                     new InUuidRow(
                                         new UuidNullableRow(
-                                            new FieldAsUuidNullable(
+                                            new ExactUuidNullableRow(
                                                 new FieldUuidNullable("t.people", "boss")
                                             )
                                         ),
@@ -642,7 +640,7 @@ public sealed class ValidationTests
                         ),
                         orderBy: null,
                         pagination: null,
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )
@@ -650,10 +648,9 @@ public sealed class ValidationTests
     }
 
     [Theory]
-    [InlineData(1, false)]
-    [InlineData(-1, false)]
-    [InlineData(0, true)]
-    public void GroupKeyReferenceMustMatchADeclaredKey(int key, bool nullable)
+    [InlineData("other", false)]
+    [InlineData("name", true)]
+    public void GroupKeyReferenceMustMatchADeclaredKey(string key, bool nullable)
     {
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
@@ -665,27 +662,109 @@ public sealed class ValidationTests
                             new GroupKey(
                                 new GroupKeyNonNullable(
                                     new GroupKeyString(
+                                        "name",
                                         new StringRow(new FieldString("t.people", "name"))
                                     )
                                 )
                             ),
                         ],
                         [
-                            new SelectItemGroup(
-                                new SelectItemGroupNullable(
-                                    new SelectItemGroupStringNullable(
-                                        "name",
-                                        new StringNullableGroup(
-                                            nullable
-                                                ? new KeyAsStringNullable(
-                                                    new KeyStringNullable(key)
-                                                )
-                                                : new KeyAsStringNullable(new KeyString(key))
+                            nullable
+                                ? new SelectItemGroup(
+                                    new SelectItemGroupNullable(
+                                        new SelectItemGroupStringNullable(
+                                            "name",
+                                            new ExactStringNullableGroup(
+                                                new KeyStringNullable(key)
+                                            )
                                         )
+                                    )
+                                )
+                                : new SelectItemGroup(
+                                    new SelectItemGroupNonNullable(
+                                        new SelectItemGroupString(
+                                            "name",
+                                            new StringGroup(new KeyString(key))
+                                        )
+                                    )
+                                ),
+                        ]
+                    )
+                )
+            )
+        );
+    }
+
+    [Fact]
+    public void GroupKeyAliasesAreUnique()
+    {
+        _ = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection(
+                [People],
+                new PureQLQuery(
+                    new MainGroupedQuery(
+                        new From(new FromEntity("t.people")),
+                        [
+                            new GroupKey(
+                                new GroupKeyNonNullable(
+                                    new GroupKeyString(
+                                        "key",
+                                        new StringRow(new FieldString("t.people", "name"))
+                                    )
+                                )
+                            ),
+                            new GroupKey(
+                                new GroupKeyNonNullable(
+                                    new GroupKeyUuid(
+                                        "key",
+                                        new UuidRow(new FieldUuid("t.people", "id"))
+                                    )
+                                )
+                            ),
+                        ],
+                        [
+                            new SelectItemGroup(
+                                new SelectItemGroupNonNullable(
+                                    new SelectItemGroupString(
+                                        "name",
+                                        new StringGroup(new KeyString("key"))
                                     )
                                 )
                             ),
                         ]
+                    )
+                )
+            )
+        );
+    }
+
+    [Fact]
+    public void DistinctByListsOnlySelectAliases()
+    {
+        _ = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection(
+                [People],
+                new PureQLQuery(
+                    new MainPlainQuery(
+                        new From(new FromEntity("t.people")),
+                        [
+                            new SelectItemProjection(
+                                new SelectItemProjectionNonNullable(
+                                    new SelectItemProjectionString(
+                                        "name",
+                                        new StringProjection(
+                                            new FieldString("t.people", "name")
+                                        )
+                                    )
+                                )
+                            ),
+                        ],
+                        subqueries: null,
+                        joins: null,
+                        where: null,
+                        orderBy: null,
+                        pagination: null,
+                        distinctBy: ["id"]
                     )
                 )
             )
@@ -720,7 +799,7 @@ public sealed class ValidationTests
                         where: null,
                         orderBy: null,
                         pagination: new Pagination(skip, take),
-                        distinct: false
+                        distinctBy: null
                     )
                 )
             )

@@ -10,7 +10,7 @@ internal sealed record QueryResult(
     {
         return Rows.Select(row => (IRecord)new ValueRecord(
             Columns
-                .Select((column, index) => KeyValuePair.Create(column.Alias!, row[index]))
+                .Select((column, index) => KeyValuePair.Create(column.Alias, row[index]))
                 .ToDictionary(StringComparer.Ordinal)
         ));
     }

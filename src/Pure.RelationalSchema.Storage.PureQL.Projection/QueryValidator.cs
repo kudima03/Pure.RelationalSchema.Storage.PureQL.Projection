@@ -9,7 +9,8 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // The checks the specification leaves to the interpreter, because they need
 // the catalog or names: entities, subqueries, sources and fields exist; a
 // field declares its column's type and, after outer joins, its nullability;
-// group key references match their keys; names and aliases are unique.
+// group key references name a key and repeat its type; names and aliases are
+// unique; distinctBy lists select aliases.
 // Storage columns carry no nullability, so for an entity column only the
 // outer-join rule can be checked; subquery columns are checked exactly.
 internal static class QueryValidator
@@ -70,15 +71,20 @@ internal static class QueryValidator
             ).Check(join.On);
 
             optional.UnionWith(
-                join.Type switch
+                join.Kind switch
                 {
-                    JoinType.Left => [join.Source.Name],
-                    JoinType.Right => sources.Take(i + 1).Select(source => source.Name),
-                    JoinType.Full => sources.Take(i + 2).Select(source => source.Name),
-                    JoinType.Inner or _ => [],
+                    JoinKind.Left => [join.Source.Name],
+                    JoinKind.Right => sources.Take(i + 1).Select(source => source.Name),
+                    JoinKind.Full => sources.Take(i + 2).Select(source => source.Name),
+                    JoinKind.Inner or _ => [],
                 }
             );
         }
+
+        RejectRepeated(
+            (query.GroupBy ?? []).Select(key => key.Alias),
+            "Group key alias"
+        );
 
         References references = new(columns, optional, subqueries, query.GroupBy);
 
@@ -93,21 +99,35 @@ internal static class QueryValidator
             references.Check(expression);
         }
 
-        string? repeated = query
-            .Select.GroupBy(column => column.Alias, StringComparer.Ordinal)
-            .FirstOrDefault(group => group.Count() > 1)
-            ?.Key;
+        RejectRepeated(query.Select.Select(column => column.Alias), "Column alias");
 
-        if (repeated is not null)
+        string? unknown = query.DistinctBy.FirstOrDefault(alias =>
+            !query.Select.Any(column => column.Alias == alias)
+        );
+
+        if (unknown is not null)
         {
             throw new ArgumentException(
-                $"Column alias '{repeated}' is used more than once."
+                $"distinctBy lists '{unknown}', which is not a column alias."
             );
         }
 
         if (query.Pagination is not null)
         {
             ValidatePagination(query.Pagination);
+        }
+    }
+
+    private static void RejectRepeated(IEnumerable<string> names, string what)
+    {
+        string? repeated = names
+            .GroupBy(name => name, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Count() > 1)
+            ?.Key;
+
+        if (repeated is not null)
+        {
+            throw new ArgumentException($"{what} '{repeated}' is used more than once.");
         }
     }
 
@@ -145,7 +165,7 @@ internal static class QueryValidator
 
             foreach (TypedExpression column in subquery.Select)
             {
-                columns[column.Alias!] = new DeclaredType(
+                columns[column.Alias] = new DeclaredType(
                     column.Type.Name,
                     column.Type.Nullable
                 );
@@ -244,21 +264,19 @@ internal static class QueryValidator
 
         private void CheckKey(IKey key)
         {
-            IReadOnlyList<TypedExpression> declared =
-                keys
-                ?? throw new ArgumentException(
-                    $"Group key {key.Key} is referenced outside a grouped query."
-                );
+            TypedExpression declared =
+                (
+                    keys
+                    ?? throw new ArgumentException(
+                        $"Group key '{key.Key}' is referenced outside a grouped query."
+                    )
+                ).FirstOrDefault(candidate => candidate.Alias == key.Key)
+                ?? throw new ArgumentException($"Group key '{key.Key}' does not exist.");
 
-            if (key.Key < 0 || key.Key >= declared.Count)
-            {
-                throw new ArgumentException($"Group key {key.Key} does not exist.");
-            }
-
-            if (!SameType(declared[key.Key].Type, key.Type))
+            if (!SameType(declared.Type, key.Type))
             {
                 throw new ArgumentException(
-                    $"Group key {key.Key} is referenced with another type than it "
+                    $"Group key '{key.Key}' is referenced with another type than it "
                         + "declares."
                 );
             }

@@ -16,7 +16,7 @@ internal sealed record ResultTable : ITable
         [
             .. select.Select(column => (IColumn)
                 new Column.Column(
-                    new Primitives.String.String(column.Alias!),
+                    new Primitives.String.String(column.Alias),
                     ValueTypes.ColumnOf(column.Type)
                 )
             ),

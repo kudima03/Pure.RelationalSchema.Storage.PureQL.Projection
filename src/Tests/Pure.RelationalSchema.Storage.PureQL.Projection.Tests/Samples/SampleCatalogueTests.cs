@@ -22,9 +22,9 @@ public sealed class SampleCatalogueTests
         ];
 
     [Fact]
-    public void CatalogueHoldsFiftySixSamples()
+    public void CatalogueHoldsFiftySevenSamples()
     {
-        Assert.Equal(56, Sample.All.Count);
+        Assert.Equal(57, Sample.All.Count);
     }
 
     [Theory]

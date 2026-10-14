@@ -37,7 +37,7 @@ internal static class Comparison
 
     public static object? In(object node, Scope scope)
     {
-        object? value = scope.Evaluate(ModelNode.Child(node, "Value"));
+        object? value = scope.Evaluate(ModelNode.Child(node, "Operand"));
 
         return Lists
             .Values(ModelNode.Child(node, "List"), scope)

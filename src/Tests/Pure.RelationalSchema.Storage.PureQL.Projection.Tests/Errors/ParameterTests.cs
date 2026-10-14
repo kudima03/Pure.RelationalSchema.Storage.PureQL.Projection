@@ -46,7 +46,7 @@ public sealed class ParameterTests
                             new InRow(
                                 new InStringRow(
                                     new StringNullableRow(
-                                        new FieldAsStringNullable(
+                                        new StringRow(
                                             new FieldString("t.names", "name")
                                         )
                                     ),
@@ -57,7 +57,7 @@ public sealed class ParameterTests
                     ),
                     orderBy: null,
                     pagination: null,
-                    distinct: false
+                    distinctBy: null
                 )
             )
         );
@@ -91,7 +91,7 @@ public sealed class ParameterTests
                     where: null,
                     orderBy: null,
                     pagination: new Pagination(0, new ParamInteger("page_size")),
-                    distinct: false
+                    distinctBy: null
                 )
             )
         );

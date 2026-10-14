@@ -9,7 +9,7 @@ Executes PureQL queries against in-memory relational schema datasets: a `PureQLQ
 
 ## Overview
 
-`Pure.RelationalSchema.Storage.PureQL.Projection` is an interpreter for the [PureQL specification](https://github.com/kudima03/PureQL-Specification) `0.1.0-preview.1.0.0` over the Pure relational storage model. Given a collection of `IStoredSchemaDataSet` objects and a `PureQLQuery`, it produces an `IStoredTableDataSet` whose rows are the query's result under the specification's semantics.
+`Pure.RelationalSchema.Storage.PureQL.Projection` is an interpreter for the [PureQL specification](https://github.com/kudima03/PureQL-Specification) `0.1.0-preview.2.0.1` over the Pure relational storage model. Given a collection of `IStoredSchemaDataSet` objects and a `PureQLQuery`, it produces an `IStoredTableDataSet` whose rows are the query's result under the specification's semantics.
 
 Everything runs in memory: no SQL, no external engine.
 
@@ -30,11 +30,13 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 
 ### What is supported
 
-Every clause and operator of the specification: `from` and `joins` (`inner`, `left`, `right`, `full`, aliases and self-joins), `where`, `groupBy` over any row expression, `having`, `select`, `distinct`, `orderBy` over any expression, `pagination`, and subqueries read through `from`, `join` and `in`. All operators in the row, projection and group contexts are supported, including aggregates with `predicate` and `over`.
+Every clause and operator of the specification: `from` and `joins` (`inner`, `left`, `right`, `full`, aliases and self-joins), `where`, `groupBy` over any row expression with keys referenced by alias, `having`, `select`, `aggregate` (total queries), `orderBy` over any expression, `distinctBy`, `pagination`, and subqueries read through `from`, `join` and `in`. All operators in the row, projection, group and total contexts are supported, including aggregates with `predicate` and `over`, and comparisons, `min` and `max` over every type.
 
-The semantics are the specification's: `null` equals `null` and sorts first, ordering comparisons against `null` are false, lifted operators are `null` on a `null` operand, `integer` is a checked 64-bit integer, `decimal` is exact (`System.Decimal`), strings compare by code point, and a `datetime` is an instant written in UTC. Overflow, division by zero and dates outside the calendar fail the query with the corresponding .NET exception.
+A plain query returns one row per row left by `where`, a total query exactly one row (even over no rows) and a grouped query one row per group. `distinctBy` runs after `orderBy` and keeps, of the rows equal on the listed columns, the first in order.
 
-The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references match their keys; source names, column aliases and subquery names are unique; a subquery reads only subqueries declared before it.
+The semantics are the specification's: `null` equals `null` and sorts first, ordering comparisons against `null` are false, lifted operators are `null` on a `null` operand, `integer` is a checked 64-bit integer, `decimal` is exact (`System.Decimal`), strings compare by code point, a `datetime` is an instant written in UTC, and seconds and `time` / `datetime` averages round half away from zero to the microsecond. Overflow, division by zero and dates outside the calendar fail the query with the corresponding .NET exception.
+
+The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` lists only column aliases; a subquery reads only subqueries declared before it.
 
 ### Storage mapping
 
@@ -49,7 +51,7 @@ Empty cell text is `NULL`. A stored datetime without an offset is read as UTC. R
 ### Not supported
 
 - **Parameters.** There is no API to bind parameter values, so evaluating a parameter (in an expression, a list or `pagination`) raises `NotSupportedException`.
-- Time and datetime precision is the .NET tick (100 ns), not the specification's nanosecond.
+- Stored times and datetimes are read to the .NET tick (100 ns); the specification's values have microsecond precision, so finer stored digits are kept as read.
 
 ## Dependencies
 
@@ -57,7 +59,7 @@ Empty cell text is `NULL`. A stored datetime without an offset is read as UTC. R
 - [`Pure.RelationalSchema`](https://github.com/kudima03/Pure.RelationalSchema/tree/2.0.0) — relational schema abstractions (`ISchema`, `ITable`, `IColumn`, column type hierarchy)
 - [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.3.0) — structural hash codes for relational schema types
 - [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.7.0.0) — in-memory relational data model (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`, `ICell`)
-- [`PureQL.CSharp.Model`](https://github.com/kudima03/PureQL.CSharp.Model/tree/0.1.0-preview.12.0.0) — PureQL query model (`PureQLQuery`, `Query`, expressions per context) — tracks PureQL specification `0.1.0-preview.1.0.0`
+- [`PureQL.CSharp.Model`](https://github.com/kudima03/PureQL.CSharp.Model/tree/0.1.0-preview.13.0.0) — PureQL query model (`PureQLQuery`, `Query`, expressions per context) — tracks PureQL specification `0.1.0-preview.2.0.0`
 - [`Pure.Collections.Generic`](https://github.com/kudima03/Pure.Collections.Generic/tree/0.1.0-preview.3.0.0) — generic collection utilities used in row projection
 
 ## Target Frameworks

@@ -19,6 +19,10 @@ internal sealed record QueryProgram(
             plain => new QueryProgram(
                 QueryClauses.Of(plain),
                 [.. (plain.Subqueries ?? []).Select(Named)]
+            ),
+            total => new QueryProgram(
+                QueryClauses.Of(total),
+                [.. (total.Subqueries ?? []).Select(Named)]
             )
         );
     }
