@@ -17,7 +17,7 @@ dotnet pack --configuration Release -p:Version=<version> --output .
 
 CI additionally passes `-p:AssemblyVersion` (pinned to the major) and `-p:FileVersion`; see `.github/workflows/publish-nuget.yml`.
 
-Mutation testing (run by CI, slow locally):
+Mutation testing (currently disabled in CI; slow locally):
 
 ```bash
 dotnet tool install -g dotnet-stryker
@@ -53,7 +53,7 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`): operands are 
 
 **Publishing:** triggered by pushing a semver tag matching `*.*.*`. The tag value becomes the `PackageVersion`.
 
-**CI thresholds:** code coverage warning at 99%, failure below 94%; mutation score failure below 48%.
+**CI thresholds:** code coverage warning at 99%, failure below 94%. The mutation step is commented out in `build-and-test.yml`; its threshold (48%) is unused.
 
 **Tests:** `Samples/SampleCatalogueTests` runs every query of `PureQL.CSharp.Model.Samples` over the `Pure.RelationalSchema.Storage.Samples` fixtures and compares it with the sample's expected `Result`. `Tree/ExpressionTreeTests` asserts the tree shape with `Data/TreeText` (C#-like text; a stored cell read prints as `row[column]`, `TreeText.Full` keeps it), and `Tree/TranslatableTreeTests` checks every sample's tree with `Data/Untranslatable`. The other tests build their own small tables with `Data/InlineTable`. Note: `dotnet format` code fixes for IDE0010/IDE0072 ("populate switch") insert `throw new NotImplementedException()` arms — avoid partial `switch`es over `ExpressionType`.
 
