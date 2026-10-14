@@ -1,16 +1,21 @@
+using System.Linq.Expressions;
 using PureQL.CSharp.Model.Literals;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// Literal values. A typed null literal has no value; a datetime literal is
-// the instant it denotes, kept in UTC like every other datetime.
+// Literal values are constants of their type's value type. A typed null
+// literal has no value; a datetime literal is the instant it denotes, kept in
+// UTC like every other datetime.
 internal static class Literals
 {
-    public static object? Value(ILiteral literal)
+    public static Expression Value(ILiteral literal)
     {
-        return ModelNode.Has(literal, "Value")
-            ? Normalize(ModelNode.Property(literal, "Value"))
-            : null;
+        return Expression.Constant(
+            ModelNode.Has(literal, "Value")
+                ? Normalize(ModelNode.Property(literal, "Value"))
+                : null,
+            ValueTypes.Clr(literal.Type)
+        );
     }
 
     public static object? Normalize(object? value)

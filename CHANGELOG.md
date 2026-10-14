@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The projection compiles its query to one LINQ expression tree, exposed by
+  `Expression`, for a LINQ provider to translate to SQL: standard query
+  operators over one constant root per stored table, value tuples, BCL
+  members, constants and captured parameters, with the result rows built
+  only by the last `Select`. Enumerating the projection runs the tree in
+  memory, as before, reading each stored table once per enumeration.
+- The tree is optimized when it is built: constants fold, conditions
+  simplify, `where` conditions move to the sources (or joins, or subqueries)
+  they read, adjacent `Where`s merge, redundant `Select`, `OrderBy` and
+  `distinctBy` are dropped, only the fields a query reads are read, and
+  pagination comes last.
+- `add`, `subtract`, `multiply`, `divide`, `integerDivide` and `modulo`
+  evaluate every operand, so an operand that fails (an overflow, a division
+  by zero) fails the query even when another operand is `null`, as in SQL.
+- Without `orderBy`, a `right` join returns its rows in the order of the
+  joined source.
+
 ## [0.1.0-preview.4.0.0] — 2026-10-14
 
 ### Changed

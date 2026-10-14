@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Keys;
@@ -6,80 +7,79 @@ using PureQL.CSharp.Model.Parameters;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// What an expression is evaluated against. In row context that is one joined
-// row; in projection context a row (absent when the result is a single row)
-// and every row left by where, which aggregates fold; in group context the
-// rows and key values of one group.
+// What an expression compiles against. In row context that is one row, whose
+// fields are members of a tuple parameter; in projection context a row
+// (absent in a total query) and every row left by where, which aggregates
+// fold; in group context a group parameter, whose key holds the group key
+// values and whose elements are the group's rows.
 internal sealed class Scope(
-    QueryRun run,
-    JoinedRow? row,
-    IReadOnlyList<JoinedRow> rows,
-    IReadOnlyList<object?> keys
+    QueryTree query,
+    Func<IField, Expression>? field,
+    ParameterExpression? group
     )
 {
-    private readonly QueryRun _run = run;
+    private readonly QueryTree _query = query;
 
-    private readonly JoinedRow? _row = row;
+    private readonly Func<IField, Expression>? _field = field;
 
-    private readonly IReadOnlyList<JoinedRow> _rows = rows;
+    private readonly ParameterExpression? _group = group;
 
-    private readonly IReadOnlyList<object?> _keys = keys;
-
-    public object? Evaluate(object node)
+    public Expression Compile(object node)
     {
         object leaf = ModelNode.Unwrap(node);
 
         return leaf switch
         {
-            IField field => Field(field),
-            IKey key => _keys[_run.Key(key.Key)],
-            IParameter parameter => throw UnboundParameter.Error(parameter.Name),
+            IField reference => Field(reference),
+            IKey key => _query.Key(
+                _group
+                    ?? throw new InvalidOperationException(
+                        $"Group key '{key.Key}' is read where there is no group."
+                    ),
+                key.Key
+            ),
+            IParameter parameter => UnboundParameter.Value(parameter),
             ILiteral literal => Literals.Value(literal),
-            _ => Operator.Of(leaf.GetType()).Evaluate(leaf, this),
+            _ => Operator.Of(leaf.GetType()).Compile(leaf, this),
         };
     }
 
-    public bool Test(object condition)
+    public Expression Test(object condition)
     {
-        return Evaluate(condition) is true;
+        return Typed.Test(Compile(condition));
+    }
+
+    // A group's own rows, or every row of the query.
+    public Expression Rows(AggregateOver over)
+    {
+        return over == AggregateOver.Group && _group is not null
+            ? _group
+            : _query.AllRows;
+    }
+
+    public ParameterExpression RowParameter()
+    {
+        return Expression.Parameter(_query.RowType, "row");
     }
 
     // A row of the same query in row context, as aggregate bodies see it.
-    public Scope Row(JoinedRow row)
+    public Scope Row(ParameterExpression row)
     {
-        return new Scope(_run, row, [], []);
+        return _query.RowScope(row);
     }
 
-    public IReadOnlyList<JoinedRow> Rows(AggregateOver over)
+    public Expression SubqueryColumn(string subquery, string field, Type item)
     {
-        return over == AggregateOver.All ? _run.AllRows : _rows;
+        return _query.SubqueryColumn(subquery, field, item);
     }
 
-    // An aggregate over every row has one value for the whole query.
-    public object? Aggregate(
-        object node,
-        IReadOnlyList<JoinedRow> rows,
-        Func<object?> evaluate
-    )
+    private Expression Field(IField field)
     {
-        return ReferenceEquals(rows, _run.AllRows)
-            ? _run.Once(node, evaluate)
-            : evaluate();
-    }
-
-    public IEnumerable<object?> SubqueryColumn(string subquery, string field)
-    {
-        return _run.SubqueryColumn(subquery, field);
-    }
-
-    private object? Field(IField field)
-    {
-        JoinedRow row =
-            _row
+        return (
+            _field
             ?? throw new InvalidOperationException(
                 $"Field '{field.Source}.{field.Field}' is read where there is no row."
-            );
-
-        return row[_run.Source(field.Source)]?.Value(field.Field);
+            )
+        )(field);
     }
 }

@@ -1,179 +1,233 @@
+using System.Linq.Expressions;
+using System.Reflection;
+
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // Numeric and string operators. All are lifted: the result is null as soon as
-// an operand is null, and later operands are then not evaluated. integer is a
-// checked 64-bit long, decimal is System.Decimal; overflow and division by
-// zero raise their .NET exceptions, which fail the query.
+// an operand is null. integer is a checked 64-bit long, decimal is
+// System.Decimal; overflow and division by zero raise their .NET exceptions,
+// which fail the query. Rounding is half away from zero, as SQL's round is.
 internal static class Arithmetic
 {
-    public static object? AddIntegers(object node, Scope scope)
+    private const int MaxDigits = 28;
+
+    private static readonly MethodInfo FloorMethod = typeof(Math).GetMethod(
+        nameof(Math.Floor),
+        [typeof(decimal)]
+    )!;
+
+    private static readonly MethodInfo CeilingMethod = typeof(Math).GetMethod(
+        nameof(Math.Ceiling),
+        [typeof(decimal)]
+    )!;
+
+    private static readonly MethodInfo RoundMethod = typeof(Math).GetMethod(
+        nameof(Math.Round),
+        [typeof(decimal), typeof(MidpointRounding)]
+    )!;
+
+    private static readonly MethodInfo RoundToDigitsMethod = typeof(Math).GetMethod(
+        nameof(Math.Round),
+        [typeof(decimal), typeof(int), typeof(MidpointRounding)]
+    )!;
+
+    private static readonly MethodInfo MinMethod = typeof(Math).GetMethod(
+        nameof(Math.Min),
+        [typeof(long), typeof(long)]
+    )!;
+
+    private static readonly MethodInfo PowerMethod = typeof(Math).GetMethod(
+        nameof(Math.Pow),
+        [typeof(double), typeof(double)]
+    )!;
+
+    private static readonly MethodInfo ConcatMethod = typeof(string).GetMethod(
+        nameof(string.Concat),
+        [typeof(string), typeof(string)]
+    )!;
+
+    public static Expression AddIntegers(object node, Scope scope)
     {
-        return Integers(node, scope, (left, right) => checked(left + right));
+        return Fold(node, scope, typeof(long?), Expression.AddChecked);
     }
 
-    public static object? AddDecimals(object node, Scope scope)
+    public static Expression AddDecimals(object node, Scope scope)
     {
-        return Decimals(node, scope, (left, right) => left + right);
+        return Fold(node, scope, typeof(decimal?), Expression.Add);
     }
 
-    public static object? SubtractIntegers(object node, Scope scope)
+    public static Expression SubtractIntegers(object node, Scope scope)
     {
-        return Integers(node, scope, (left, right) => checked(left - right));
+        return Fold(node, scope, typeof(long?), Expression.SubtractChecked);
     }
 
-    public static object? SubtractDecimals(object node, Scope scope)
+    public static Expression SubtractDecimals(object node, Scope scope)
     {
-        return Decimals(node, scope, (left, right) => left - right);
+        return Fold(node, scope, typeof(decimal?), Expression.Subtract);
     }
 
-    public static object? MultiplyIntegers(object node, Scope scope)
+    public static Expression MultiplyIntegers(object node, Scope scope)
     {
-        return Integers(node, scope, (left, right) => checked(left * right));
+        return Fold(node, scope, typeof(long?), Expression.MultiplyChecked);
     }
 
-    public static object? MultiplyDecimals(object node, Scope scope)
+    public static Expression MultiplyDecimals(object node, Scope scope)
     {
-        return Decimals(node, scope, (left, right) => left * right);
+        return Fold(node, scope, typeof(decimal?), Expression.Multiply);
     }
 
-    public static object? Divide(object node, Scope scope)
+    public static Expression Divide(object node, Scope scope)
     {
-        return Decimals(node, scope, (left, right) => left / right);
+        return Fold(node, scope, typeof(decimal?), Expression.Divide);
     }
 
     // Truncates toward zero, and modulo takes the sign of its left operand,
-    // exactly as C# integer division and remainder do.
-    public static object? IntegerDivide(object node, Scope scope)
+    // exactly as C# (and SQL) integer division and remainder do.
+    public static Expression IntegerDivide(object node, Scope scope)
     {
-        return Lifted.Binary(node, scope, (left, right) => (long)left / (long)right);
-    }
-
-    public static object? Modulo(object node, Scope scope)
-    {
-        return Lifted.Binary(node, scope, (left, right) => (long)left % (long)right);
-    }
-
-    public static object? Floor(object node, Scope scope)
-    {
-        return Lifted.Unary(
-            node,
-            scope,
-            value => (long)decimal.Floor(Values.Decimal(value))
+        return Expression.Divide(
+            Integer(scope.Compile(ModelNode.Child(node, "Left"))),
+            Integer(scope.Compile(ModelNode.Child(node, "Right")))
         );
     }
 
-    public static object? Ceiling(object node, Scope scope)
+    public static Expression Modulo(object node, Scope scope)
     {
-        return Lifted.Unary(
-            node,
-            scope,
-            value => (long)decimal.Ceiling(Values.Decimal(value))
+        return Expression.Modulo(
+            Integer(scope.Compile(ModelNode.Child(node, "Left"))),
+            Integer(scope.Compile(ModelNode.Child(node, "Right")))
         );
     }
 
-    public static object? Round(object node, Scope scope)
+    public static Expression Floor(object node, Scope scope)
     {
-        return Lifted.Unary(
-            node,
-            scope,
-            value => (long)decimal.Round(
-                Values.Decimal(value),
-                MidpointRounding.AwayFromZero
-            )
-        );
+        return ToInteger(node, scope, value => Expression.Call(FloorMethod, value));
+    }
+
+    public static Expression Ceiling(object node, Scope scope)
+    {
+        return ToInteger(node, scope, value => Expression.Call(CeilingMethod, value));
+    }
+
+    public static Expression Round(object node, Scope scope)
+    {
+        return ToInteger(node, scope, AwayFromZero);
     }
 
     // A negative digits rounds to tens, hundreds and so on; decimal holds 28
     // digits on either side of the point, so further digits change nothing.
-    public static object? RoundToDigits(object node, Scope scope)
+    // Constant digits, the usual case, fold to one of the three branches.
+    public static Expression RoundToDigits(object node, Scope scope)
     {
-        object? value = scope.Evaluate(ModelNode.Child(node, "Operand"));
+        Expression digits = Typed.As(
+            scope.Compile(ModelNode.Child(node, "Digits")),
+            typeof(long)
+        );
 
-        if (value is null)
-        {
-            return null;
-        }
-
-        decimal number = Values.Decimal(value);
-        long digits = (long)scope.Evaluate(ModelNode.Child(node, "Digits"))!;
-
-        if (digits >= 0)
-        {
-            return decimal.Round(
-                number,
-                (int)Math.Min(digits, 28),
-                MidpointRounding.AwayFromZero
-            );
-        }
-
-        if (digits < -28)
-        {
-            return 0m;
-        }
-
-        decimal scale = Power(-digits);
-        return decimal.Round(number / scale, MidpointRounding.AwayFromZero) * scale;
-    }
-
-    public static object? Concat(object node, Scope scope)
-    {
-        return Fold(node, scope, value => (string)value, string.Concat);
-    }
-
-    private static object? Integers(
-        object node,
-        Scope scope,
-        Func<long, long, long> operation
-    )
-    {
-        return Fold(node, scope, value => (long)value, operation);
-    }
-
-    private static object? Decimals(
-        object node,
-        Scope scope,
-        Func<decimal, decimal, decimal> operation
-    )
-    {
-        return Fold(node, scope, Values.Decimal, operation);
-    }
-
-    private static object? Fold<T>(
-        object node,
-        Scope scope,
-        Func<object, T> convert,
-        Func<T, T, T> operation
-    )
-        where T : notnull
-    {
-        T? result = default;
-        bool first = true;
-
-        foreach (object operand in ModelNode.Children(node, "Values"))
-        {
-            object? value = scope.Evaluate(operand);
-
-            if (value is null)
+        return Lifted.Unary(
+            Decimal(scope.Compile(ModelNode.Child(node, "Operand"))),
+            typeof(decimal?),
+            value =>
             {
-                return null;
+                Expression scale = Expression.Convert(
+                    Expression.Call(
+                        PowerMethod,
+                        Expression.Constant(10d),
+                        Expression.Convert(Expression.Negate(digits), typeof(double))
+                    ),
+                    typeof(decimal)
+                );
+
+                return Expression.Condition(
+                    Expression.GreaterThanOrEqual(digits, Expression.Constant(0L)),
+                    Expression.Call(
+                        RoundToDigitsMethod,
+                        value,
+                        Expression.Convert(
+                            Expression.Call(
+                                MinMethod,
+                                digits,
+                                Expression.Constant((long)MaxDigits)
+                            ),
+                            typeof(int)
+                        ),
+                        Expression.Constant(MidpointRounding.AwayFromZero)
+                    ),
+                    Expression.Condition(
+                        Expression.LessThan(
+                            digits,
+                            Expression.Constant((long)-MaxDigits)
+                        ),
+                        Expression.Constant(0m),
+                        Expression.Multiply(
+                            AwayFromZero(Expression.Divide(value, scale)),
+                            scale
+                        )
+                    )
+                );
             }
-
-            result = first ? convert(value) : operation(result!, convert(value));
-            first = false;
-        }
-
-        return result;
+        );
     }
 
-    private static decimal Power(long exponent)
+    public static Expression Concat(object node, Scope scope)
     {
-        decimal result = 1m;
+        return Lifted.All(
+            [
+                .. ModelNode
+                    .Children(node, "Values")
+                    .Select(operand => Typed.As(scope.Compile(operand), typeof(string))),
+            ],
+            typeof(string),
+            values => values.Aggregate(
+                (left, right) => Expression.Call(ConcatMethod, left, right)
+            )
+        );
+    }
 
-        for (long i = 0; i < exponent; i++)
-        {
-            result *= 10m;
-        }
+    public static Expression AwayFromZero(Expression value)
+    {
+        return Expression.Call(
+            RoundMethod,
+            value,
+            Expression.Constant(MidpointRounding.AwayFromZero)
+        );
+    }
 
-        return result;
+    public static Expression Decimal(Expression value)
+    {
+        return Typed.As(value, typeof(decimal?));
+    }
+
+    private static Expression Integer(Expression value)
+    {
+        return Typed.As(value, typeof(long?));
+    }
+
+    private static Expression ToInteger(
+        object node,
+        Scope scope,
+        Func<Expression, Expression> round
+    )
+    {
+        return Lifted.Unary(
+            Decimal(scope.Compile(ModelNode.Child(node, "Operand"))),
+            typeof(long?),
+            value => Expression.Convert(round(value), typeof(long))
+        );
+    }
+
+    // The operands combined left to right, each converted to the operator's
+    // type; lifted operators make the result null on a null operand.
+    private static Expression Fold(
+        object node,
+        Scope scope,
+        Type type,
+        Func<Expression, Expression, BinaryExpression> operation
+    )
+    {
+        return ModelNode
+            .Children(node, "Values")
+            .Select(operand => Typed.As(scope.Compile(operand), type))
+            .Aggregate((left, right) => operation(left, right));
     }
 }

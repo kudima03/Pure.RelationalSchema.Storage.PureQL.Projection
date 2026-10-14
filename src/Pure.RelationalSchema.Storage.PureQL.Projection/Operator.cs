@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
@@ -8,14 +9,15 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // operator has the same operands in every context. So the record type's
 // longest matching name prefix selects the operator; where integer and
 // decimal results differ (add, subtract, multiply, sum, round) the prefix
-// carries the result type too.
+// carries the result type too. Each operator compiles its record into the
+// expression that computes it.
 internal sealed class Operator
 {
     private static readonly IReadOnlyDictionary<
         string,
-        Func<object, Scope, object?>
+        Func<object, Scope, Expression>
     > All =
-        new Dictionary<string, Func<object, Scope, object?>>(StringComparer.Ordinal)
+        new Dictionary<string, Func<object, Scope, Expression>>(StringComparer.Ordinal)
         {
             ["AddInteger"] = Arithmetic.AddIntegers,
             ["AddDecimal"] = Arithmetic.AddDecimals,
@@ -61,11 +63,11 @@ internal sealed class Operator
 
     private static readonly ConcurrentDictionary<Type, Operator?> Resolved = new();
 
-    private readonly Func<object, Scope, object?> _evaluate;
+    private readonly Func<object, Scope, Expression> _compile;
 
-    private Operator(Func<object, Scope, object?> evaluate)
+    private Operator(Func<object, Scope, Expression> compile)
     {
-        _evaluate = evaluate;
+        _compile = compile;
     }
 
     public static Operator Of(Type type)
@@ -76,9 +78,9 @@ internal sealed class Operator
             );
     }
 
-    public object? Evaluate(object node, Scope scope)
+    public Expression Compile(object node, Scope scope)
     {
-        return _evaluate(node, scope);
+        return _compile(node, scope);
     }
 
     private static Operator? Resolve(Type type)

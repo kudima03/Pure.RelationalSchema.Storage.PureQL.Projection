@@ -241,4 +241,51 @@ public sealed class ProjectionApiTests
         Assert.True(untyped.MoveNext());
         Assert.False(untyped.MoveNext());
     }
+
+    [Fact]
+    public void QueriesComposedOverTheProjectionRunInMemory()
+    {
+        PureQLProjection projection = new(
+            [Counters],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.counters")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionInteger(
+                                    "small",
+                                    new IntegerProjection(
+                                        new FieldInteger("t.counters", "small")
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        IQueryable<IRow> first = Queryable.Take(projection, 1);
+        IQueryable untyped = projection.Provider.CreateQuery(first.Expression);
+
+        Assert.Equal(["1"], ResultColumn.Texts(first, "small"));
+        Assert.Equal(typeof(IRow), untyped.ElementType);
+        _ = Assert.Single(untyped.Cast<object>().ToList());
+        Assert.Equal(
+            1,
+            projection.Provider.Execute(
+                System.Linq.Expressions.Expression.Call(
+                    typeof(Queryable),
+                    nameof(Queryable.Count),
+                    [typeof(IRow)],
+                    first.Expression
+                )
+            )
+        );
+
+        IEnumerator rows = untyped.GetEnumerator();
+        Assert.True(rows.MoveNext());
+        Assert.False(rows.MoveNext());
+    }
 }
