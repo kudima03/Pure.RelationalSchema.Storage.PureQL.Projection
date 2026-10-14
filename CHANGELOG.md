@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.4.0.0] — 2026-10-14
+
+### Changed
+
+- **Breaking:** updated for `PureQL.CSharp.Model` `0.1.0-preview.13.0.0`,
+  which models PureQL specification `0.1.0-preview.2.0.0`. The interpreter
+  follows `0.1.0-preview.2.0.1`, which adds microsecond precision.
+- **Breaking:** `distinctBy` replaces `distinct`. After `orderBy` it keeps,
+  of the rows equal on the listed columns, the first in order, and
+  pagination comes after it. `distinctBy` may list only select aliases.
+- **Breaking:** group keys have aliases and are referenced by them; key
+  aliases must be unique.
+- A plain query always returns one row per row left by `where`.
+- Seconds in time and datetime arithmetic, and time and datetime averages,
+  round half away from zero to the microsecond.
+
+### Added
+
+- Total queries (`MainTotalQuery` / `TotalQuery`): `aggregate` columns and
+  exactly one row, even over no rows, also as a one-row subquery source.
+
 ## [0.1.0-preview.3.0.0] — 2026-10-10
 
 ### Changed
