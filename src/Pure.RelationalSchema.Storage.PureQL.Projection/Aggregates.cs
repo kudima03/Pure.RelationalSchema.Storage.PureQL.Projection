@@ -1,156 +1,167 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using PureQL.CSharp.Model;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // Aggregates fold the rows of the current group, or every row left by where
-// with over "all" (the only rows a plain query has). A predicate keeps the
-// rows it is true for, and null selector values are skipped. count and sum
-// over no rows are 0, any is false and all is true; average, min and max are
-// null.
+// with over "all" (the only rows a plain or total query has): LINQ's
+// aggregates over the group or over the query's rows, which SQL runs as an
+// aggregate or a scalar subquery. A predicate keeps the rows it is true for,
+// and null selector values are skipped. count and sum over no rows are 0, any
+// is false and all is true; average, min and max are null.
 internal static class Aggregates
 {
-    public static object? Count(object node, Scope scope)
+    private static readonly MethodInfo FromDayNumberMethod = typeof(DateOnly).GetMethod(
+        nameof(DateOnly.FromDayNumber),
+        [typeof(int)]
+    )!;
+
+    private static readonly ConstructorInfo TimeConstructor =
+        typeof(TimeOnly).GetConstructor([typeof(long)])!;
+
+    private static readonly ConstructorInfo DateTimeConstructor =
+        typeof(DateTime).GetConstructor([typeof(long), typeof(DateTimeKind)])!;
+
+    public static Expression Count(object node, Scope scope)
     {
-        return Fold(node, scope, rows => (long)Matching(node, rows).Count());
+        Expression rows = scope.Rows(Over(node));
+        LambdaExpression? predicate = Predicate(node, scope);
+
+        return predicate is null
+            ? Linq.LongCount(rows)
+            : Linq.LongCount(rows, predicate);
     }
 
-    public static object? SumIntegers(object node, Scope scope)
+    public static Expression SumIntegers(object node, Scope scope)
     {
-        return Fold(
-            node,
-            scope,
-            rows => Selected(node, rows)
-                .Aggregate(0L, (sum, value) => checked(sum + (long)value))
-        );
+        return Linq.Sum(Filtered(node, scope), Selector(node, scope, typeof(long?)));
     }
 
-    public static object? SumDecimals(object node, Scope scope)
+    public static Expression SumDecimals(object node, Scope scope)
     {
-        return Fold(
-            node,
-            scope,
-            rows => Selected(node, rows)
-                .Aggregate(0m, (sum, value) => sum + Values.Decimal(value))
-        );
+        return Linq.Sum(Filtered(node, scope), Selector(node, scope, typeof(decimal?)));
     }
 
     // Numbers average as divide does. A date averages its day numbers and
     // rounds half away from zero to a whole day; a time or datetime averages
     // its microseconds the same way, the time since midnight without wrapping.
-    public static object? Average(object node, Scope scope)
+    public static Expression Average(object node, Scope scope)
     {
-        return Fold(node, scope, rows => Mean([.. Selected(node, rows)]));
-    }
+        Type type = ValueTypes.Clr(((IOperator)node).Type);
+        Expression rows = Filtered(node, scope);
 
-    public static object? Min(object node, Scope scope)
-    {
-        return Fold(
-            node,
-            scope,
-            rows => Selected(node, rows)
-                .Aggregate(
-                    (object?)null,
-                    (min, value) =>
-                        min is null || Values.Compare(value, min) < 0 ? value : min
-                )
+        if (type == typeof(decimal?))
+        {
+            return Linq.Average(rows, Selector(node, scope, typeof(decimal?)));
+        }
+
+        Func<Expression, Expression> number = type == typeof(DateOnly?)
+            ? date => Expression.Convert(
+                Expression.Property(date, nameof(DateOnly.DayNumber)),
+                typeof(decimal)
+            )
+            : value => Temporal.Microseconds(Expression.Property(value, "Ticks"));
+
+        Func<Expression, Expression> value = type == typeof(DateOnly?)
+            ? mean => Expression.Call(
+                FromDayNumberMethod,
+                Expression.Convert(Arithmetic.AwayFromZero(mean), typeof(int))
+            )
+            : type == typeof(TimeOnly?)
+                ? mean => Expression.New(TimeConstructor, Temporal.MicrosecondTicks(mean))
+            : mean => Expression.New(
+                DateTimeConstructor,
+                Temporal.MicrosecondTicks(mean),
+                Expression.Constant(DateTimeKind.Utc)
+            );
+
+        LambdaExpression selector = Selector(node, scope, type);
+        LambdaExpression numbers = Expression.Lambda(
+            Lifted.Unary(selector.Body, typeof(decimal?), number),
+            selector.Parameters
         );
+
+        return Lifted.Unary(Linq.Average(rows, numbers), type, value);
     }
 
-    public static object? Max(object node, Scope scope)
+    public static Expression Min(object node, Scope scope)
     {
-        return Fold(
-            node,
-            scope,
-            rows => Selected(node, rows)
-                .Aggregate(
-                    (object?)null,
-                    (max, value) =>
-                        max is null || Values.Compare(value, max) > 0 ? value : max
-                )
-        );
+        return Extreme(node, scope, Linq.Min, Linq.Min);
     }
 
-    public static object? Any(object node, Scope scope)
+    public static Expression Max(object node, Scope scope)
     {
-        return Fold(node, scope, rows => Matching(node, rows).Any());
+        return Extreme(node, scope, Linq.Max, Linq.Max);
     }
 
-    public static object? All(object node, Scope scope)
+    public static Expression Any(object node, Scope scope)
     {
-        return Fold(
-            node,
-            scope,
-            rows => rows.All(row => row.Test(ModelNode.Child(node, "Predicate")))
-        );
+        return Linq.Any(scope.Rows(Over(node)), Predicate(node, scope)!);
     }
 
-    private static object? Fold(
+    public static Expression All(object node, Scope scope)
+    {
+        return Linq.All(scope.Rows(Over(node)), Predicate(node, scope)!);
+    }
+
+    // Strings order ordinally, like every string comparison of the tree.
+    private static Expression Extreme(
         object node,
         Scope scope,
-        Func<IEnumerable<Scope>, object?> fold
+        Func<Expression, LambdaExpression, Expression> byValue,
+        Func<Expression, Expression, Expression> byComparer
     )
     {
-        AggregateOver over = ModelNode.Has(node, "Over")
-            ? (AggregateOver)ModelNode.Child(node, "Over")
-            : AggregateOver.Group;
+        Type type = ValueTypes.Clr(((IOperator)node).Type);
+        Expression rows = Filtered(node, scope);
+        LambdaExpression selector = Selector(node, scope, type);
 
-        IReadOnlyList<JoinedRow> rows = scope.Rows(over);
-
-        return scope.Aggregate(node, rows, () => fold(rows.Select(scope.Row)));
+        return type == typeof(string)
+            ? byComparer(
+                Linq.Select(rows, selector),
+                Expression.Constant(StringComparer.Ordinal, typeof(IComparer<string>))
+            )
+            : byValue(rows, selector);
     }
 
-    private static IEnumerable<Scope> Matching(object node, IEnumerable<Scope> rows)
+    private static AggregateOver Over(object node)
+    {
+        return ModelNode.Has(node, "Over")
+            ? (AggregateOver)ModelNode.Child(node, "Over")
+            : AggregateOver.All;
+    }
+
+    private static Expression Filtered(object node, Scope scope)
+    {
+        Expression rows = scope.Rows(Over(node));
+        LambdaExpression? predicate = Predicate(node, scope);
+
+        return predicate is null ? rows : Linq.Where(rows, predicate);
+    }
+
+    private static LambdaExpression? Predicate(object node, Scope scope)
     {
         object? predicate = ModelNode.Has(node, "Predicate")
             ? ModelNode.Property(node, "Predicate")
             : null;
 
-        return predicate is null ? rows : rows.Where(row => row.Test(predicate));
+        if (predicate is null)
+        {
+            return null;
+        }
+
+        ParameterExpression row = scope.RowParameter();
+        return Expression.Lambda(scope.Row(row).Test(predicate), row);
     }
 
-    private static IEnumerable<object> Selected(object node, IEnumerable<Scope> rows)
+    private static LambdaExpression Selector(object node, Scope scope, Type type)
     {
-        object selector = ModelNode.Child(node, "Selector");
+        ParameterExpression row = scope.RowParameter();
 
-        return Matching(node, rows)
-            .Select(row => row.Evaluate(selector))
-            .OfType<object>();
-    }
-
-    private static object? Mean(List<object> values)
-    {
-        return values.Count == 0
-            ? null
-            : values[0] switch
-            {
-                DateOnly => DateOnly.FromDayNumber(
-                    (int)RoundedMean(values, value => ((DateOnly)value).DayNumber)
-                ),
-                TimeOnly => new TimeOnly(
-                    MeanTicks(values, value => ((TimeOnly)value).Ticks)
-                ),
-                DateTime => new DateTime(
-                    MeanTicks(values, value => ((DateTime)value).Ticks),
-                    DateTimeKind.Utc
-                ),
-                _ => values.Sum(Values.Decimal) / values.Count,
-            };
-    }
-
-    // The mean of ticks, rounded half away from zero to a whole microsecond.
-    private static long MeanTicks(List<object> values, Func<object, long> ticks)
-    {
-        return (long)RoundedMean(
-                values,
-                value => (decimal)ticks(value) / TimeSpan.TicksPerMicrosecond
-            ) * TimeSpan.TicksPerMicrosecond;
-    }
-
-    private static decimal RoundedMean(List<object> values, Func<object, decimal> number)
-    {
-        return decimal.Round(
-            values.Sum(number) / values.Count,
-            MidpointRounding.AwayFromZero
+        return Expression.Lambda(
+            Typed.As(scope.Row(row).Compile(ModelNode.Child(node, "Selector")), type),
+            row
         );
     }
 }

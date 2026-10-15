@@ -7,8 +7,11 @@ using PureQL.CSharp.Model;
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // The result of a PureQL query over stored schema datasets. The query is
-// validated against the datasets' schemas when the projection is built, and
-// runs each time the projection is enumerated.
+// validated against the datasets' schemas and compiled to one LINQ expression
+// tree when the projection is built: standard query operators over one root
+// per stored table (a constant holding its IStoredTableDataSet), for a LINQ
+// provider to translate (see QueryTree). Enumerating the projection runs the
+// tree in memory, again on every enumeration.
 public sealed record PureQLProjection : IStoredTableDataSet
 {
     private readonly IQueryable<IRow> _rows;
@@ -24,7 +27,12 @@ public sealed record PureQLProjection : IStoredTableDataSet
         QueryValidator.Validate(program, catalog);
         ResultTable table = new(program.Main.Select);
         TableSchema = table;
-        _rows = new ResultRows(catalog, program, [.. table.Columns]).AsQueryable();
+        _rows = new LocalQuery<IRow>(
+            new DocumentTree(catalog, program.Subqueries).Rows(
+                program.Main,
+                [.. table.Columns]
+            )
+        );
     }
 
     public ITable TableSchema { get; }

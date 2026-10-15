@@ -4,10 +4,13 @@ using PureQL.CSharp.Model.Types;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// Maps between PureQL types and storage column types. A stored column holds
-// one PureQL type: every integral column type is an integer, double and float
-// are decimals. A result column is typed the way PureQL.CSharp.Model.Samples
-// types its expected results: integer as long, decimal as double.
+// Maps between PureQL types, storage column types and the CLR types values
+// have in the tree. A stored column holds one PureQL type: every integral
+// column type is an integer, double and float are decimals. A result column
+// is typed the way PureQL.CSharp.Model.Samples types its expected results:
+// integer as long, decimal as double. In the tree every value may be null:
+// integer is long?, decimal decimal?, string string, boolean bool?, date
+// DateOnly?, time TimeOnly?, datetime DateTime? (a UTC instant), uuid Guid?.
 internal static class ValueTypes
 {
     public static string? OfColumn(IColumnType columnType)
@@ -44,10 +47,31 @@ internal static class ValueTypes
         };
     }
 
-    // An integer expression may stand where a decimal is expected, so a value
-    // is widened to the declared type of the column or key that holds it.
-    public static object? Normalize(object? value, IType type)
+    public static Type Clr(IType type)
     {
-        return value is long number && type.Name == "decimal" ? (decimal)number : value;
+        return Clr(type.Name);
+    }
+
+    // The CLR type of a PureQL type; a list type gives its item type.
+    public static Type Clr(string type)
+    {
+        string item = type.EndsWith("List", StringComparison.Ordinal)
+            ? type[..^4]
+            : type;
+
+        return item switch
+        {
+            "integer" => typeof(long?),
+            "decimal" => typeof(decimal?),
+            "string" => typeof(string),
+            "boolean" => typeof(bool?),
+            "date" => typeof(DateOnly?),
+            "time" => typeof(TimeOnly?),
+            "datetime" => typeof(DateTime?),
+            "uuid" => typeof(Guid?),
+            _ => throw new NotSupportedException(
+                $"PureQL type '{type}' has no value type."
+            ),
+        };
     }
 }
