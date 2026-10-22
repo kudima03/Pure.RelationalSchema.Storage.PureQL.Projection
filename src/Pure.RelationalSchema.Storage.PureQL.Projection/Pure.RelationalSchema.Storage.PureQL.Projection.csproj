@@ -18,7 +18,7 @@
     <PackageProjectUrl>https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Pure.Primitives" Version="3.6.5" />
+    <PackageReference Include="Pure.Primitives" Version="3.7.0" />
     <PackageReference Include="Pure.RelationalSchema" Version="2.0.3" />
     <PackageReference Include="Pure.RelationalSchema.HashCodes" Version="3.3.0" />
     <PackageReference Include="Pure.RelationalSchema.Storage" Version="0.1.0-preview.8.0.0" />
