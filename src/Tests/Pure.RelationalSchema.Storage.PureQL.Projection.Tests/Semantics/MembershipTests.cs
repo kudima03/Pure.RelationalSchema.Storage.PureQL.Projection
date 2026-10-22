@@ -69,6 +69,55 @@ public sealed class MembershipTests
     }
 
     [Fact]
+    public void DecimalValueIsInABoundIntegerListParameterByNumericValue()
+    {
+        PureQLProjection projection = new(
+            [Items],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionBoolean(
+                                    "listed",
+                                    new BooleanProjection(
+                                        new ComparisonProjection(
+                                            new InProjection(
+                                                new InDecimalProjection(
+                                                    new DecimalNullableProjection(
+                                                        new ExactDecimalProjection(
+                                                            new FieldDecimal(
+                                                                "t.items",
+                                                                "weight"
+                                                            )
+                                                        )
+                                                    ),
+                                                    new ListDecimal(
+                                                        new ListInteger(
+                                                            new ListParamInteger("weights")
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new Dictionary<string, ILiteral>
+            {
+                ["weights"] = new ListLiteralInteger([2, 3]),
+            }
+        );
+
+        Assert.Equal(["True", "False", "True"], ResultColumn.Texts(projection, "listed"));
+    }
+
+    [Fact]
     public void NullIsInASubqueryColumnHoldingNullButNotInALiteralList()
     {
         PureQLProjection projection = new(

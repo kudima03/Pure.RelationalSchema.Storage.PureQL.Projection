@@ -4,6 +4,7 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Lists;
+using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
@@ -11,9 +12,9 @@ using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 
-// A parameter given no value fails the query when it is read, wherever it
-// stands; a value that is not of its parameter's type, and a bound pagination
-// out of range, fail when the projection is built.
+// A parameter given no literal fails the query when it is read, wherever it
+// stands; a literal of another type than its parameter's, and a bound
+// pagination out of range, fail when the projection is built.
 public sealed class ParameterTests
 {
     private static readonly IStoredSchemaDataSet Names = new InlineTable(
@@ -22,17 +23,15 @@ public sealed class ParameterTests
         ("name", new StringColumnType())
     ).With(["Ann"], ["Bob"]);
 
-    private static readonly IReadOnlyDictionary<string, object?> ValuesOfAnotherType =
-        new Dictionary<string, object?>
+    private static readonly IReadOnlyDictionary<string, ILiteral> LiteralsOfAnotherType =
+        new Dictionary<string, ILiteral>
         {
-            ["null"] = null,
-            ["string"] = "10",
-            ["decimal"] = 10m,
-            ["double"] = 10.0,
-            ["ulong over long"] = ulong.MaxValue,
-            ["boolean"] = true,
-            ["list with null"] = new[] { "Ann", null },
-            ["list with integer"] = new object[] { "Ann", 1L },
+            ["null integer"] = new LiteralIntegerNullable(),
+            ["null string"] = new LiteralStringNullable(),
+            ["string"] = new LiteralString("10"),
+            ["decimal"] = new LiteralDecimal(10m),
+            ["boolean"] = new LiteralBoolean(true),
+            ["integer list"] = new ListLiteralInteger([10]),
         };
 
     [Fact]
@@ -66,7 +65,7 @@ public sealed class ParameterTests
         PureQLProjection projection = new(
             [Names],
             Paged(new Pagination(0, new ParamInteger("page_size"))),
-            new Dictionary<string, object?> { ["page"] = 1L }
+            new Dictionary<string, ILiteral> { ["page"] = new LiteralInteger(1) }
         );
 
         NotSupportedException error = Assert.Throws<NotSupportedException>(() =>
@@ -77,15 +76,15 @@ public sealed class ParameterTests
 
     [Theory]
     [MemberData(nameof(IntegersOfAnotherType))]
-    public void ValueOfAnotherTypeIsRejectedWhenTheProjectionIsBuilt(string value)
+    public void LiteralOfAnotherTypeIsRejectedWhenTheProjectionIsBuilt(string literal)
     {
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
                 Paged(new Pagination(0, new ParamInteger("page_size"))),
-                new Dictionary<string, object?>
+                new Dictionary<string, ILiteral>
                 {
-                    ["page_size"] = ValuesOfAnotherType[value],
+                    ["page_size"] = LiteralsOfAnotherType[literal],
                 }
             )
         );
@@ -93,36 +92,46 @@ public sealed class ParameterTests
     }
 
     public static TheoryData<string> IntegersOfAnotherType =>
-        ["null", "string", "decimal", "double", "ulong over long", "boolean"];
+        ["null integer", "string", "decimal", "boolean", "integer list"];
 
     [Fact]
-    public void DecimalParameterRejectsABinaryFloatingPointValue()
+    public void TypedNullIsRejectedForAParameterThatIsNotNullable()
     {
-        _ = Assert.Throws<ArgumentException>(() =>
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                Selecting(new ParamDecimal("ratio")),
-                new Dictionary<string, object?> { ["ratio"] = 0.1 }
+                Paged(new Pagination(0, new ParamInteger("page_size"))),
+                new Dictionary<string, ILiteral>
+                {
+                    ["page_size"] = new LiteralIntegerNullable(),
+                }
             )
+        );
+        Assert.Equal(
+            "Parameter 'page_size' is integer and cannot be bound to a null integer literal.",
+            error.Message
         );
     }
 
     [Theory]
     [MemberData(nameof(StringListsOfAnotherType))]
-    public void ListParameterRejectsAValueThatIsNotAListOfItsItems(string value)
+    public void ListParameterRejectsALiteralThatIsNotAListOfItsItems(string literal)
     {
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
                 InList(new ListParamString("wanted")),
-                new Dictionary<string, object?> { ["wanted"] = ValuesOfAnotherType[value] }
+                new Dictionary<string, ILiteral>
+                {
+                    ["wanted"] = LiteralsOfAnotherType[literal],
+                }
             )
         );
         Assert.Contains("'wanted'", error.Message, StringComparison.Ordinal);
     }
 
     public static TheoryData<string> StringListsOfAnotherType =>
-        ["null", "string", "list with null", "list with integer"];
+        ["null string", "string", "integer list"];
 
     [Fact]
     public void ParameterInASubqueryNobodyReadsIsChecked()
@@ -161,7 +170,7 @@ public sealed class ParameterTests
                         distinctBy: null
                     )
                 ),
-                new Dictionary<string, object?> { ["page_size"] = "10" }
+                new Dictionary<string, ILiteral> { ["page_size"] = new LiteralString("10") }
             )
         );
     }
@@ -175,7 +184,11 @@ public sealed class ParameterTests
             new PureQLProjection(
                 [Names],
                 Paged(new Pagination(new ParamInteger("skip"), new ParamInteger("take"))),
-                new Dictionary<string, object?> { ["skip"] = skip, ["take"] = take }
+                new Dictionary<string, ILiteral>
+                {
+                    ["skip"] = new LiteralInteger(skip),
+                    ["take"] = new LiteralInteger(take),
+                }
             )
         );
         Assert.Equal(message, error.Message);
@@ -189,25 +202,6 @@ public sealed class ParameterTests
                     "name",
                     new StringProjection(new FieldString("t.names", "name"))
                 )
-            )
-        );
-    }
-
-    private static PureQLQuery Selecting(ParamDecimal parameter)
-    {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.names")),
-                [
-                    new SelectItemProjection(
-                        new SelectItemProjectionNonNullable(
-                            new SelectItemProjectionDecimal(
-                                parameter.Name,
-                                new ExactDecimalProjection(parameter)
-                            )
-                        )
-                    ),
-                ]
             )
         );
     }

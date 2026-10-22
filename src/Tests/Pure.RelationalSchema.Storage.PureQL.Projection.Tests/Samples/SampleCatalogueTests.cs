@@ -1,5 +1,7 @@
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
+using PureQL.CSharp.Model.Lists;
+using PureQL.CSharp.Model.Literals;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 
@@ -7,8 +9,6 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // returns exactly that result over the fixtures it was computed on.
 public sealed class SampleCatalogueTests
 {
-    private static readonly string[] Statuses = ["paid", "shipped"];
-
     public static TheoryData<string> SamplesWithResult =>
         [
             .. Sample
@@ -72,14 +72,16 @@ public sealed class SampleCatalogueTests
         PureQLProjection projection = new(
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
             Sample.Named(name).Query,
-            new Dictionary<string, object?>
+            new Dictionary<string, ILiteral>
             {
-                ["min_age"] = 18m,
-                ["min_total"] = 100m,
-                ["min_orders"] = 2L,
-                ["statuses"] = Statuses,
-                ["currency"] = "USD",
-                ["since"] = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                ["min_age"] = new LiteralDecimal(18m),
+                ["min_total"] = new LiteralDecimal(100m),
+                ["min_orders"] = new LiteralInteger(2),
+                ["statuses"] = new ListLiteralString(["paid", "shipped"]),
+                ["currency"] = new LiteralString("USD"),
+                ["since"] = new LiteralDatetime(
+                    new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero)
+                ),
             }
         );
 

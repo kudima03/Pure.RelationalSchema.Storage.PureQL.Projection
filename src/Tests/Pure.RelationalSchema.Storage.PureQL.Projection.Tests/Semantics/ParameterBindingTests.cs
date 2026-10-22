@@ -1,10 +1,10 @@
-using System.Globalization;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Lists;
+using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
@@ -12,11 +12,11 @@ using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
-// Parameters bound by name read their values wherever they stand: in an
-// expression, as the list of in and in pagination. A value has its
-// parameter's type, an integral number standing for an integer or a decimal,
-// a datetime read as its instant in UTC; the tree still holds the parameter
-// as a captured variable.
+// Parameters bound by name to literals read their values wherever they
+// stand: in an expression, as the list of in and in pagination. A literal has
+// its parameter's type, an integer standing for a decimal, and a datetime is
+// the instant it denotes in UTC; the tree still holds the parameter as a
+// captured variable.
 public sealed class ParameterBindingTests
 {
     private static readonly IStoredSchemaDataSet Names = new InlineTable(
@@ -30,16 +30,18 @@ public sealed class ParameterBindingTests
     public void ScalarParametersReadTheirBoundValues()
     {
         PureQLProjection projection = Selecting(
-            new Dictionary<string, object?>
+            new Dictionary<string, ILiteral>
             {
-                ["integer"] = 7L,
-                ["decimal"] = 2.5m,
-                ["string"] = "x",
-                ["boolean"] = true,
-                ["date"] = new DateOnly(2024, 2, 29),
-                ["time"] = new TimeOnly(13, 5, 0),
-                ["datetime"] = new DateTime(2024, 1, 1, 10, 0, 0, DateTimeKind.Utc),
-                ["uuid"] = new Guid("8C5E1A2B-0000-4000-8000-000000000001"),
+                ["integer"] = new LiteralInteger(7),
+                ["decimal"] = new LiteralDecimal(2.5m),
+                ["string"] = new LiteralString("x"),
+                ["boolean"] = new LiteralBoolean(true),
+                ["date"] = new LiteralDate(new DateOnly(2024, 2, 29)),
+                ["time"] = new LiteralTime(new TimeOnly(13, 5, 0)),
+                ["datetime"] = new LiteralDatetime(
+                    new DateTimeOffset(2024, 1, 1, 10, 0, 0, TimeSpan.Zero)
+                ),
+                ["uuid"] = new LiteralUuid(new Guid("8C5E1A2B-0000-4000-8000-000000000001")),
             },
             new SelectItemProjectionInteger(
                 "integer",
@@ -81,68 +83,36 @@ public sealed class ParameterBindingTests
     }
 
     [Fact]
-    public void IntegralNumbersBindIntegerAndDecimalParameters()
+    public void IntegerLiteralBindsADecimalParameter()
     {
         PureQLProjection projection = Selecting(
-            new Dictionary<string, object?>
-            {
-                ["integer"] = 7,
-                ["unsigned"] = 8UL,
-                ["decimal"] = (byte)3,
-            },
-            new SelectItemProjectionInteger(
-                "integer",
-                new IntegerProjection(new ParamInteger("integer"))
-            ),
-            new SelectItemProjectionInteger(
-                "unsigned",
-                new IntegerProjection(new ParamInteger("unsigned"))
-            ),
+            new Dictionary<string, ILiteral> { ["decimal"] = new LiteralInteger(3) },
             new SelectItemProjectionDecimal(
                 "decimal",
                 new ExactDecimalProjection(new ParamDecimal("decimal"))
             )
         );
 
-        Assert.Equal(["7", "7", "7"], ResultColumn.Texts(projection, "integer"));
-        Assert.Equal(["8", "8", "8"], ResultColumn.Texts(projection, "unsigned"));
         Assert.Equal(["3", "3", "3"], ResultColumn.Texts(projection, "decimal"));
     }
 
     [Fact]
     public void DatetimeParameterIsTheInstantItDenotesInUtc()
     {
-        DateTime local = new(2024, 1, 1, 3, 0, 0, DateTimeKind.Local);
         PureQLProjection projection = Selecting(
-            new Dictionary<string, object?>
+            new Dictionary<string, ILiteral>
             {
-                ["offset"] = new DateTimeOffset(2024, 1, 1, 3, 0, 0, TimeSpan.FromHours(3)),
-                ["unspecified"] = new DateTime(2024, 1, 1, 3, 0, 0),
-                ["local"] = local,
+                ["at"] = new LiteralDatetime(
+                    new DateTimeOffset(2024, 1, 1, 3, 0, 0, TimeSpan.FromHours(3))
+                ),
             },
             new SelectItemProjectionDatetime(
-                "offset",
-                new DatetimeProjection(new ParamDatetime("offset"))
-            ),
-            new SelectItemProjectionDatetime(
-                "unspecified",
-                new DatetimeProjection(new ParamDatetime("unspecified"))
-            ),
-            new SelectItemProjectionDatetime(
-                "local",
-                new DatetimeProjection(new ParamDatetime("local"))
+                "at",
+                new DatetimeProjection(new ParamDatetime("at"))
             )
         );
 
-        Assert.Equal("2024-01-01T00:00:00", ResultColumn.Texts(projection, "offset")[0]);
-        Assert.Equal(
-            "2024-01-01T03:00:00",
-            ResultColumn.Texts(projection, "unspecified")[0]
-        );
-        Assert.Equal(
-            local.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture),
-            ResultColumn.Texts(projection, "local")[0]
-        );
+        Assert.Equal("2024-01-01T00:00:00", ResultColumn.Texts(projection, "at")[0]);
     }
 
     [Fact]
@@ -175,7 +145,7 @@ public sealed class ParameterBindingTests
                     distinctBy: null
                 )
             ),
-            new Dictionary<string, object?> { ["min_id"] = 1L }
+            new Dictionary<string, ILiteral> { ["min_id"] = new LiteralInteger(1) }
         );
 
         Assert.Contains("@min_id", TreeText.Of(projection.Expression), StringComparison.Ordinal);
@@ -218,7 +188,7 @@ public sealed class ParameterBindingTests
                     distinctBy: null
                 )
             ),
-            new Dictionary<string, object?> { ["wanted"] = wanted }
+            new Dictionary<string, ILiteral> { ["wanted"] = new ListLiteralString(wanted) }
         );
 
         wanted.Add("Bob");
@@ -251,7 +221,11 @@ public sealed class ParameterBindingTests
                     distinctBy: null
                 )
             ),
-            new Dictionary<string, object?> { ["skip"] = 1, ["take"] = 1 }
+            new Dictionary<string, ILiteral>
+            {
+                ["skip"] = new LiteralInteger(1),
+                ["take"] = new LiteralInteger(1),
+            }
         );
 
         Assert.Equal(["Bob"], ResultColumn.Texts(projection, "name"));
@@ -277,7 +251,7 @@ public sealed class ParameterBindingTests
                     ]
                 )
             ),
-            new Dictionary<string, object?> { ["integer"] = 4L }
+            new Dictionary<string, ILiteral> { ["integer"] = new LiteralInteger(4) }
         );
 
         Assert.Equal(["4", "4", "4"], ResultColumn.Texts(projection, "integer"));
@@ -287,7 +261,7 @@ public sealed class ParameterBindingTests
     public void NullableParameterBindsNull()
     {
         PureQLProjection projection = Selecting(
-            new Dictionary<string, object?> { ["name"] = null },
+            new Dictionary<string, ILiteral> { ["name"] = new LiteralStringNullable() },
             new SelectItemProjectionStringNullable(
                 "name",
                 new ExactStringNullableProjection(new ParamStringNullable("name"))
@@ -301,7 +275,11 @@ public sealed class ParameterBindingTests
     public void ValuesOfParametersTheQueryDoesNotReadAreIgnored()
     {
         PureQLProjection projection = Selecting(
-            new Dictionary<string, object?> { ["integer"] = 1L, ["unused"] = "anything" },
+            new Dictionary<string, ILiteral>
+            {
+                ["integer"] = new LiteralInteger(1),
+                ["unused"] = new LiteralString("anything"),
+            },
             new SelectItemProjectionInteger(
                 "integer",
                 new IntegerProjection(new ParamInteger("integer"))
@@ -321,7 +299,7 @@ public sealed class ParameterBindingTests
     }
 
     private static PureQLProjection Selecting(
-        IReadOnlyDictionary<string, object?> values,
+        IReadOnlyDictionary<string, ILiteral> values,
         params object[] columns
     )
     {

@@ -23,7 +23,7 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 |--------|-------------|
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)` | Validates the query against the datasets' schemas and builds the projection. |
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
-| `PureQLProjection(..., IReadOnlyDictionary<string, object?> parameters)` | Either of the above with parameter values bound by name (see [Parameters](#parameters)). |
+| `PureQLProjection(..., IReadOnlyDictionary<string, ILiteral> parameters)` | Either of the above with parameters bound by name to literals (see [Parameters](#parameters)). |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
 | `IEnumerator<IRow> GetEnumerator()` | Runs the query and enumerates the result rows. Every enumeration runs the query again. |
 | `IAsyncEnumerator<IRow> GetAsyncEnumerator(...)` | Async enumeration over the same rows. |
@@ -38,27 +38,31 @@ A plain query returns one row per row left by `where`, a total query exactly one
 
 The semantics are the specification's: `null` equals `null` and sorts first, ordering comparisons against `null` are false, lifted operators are `null` on a `null` operand, `integer` is a checked 64-bit integer, `decimal` is exact (`System.Decimal`), strings compare by code point, a `datetime` is an instant written in UTC, and seconds and `time` / `datetime` averages round half away from zero to the microsecond. Overflow, division by zero and dates outside the calendar fail the query with the corresponding .NET exception.
 
-The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` lists only column aliases; a subquery reads only subqueries declared before it; a bound parameter's value has the parameter's type, and a bound `pagination` is in range.
+The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` lists only column aliases; a subquery reads only subqueries declared before it; a bound parameter's literal has the parameter's type, and a bound `pagination` is in range.
 
 ### Parameters
 
-Parameter values are passed by name to the constructor that takes `parameters`. A value has its parameter's type:
+Parameters are bound by name to literals of the query model (`PureQL.CSharp.Model.Literals` / `.Lists`), passed to the constructor that takes `parameters`. Binding a parameter substitutes the value of a literal of its type:
 
-| PureQL type | Value |
+| Parameter | Literal |
 |---|---|
-| `integer` | `long` or another integral number that fits |
-| `decimal` | `decimal` or an integral number (not `double`/`float`, which are inexact) |
-| `string`, `boolean`, `date`, `time`, `uuid` | `string`, `bool`, `DateOnly`, `TimeOnly`, `Guid` |
-| `datetime` | `DateTimeOffset`, or `DateTime` (local is converted to UTC, otherwise read as UTC) |
-| `<type>List` | any sequence (not a string) of non-null items of the item type; its items are copied when the projection is built |
+| `integer`, `string`, `boolean`, `date`, `time`, `datetime`, `uuid` | `LiteralInteger`, `LiteralString`, `LiteralBoolean`, `LiteralDate`, `LiteralTime`, `LiteralDatetime`, `LiteralUuid` |
+| `decimal` | `LiteralDecimal`, or `LiteralInteger` (an integer stands for a decimal, as in decimal expressions) |
+| nullable `<type>` | the literal of its type, or that type's typed null (`LiteralIntegerNullable`, …) |
+| `<type>List` | `ListLiteral<Type>` (`ListLiteralInteger` also binds a `decimalList`); its items are copied when the projection is built |
 
-`null` binds only a nullable parameter. A value of another type raises `ArgumentException` when the projection is built, for every parameter of the document, read or not. Names the query does not use are ignored. A parameter that is given no value (or every parameter, with the constructors without `parameters`) raises `NotSupportedException` when the query reads it, so a tree can still be built for a provider that binds parameters itself.
+A literal of another type, or a typed null for a parameter that is not nullable, raises `ArgumentException` when the projection is built, for every parameter of the document, read or not. Names the query does not use are ignored. A parameter given no literal (or every parameter, with the constructors without `parameters`) raises `NotSupportedException` when the query reads it, so a tree can still be built for a provider that binds parameters itself.
 
 ```csharp
 IStoredTableDataSet result = new PureQLProjection(
     datasets,
     query,
-    new Dictionary<string, object?> { ["min_total"] = 100m, ["page_size"] = 20 }
+    new Dictionary<string, ILiteral>
+    {
+        ["min_total"] = new LiteralDecimal(100m),
+        ["page_size"] = new LiteralInteger(20),
+        ["statuses"] = new ListLiteralString(["paid", "shipped"]),
+    }
 );
 ```
 

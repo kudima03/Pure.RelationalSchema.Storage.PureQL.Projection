@@ -1,24 +1,23 @@
-using System.Collections;
 using System.Linq.Expressions;
+using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
+using PureQL.CSharp.Model.Types;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// The values a query's parameters are bound to, by name. A parameter is a
+// The literals a query's parameters are bound to, by name. A parameter is a
 // captured variable in the tree, the Value of a QueryParameter constant, as
-// C# closures are, so a provider can pass it as a SQL parameter. A value has
-// its parameter's type: an integral number for integer, a decimal or an
-// integral number for decimal, a string, bool, DateOnly, TimeOnly or Guid,
-// a DateTimeOffset or DateTime for datetime (a DateTime that is not local is
-// read as UTC, as stored datetimes are) and a sequence of non-null items for
-// a list; null only for a nullable parameter. A parameter given no value
-// fails the query when it is read instead of guessing a value.
-internal sealed class ParameterValues(IReadOnlyDictionary<string, object?> values)
+// C# closures are, so a provider can pass it as a SQL parameter; bound, it
+// holds its literal's value. A literal binds a parameter of its type, a typed
+// null only a nullable one, and an integer (list) a decimal (list), as an
+// integer stands for a decimal in a decimal expression. A parameter given no
+// literal fails the query when it is read instead of guessing a value.
+internal sealed class ParameterValues(IReadOnlyDictionary<string, ILiteral> values)
 {
-    private readonly IReadOnlyDictionary<string, object?> _values =
-        new Dictionary<string, object?>(values, StringComparer.Ordinal);
+    private readonly IReadOnlyDictionary<string, ILiteral> _values =
+        new Dictionary<string, ILiteral>(values, StringComparer.Ordinal);
 
-    public static ParameterValues None { get; } = new(new Dictionary<string, object?>());
+    public static ParameterValues None { get; } = new(new Dictionary<string, ILiteral>());
 
     public static NotSupportedException Unbound(string name)
     {
@@ -30,7 +29,7 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, object?> value
     public Expression Value(IParameter parameter)
     {
         Type item = ValueTypes.Clr(parameter.Type);
-        Type type = IsList(parameter)
+        Type type = IsList(parameter.Type)
             ? typeof(IEnumerable<>).MakeGenericType(item)
             : item;
         Type holder = typeof(QueryParameter<>).MakeGenericType(type);
@@ -45,7 +44,7 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, object?> value
         );
     }
 
-    // Rejects a value that is not of the parameter's type.
+    // Rejects a literal of another type than the parameter's.
     public void Check(IParameter parameter)
     {
         if (_values.ContainsKey(parameter.Name))
@@ -60,77 +59,45 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, object?> value
         return _values.ContainsKey(parameter.Name) ? (long?)Bound(parameter) : null;
     }
 
-    private static bool IsList(IParameter parameter)
+    private static bool IsList(IType type)
     {
-        return parameter.Type.Name.EndsWith("List", StringComparison.Ordinal);
+        return type.Name.EndsWith("List", StringComparison.Ordinal);
+    }
+
+    private static bool Binds(IType parameter, IType literal)
+    {
+        bool typed =
+            literal.Name == parameter.Name
+            || (parameter.Name, literal.Name)
+                is ("decimal", "integer")
+                    or ("decimalList", "integerList");
+
+        return typed && (parameter.Nullable || !literal.Nullable);
+    }
+
+    private static string Describe(IType type, string nullable)
+    {
+        return type.Nullable ? $"{nullable} {type.Name}" : type.Name;
     }
 
     // A parameter's value as the tree holds it: a value of its type's value
     // type, or the items of a list in an array.
     private object? Bound(IParameter parameter)
     {
-        object? value = _values[parameter.Name];
+        ILiteral literal = _values[parameter.Name];
 
-        if (!IsList(parameter))
+        if (!Binds(parameter.Type, literal.Type))
         {
-            return value is null && parameter.Type.Nullable ? null : Of(parameter, value);
+            throw new ArgumentException(
+                $"Parameter '{parameter.Name}' is {Describe(parameter.Type, "nullable")} "
+                    + $"and cannot be bound to a {Describe(literal.Type, "null")} literal."
+            );
         }
 
-        object?[] items = value is IEnumerable sequence and not string
-            ? [.. sequence.Cast<object?>().Select(each => Of(parameter, each))]
-            : throw Mismatch(parameter, value);
+        Type item = ValueTypes.Clr(parameter.Type);
 
-        Array array = Array.CreateInstance(ValueTypes.Clr(parameter.Type), items.Length);
-
-        for (int i = 0; i < items.Length; i++)
-        {
-            array.SetValue(items[i], i);
-        }
-
-        return array;
-    }
-
-    private static object Of(IParameter parameter, object? value)
-    {
-        string type = IsList(parameter)
-            ? parameter.Type.Name[..^"List".Length]
-            : parameter.Type.Name;
-
-        object? converted = (type, value) switch
-        {
-            ("integer", long or int or short or sbyte or byte or uint or ushort) =>
-                Convert.ToInt64(value),
-            ("integer", ulong number) when number <= long.MaxValue => (long)number,
-            ("decimal", decimal) => value,
-            (
-                "decimal",
-                long or int or short or sbyte or byte or ulong or uint or ushort
-            ) => Convert.ToDecimal(value),
-            ("string", string) => value,
-            ("boolean", bool) => value,
-            ("date", DateOnly) => value,
-            ("time", TimeOnly) => value,
-            ("datetime", DateTimeOffset instant) => instant.UtcDateTime,
-            ("datetime", DateTime { Kind: DateTimeKind.Local } local) =>
-                local.ToUniversalTime(),
-            ("datetime", DateTime instant) => DateTime.SpecifyKind(
-                instant,
-                DateTimeKind.Utc
-            ),
-            ("uuid", Guid) => value,
-            _ => null,
-        };
-
-        return converted ?? throw Mismatch(parameter, value);
-    }
-
-    private static ArgumentException Mismatch(IParameter parameter, object? value)
-    {
-        string what = value is null ? "null" : $"a value of type {value.GetType().Name}";
-
-        return new ArgumentException(
-            $"Parameter '{parameter.Name}' is {parameter.Type.Name} and cannot be "
-                + $"bound to {what}."
-        );
+        return IsList(parameter.Type)
+            ? Literals.Items(literal, item)
+            : Literals.As(Literals.Of(literal), item);
     }
 }

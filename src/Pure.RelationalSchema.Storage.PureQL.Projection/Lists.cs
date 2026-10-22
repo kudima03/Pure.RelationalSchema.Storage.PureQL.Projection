@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Linq.Expressions;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
@@ -18,7 +17,7 @@ internal static class Lists
         return leaf switch
         {
             IParameter parameter => Converted(scope.Parameter(parameter), item),
-            ILiteral literal => Array(literal, item),
+            ILiteral literal => Expression.Constant(Literals.Items(literal, item)),
             _ => scope.SubqueryColumn(
                 (string)ModelNode.Child(leaf, "Subquery"),
                 (string)ModelNode.Child(leaf, "Field"),
@@ -31,30 +30,6 @@ internal static class Lists
     public static Type Item(object list)
     {
         return ValueTypes.Clr((IType)ModelNode.Child(ModelNode.Unwrap(list), "Type"));
-    }
-
-    private static ConstantExpression Array(ILiteral literal, Type item)
-    {
-        object?[] values =
-        [
-            .. ((IEnumerable)ModelNode.Child(literal, "Value"))
-                .Cast<object>()
-                .Select(Literals.Normalize),
-        ];
-
-        Array array = System.Array.CreateInstance(item, values.Length);
-
-        for (int i = 0; i < values.Length; i++)
-        {
-            array.SetValue(
-                item == typeof(decimal?) && values[i] is long number
-                    ? (decimal)number
-                    : values[i],
-                i
-            );
-        }
-
-        return Expression.Constant(array);
     }
 
     private static Expression Converted(Expression sequence, Type item)

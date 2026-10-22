@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model;
+using PureQL.CSharp.Model.Literals;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
@@ -26,7 +27,7 @@ public sealed record PureQLProjection : IStoredTableDataSet
     public PureQLProjection(
         IEnumerable<IStoredSchemaDataSet> datasets,
         PureQLQuery query,
-        IReadOnlyDictionary<string, object?> parameters
+        IReadOnlyDictionary<string, ILiteral> parameters
     )
         : this(
             new Catalog(datasets),
@@ -38,7 +39,7 @@ public sealed record PureQLProjection : IStoredTableDataSet
     public PureQLProjection(
         IEnumerable<IStoredSchemaDataSet> datasets,
         Query query,
-        IReadOnlyDictionary<string, object?> parameters
+        IReadOnlyDictionary<string, ILiteral> parameters
     )
         : this(
             new Catalog(datasets),
