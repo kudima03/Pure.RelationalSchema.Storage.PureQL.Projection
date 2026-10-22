@@ -1,9 +1,26 @@
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// A named query parameter, which the tree reads like a captured variable.
-internal sealed class QueryParameter<T>(string name)
+// A named query parameter, which the tree reads like a captured variable:
+// the value it is bound to, or, when it is not bound, a failure.
+internal sealed class QueryParameter<T>
 {
-    public string Name { get; } = name;
+    private readonly bool _bound;
 
-    public T Value => throw UnboundParameter.Error(Name);
+    public QueryParameter(string name)
+    {
+        Name = name;
+        Value = default!;
+        _bound = false;
+    }
+
+    public QueryParameter(string name, T value)
+    {
+        Name = name;
+        Value = value;
+        _bound = true;
+    }
+
+    public string Name { get; }
+
+    public T Value => _bound ? field : throw ParameterValues.Unbound(Name);
 }

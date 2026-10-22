@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
+using PureQL.CSharp.Model.Parameters;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
@@ -9,9 +10,15 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // subquery is built where it is read, for the way it is read, and inlined
 // there, as SQL inlines a common table expression; read twice the same way,
 // it is the same subtree.
-internal sealed class DocumentTree(Catalog catalog, IEnumerable<NamedQuery> subqueries)
+internal sealed class DocumentTree(
+    Catalog catalog,
+    IEnumerable<NamedQuery> subqueries,
+    ParameterValues parameters
+)
 {
     private readonly Catalog _catalog = catalog;
+
+    private readonly ParameterValues _parameters = parameters;
 
     private readonly IReadOnlyDictionary<string, QueryClauses> _subqueries =
         subqueries.ToDictionary(
@@ -69,5 +76,10 @@ internal sealed class DocumentTree(Catalog catalog, IEnumerable<NamedQuery> subq
     public KeyValuePair<ITable, IStoredTableDataSet> Table(string entity)
     {
         return _catalog.Table(entity);
+    }
+
+    public Expression Parameter(IParameter parameter)
+    {
+        return _parameters.Value(parameter);
     }
 }
