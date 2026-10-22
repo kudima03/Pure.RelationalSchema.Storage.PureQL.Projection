@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.4.3.0] — 2026-10-22
+
+### Added
+
+- `PureQLProjection` constructors taking an
+  `IReadOnlyDictionary<string, ILiteral>` bind query parameters to literals
+  by name. Each literal is checked against its parameter's type (an integer
+  literal binds a decimal parameter; a typed null binds only a nullable
+  one); a mismatch, or a bound pagination value out of range, throws
+  `ArgumentException`. Reading a parameter that is not bound still throws
+  `NotSupportedException`.
+
 ## [0.1.0-preview.4.2.0] — 2026-10-22
 
 ### Changed
