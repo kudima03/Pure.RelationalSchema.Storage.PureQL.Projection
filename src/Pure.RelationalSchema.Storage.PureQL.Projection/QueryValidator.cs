@@ -2,6 +2,7 @@ using Pure.RelationalSchema.Abstractions.Column;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Keys;
+using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.Types;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
@@ -10,18 +11,23 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // the catalog or names: entities, subqueries, sources and fields exist; a
 // field declares its column's type and, after outer joins, its nullability;
 // group key references name a key and repeat its type; names and aliases are
-// unique; distinctBy lists select aliases.
+// unique; distinctBy lists select aliases; a bound parameter's value has the
+// parameter's type and a bound pagination is in range.
 // Storage columns carry no nullability, so for an entity column only the
 // outer-join rule can be checked; subquery columns are checked exactly.
 internal static class QueryValidator
 {
-    public static void Validate(QueryProgram program, Catalog catalog)
+    public static void Validate(
+        QueryProgram program,
+        Catalog catalog,
+        ParameterValues parameters
+    )
     {
         Dictionary<string, QueryClauses> declared = new(StringComparer.Ordinal);
 
         foreach (NamedQuery subquery in program.Subqueries)
         {
-            Validate(subquery.Clauses, catalog, declared);
+            Validate(subquery.Clauses, catalog, declared, parameters);
 
             if (!declared.TryAdd(subquery.Name, subquery.Clauses))
             {
@@ -31,13 +37,14 @@ internal static class QueryValidator
             }
         }
 
-        Validate(program.Main, catalog, declared);
+        Validate(program.Main, catalog, declared, parameters);
     }
 
     private static void Validate(
         QueryClauses query,
         Catalog catalog,
-        IReadOnlyDictionary<string, QueryClauses> subqueries
+        IReadOnlyDictionary<string, QueryClauses> subqueries,
+        ParameterValues parameters
     )
     {
         List<Source> sources = [query.From, .. query.Joins.Select(join => join.Source)];
@@ -67,7 +74,8 @@ internal static class QueryValidator
                     .ToDictionary(StringComparer.Ordinal),
                 new HashSet<string>(optional, StringComparer.Ordinal),
                 subqueries,
-                null
+                null,
+                parameters
             ).Check(join.On);
 
             optional.UnionWith(
@@ -86,7 +94,13 @@ internal static class QueryValidator
             "Group key alias"
         );
 
-        References references = new(columns, optional, subqueries, query.GroupBy);
+        References references = new(
+            columns,
+            optional,
+            subqueries,
+            query.GroupBy,
+            parameters
+        );
 
         foreach (
             object expression in new object?[] { query.Where, query.Having }
@@ -114,7 +128,7 @@ internal static class QueryValidator
 
         if (query.Pagination is not null)
         {
-            ValidatePagination(query.Pagination);
+            ValidatePagination(query.Pagination, parameters);
         }
     }
 
@@ -131,14 +145,21 @@ internal static class QueryValidator
         }
     }
 
-    private static void ValidatePagination(Pagination pagination)
+    // A pagination parameter is checked when it is bound.
+    private static void ValidatePagination(
+        Pagination pagination,
+        ParameterValues parameters
+    )
     {
-        if (pagination.Skip.TryPickT0(out long skip, out _) && skip < 0)
+        long? skip = pagination.Skip.Match(number => number, parameters.Integer);
+        long? take = pagination.Take.Match(number => number, parameters.Integer);
+
+        if (skip < 0)
         {
             throw new ArgumentException($"Pagination skip {skip} is negative.");
         }
 
-        if (pagination.Take.TryPickT0(out long take, out _) && take < 1)
+        if (take < 1)
         {
             throw new ArgumentException($"Pagination take {take} is less than 1.");
         }
@@ -192,7 +213,8 @@ internal static class QueryValidator
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, DeclaredType>> sources,
         IReadOnlySet<string> optional,
         IReadOnlyDictionary<string, QueryClauses> subqueries,
-        IReadOnlyList<TypedExpression>? keys
+        IReadOnlyList<TypedExpression>? keys,
+        ParameterValues parameters
     )
     {
         public void Check(object expression)
@@ -206,6 +228,9 @@ internal static class QueryValidator
                         break;
                     case IKey key:
                         CheckKey(key);
+                        break;
+                    case IParameter parameter:
+                        parameters.Check(parameter);
                         break;
                     default:
                         if (ModelNode.Has(node, "Subquery"))

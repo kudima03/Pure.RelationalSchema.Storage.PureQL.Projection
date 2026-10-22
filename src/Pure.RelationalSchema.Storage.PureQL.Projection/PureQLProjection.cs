@@ -11,24 +11,53 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // tree when the projection is built: standard query operators over one root
 // per stored table (a constant holding its IStoredTableDataSet), for a LINQ
 // provider to translate (see QueryTree). Enumerating the projection runs the
-// tree in memory, again on every enumeration.
+// tree in memory, again on every enumeration. Parameters are bound by name
+// (see ParameterValues); reading one that is not bound fails the query.
 public sealed record PureQLProjection : IStoredTableDataSet
 {
     private readonly IQueryable<IRow> _rows;
 
     public PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)
-        : this(new Catalog(datasets), QueryProgram.Of(query)) { }
+        : this(new Catalog(datasets), QueryProgram.Of(query), ParameterValues.None) { }
 
     public PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)
-        : this(new Catalog(datasets), QueryProgram.Of(query)) { }
+        : this(new Catalog(datasets), QueryProgram.Of(query), ParameterValues.None) { }
 
-    private PureQLProjection(Catalog catalog, QueryProgram program)
+    public PureQLProjection(
+        IEnumerable<IStoredSchemaDataSet> datasets,
+        PureQLQuery query,
+        IReadOnlyDictionary<string, object?> parameters
+    )
+        : this(
+            new Catalog(datasets),
+            QueryProgram.Of(query),
+            new ParameterValues(parameters)
+        )
+    { }
+
+    public PureQLProjection(
+        IEnumerable<IStoredSchemaDataSet> datasets,
+        Query query,
+        IReadOnlyDictionary<string, object?> parameters
+    )
+        : this(
+            new Catalog(datasets),
+            QueryProgram.Of(query),
+            new ParameterValues(parameters)
+        )
+    { }
+
+    private PureQLProjection(
+        Catalog catalog,
+        QueryProgram program,
+        ParameterValues parameters
+    )
     {
-        QueryValidator.Validate(program, catalog);
+        QueryValidator.Validate(program, catalog, parameters);
         ResultTable table = new(program.Main.Select);
         TableSchema = table;
         _rows = new LocalQuery<IRow>(
-            new DocumentTree(catalog, program.Subqueries).Rows(
+            new DocumentTree(catalog, program.Subqueries, parameters).Rows(
                 program.Main,
                 [.. table.Columns]
             )

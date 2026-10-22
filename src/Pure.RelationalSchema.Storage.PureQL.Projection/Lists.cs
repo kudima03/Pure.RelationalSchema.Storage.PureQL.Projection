@@ -17,7 +17,7 @@ internal static class Lists
 
         return leaf switch
         {
-            IParameter parameter => Converted(UnboundParameter.Value(parameter), item),
+            IParameter parameter => Converted(scope.Parameter(parameter), item),
             ILiteral literal => Array(literal, item),
             _ => scope.SubqueryColumn(
                 (string)ModelNode.Child(leaf, "Subquery"),

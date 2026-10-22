@@ -7,6 +7,8 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // returns exactly that result over the fixtures it was computed on.
 public sealed class SampleCatalogueTests
 {
+    private static readonly string[] Statuses = ["paid", "shipped"];
+
     public static TheoryData<string> SamplesWithResult =>
         [
             .. Sample
@@ -51,7 +53,7 @@ public sealed class SampleCatalogueTests
 
     [Theory]
     [MemberData(nameof(SamplesWithParameters))]
-    public void SampleWithParameterFailsBecauseParametersCannotBeBound(string name)
+    public void SampleWithUnboundParameterFailsWhenItRuns(string name)
     {
         PureQLProjection projection = new(
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
@@ -59,5 +61,28 @@ public sealed class SampleCatalogueTests
         );
 
         _ = Assert.Throws<NotSupportedException>(() => projection.ToList());
+    }
+
+    // The catalogue gives no result for a sample with parameters, which is
+    // only run with values bound for every parameter of every such sample.
+    [Theory]
+    [MemberData(nameof(SamplesWithParameters))]
+    public void SampleWithBoundParametersRuns(string name)
+    {
+        PureQLProjection projection = new(
+            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
+            Sample.Named(name).Query,
+            new Dictionary<string, object?>
+            {
+                ["min_age"] = 18m,
+                ["min_total"] = 100m,
+                ["min_orders"] = 2L,
+                ["statuses"] = Statuses,
+                ["currency"] = "USD",
+                ["since"] = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            }
+        );
+
+        Assert.Null(Record.Exception(() => projection.ToList()));
     }
 }

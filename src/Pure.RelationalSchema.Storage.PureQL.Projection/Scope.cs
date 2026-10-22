@@ -38,7 +38,7 @@ internal sealed class Scope(
                     ),
                 key.Key
             ),
-            IParameter parameter => UnboundParameter.Value(parameter),
+            IParameter parameter => Parameter(parameter),
             ILiteral literal => Literals.Value(literal),
             _ => Operator.Of(leaf.GetType()).Compile(leaf, this),
         };
@@ -71,6 +71,11 @@ internal sealed class Scope(
     public Expression SubqueryColumn(string subquery, string field, Type item)
     {
         return _query.SubqueryColumn(subquery, field, item);
+    }
+
+    public Expression Parameter(IParameter parameter)
+    {
+        return _query.Parameter(parameter);
     }
 
     private Expression Field(IField field)

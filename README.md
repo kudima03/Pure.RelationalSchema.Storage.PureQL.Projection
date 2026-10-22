@@ -23,6 +23,7 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 |--------|-------------|
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)` | Validates the query against the datasets' schemas and builds the projection. |
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
+| `PureQLProjection(..., IReadOnlyDictionary<string, object?> parameters)` | Either of the above with parameter values bound by name (see [Parameters](#parameters)). |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
 | `IEnumerator<IRow> GetEnumerator()` | Runs the query and enumerates the result rows. Every enumeration runs the query again. |
 | `IAsyncEnumerator<IRow> GetAsyncEnumerator(...)` | Async enumeration over the same rows. |
@@ -37,7 +38,29 @@ A plain query returns one row per row left by `where`, a total query exactly one
 
 The semantics are the specification's: `null` equals `null` and sorts first, ordering comparisons against `null` are false, lifted operators are `null` on a `null` operand, `integer` is a checked 64-bit integer, `decimal` is exact (`System.Decimal`), strings compare by code point, a `datetime` is an instant written in UTC, and seconds and `time` / `datetime` averages round half away from zero to the microsecond. Overflow, division by zero and dates outside the calendar fail the query with the corresponding .NET exception.
 
-The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` lists only column aliases; a subquery reads only subqueries declared before it.
+The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` lists only column aliases; a subquery reads only subqueries declared before it; a bound parameter's value has the parameter's type, and a bound `pagination` is in range.
+
+### Parameters
+
+Parameter values are passed by name to the constructor that takes `parameters`. A value has its parameter's type:
+
+| PureQL type | Value |
+|---|---|
+| `integer` | `long` or another integral number that fits |
+| `decimal` | `decimal` or an integral number (not `double`/`float`, which are inexact) |
+| `string`, `boolean`, `date`, `time`, `uuid` | `string`, `bool`, `DateOnly`, `TimeOnly`, `Guid` |
+| `datetime` | `DateTimeOffset`, or `DateTime` (local is converted to UTC, otherwise read as UTC) |
+| `<type>List` | any sequence (not a string) of non-null items of the item type; its items are copied when the projection is built |
+
+`null` binds only a nullable parameter. A value of another type raises `ArgumentException` when the projection is built, for every parameter of the document, read or not. Names the query does not use are ignored. A parameter that is given no value (or every parameter, with the constructors without `parameters`) raises `NotSupportedException` when the query reads it, so a tree can still be built for a provider that binds parameters itself.
+
+```csharp
+IStoredTableDataSet result = new PureQLProjection(
+    datasets,
+    query,
+    new Dictionary<string, object?> { ["min_total"] = 100m, ["page_size"] = 20 }
+);
+```
 
 ### Expression tree
 
@@ -55,7 +78,7 @@ scan(from) [.Where] (.SelectMany(join))* [.Where(rest of where)]
 - **Rows** are value tuples: a source row holds its fields, a joined row one source row per source, a group key one value per key, a query result one value per column. Every value is nullable: `long?` (integer), `decimal?`, `string`, `bool?`, `DateOnly?`, `TimeOnly?`, `DateTime?` (UTC), `Guid?`.
 - **Joins** are a correlated `SelectMany` (`DefaultIfEmpty` for an outer side); `full` is the left join `Concat` the unmatched joined rows (`!Any(...)`). An unmatched side is the default tuple: all nulls.
 - **Aggregates** are LINQ's over the group or, over all rows, over the query's rows, which are one shared subtree. A total query reads a one-row constant source, as SQL's `SELECT` without `FROM`.
-- **Semantics** are C#'s, which match the specification: `null == null`, an ordering comparison with null is false, lifted operators. Strings compare with `string.CompareOrdinal` and order with `StringComparer.Ordinal` (SQL's `"C"` collation, code point order); ascending order puts null first. Parameters are captured variables, the `Value` of a constant holding the parameter, as C# closures are; reading one fails while parameters cannot be bound.
+- **Semantics** are C#'s, which match the specification: `null == null`, an ordering comparison with null is false, lifted operators. Strings compare with `string.CompareOrdinal` and order with `StringComparer.Ordinal` (SQL's `"C"` collation, code point order); ascending order puts null first. Parameters are captured variables, the `Value` of a constant holding the parameter, as C# closures are, bound or not; reading an unbound one fails.
 
 Built in, before any provider sees it:
 
@@ -78,7 +101,6 @@ Empty cell text is `NULL`. A stored datetime without an offset is read as UTC. R
 
 ### Not supported
 
-- **Parameters.** There is no API to bind parameter values, so reading a parameter (in an expression, a list or `pagination`) raises `NotSupportedException` when the query runs; the tree is built and holds the parameter as a captured variable.
 - Stored times and datetimes are read to the .NET tick (100 ns); the specification's values have microsecond precision, so finer stored digits are kept as read.
 
 ## Dependencies

@@ -100,6 +100,11 @@ internal sealed class QueryTree
         return Tuples.Item(Expression.Property(group, "Key"), _keys[alias]);
     }
 
+    public Expression Parameter(IParameter parameter)
+    {
+        return _document.Parameter(parameter);
+    }
+
     public Expression SubqueryColumn(string subquery, string field, Type item)
     {
         CompiledQuery compiled = _document.Subquery(subquery, QueryUse.Membership);
@@ -611,7 +616,7 @@ internal sealed class QueryTree
         return Linq.Take(paged, Count(_query.Pagination.Take));
     }
 
-    private static Expression Count(OneOf.OneOf<long, ParamInteger> count)
+    private Expression Count(OneOf.OneOf<long, ParamInteger> count)
     {
         return count.Match<Expression>(
             number => Expression.Constant((int)Math.Min(number, int.MaxValue)),
@@ -621,7 +626,7 @@ internal sealed class QueryTree
                         nameof(Math.Min),
                         [typeof(long), typeof(long)]
                     )!,
-                    Typed.As(UnboundParameter.Value(parameter), typeof(long)),
+                    Typed.As(Parameter(parameter), typeof(long)),
                     Expression.Constant((long)int.MaxValue)
                 ),
                 typeof(int)
