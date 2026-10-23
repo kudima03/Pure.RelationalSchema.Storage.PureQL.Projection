@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.4.4.0] — 2026-10-23
+
+### Changed
+
+- Updated `Pure.RelationalSchema` dependency from `2.0.3` to `2.1.0`.
+
 ## [0.1.0-preview.4.3.0] — 2026-10-22
 
 ### Added
