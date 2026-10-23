@@ -16,7 +16,7 @@
     />
     <PackageReference
       Include="Pure.RelationalSchema.Storage.Samples"
-      Version="0.1.0-preview.1.0.0"
+      Version="0.1.0-preview.1.2.0"
     />
     <PackageReference
       Include="PureQL.CSharp.Model.Samples"
