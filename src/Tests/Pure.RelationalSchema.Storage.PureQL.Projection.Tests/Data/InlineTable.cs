@@ -1,7 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.ColumnType;
 using Pure.RelationalSchema.Abstractions.Table;
-using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using Pure.RelationalSchema.Storage.Samples.TableDataSets;
@@ -12,7 +11,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 // A one-table schema dataset built from cell texts, for the shapes the
 // fixtures of Pure.RelationalSchema.Storage.Samples do not hold: an integer
 // column, datetimes with offsets, code points outside the BMP, extreme
-// values. Each row lists one cell text per column; empty text is NULL.
+// values. Each row lists one cell text per column; empty text is NULL. The
+// cells are keyed by the table's own columns, compared by reference: hashing
+// a column on every read would make a cell read cost microseconds, and the
+// scale tests measure the projection, not the fixture.
 internal sealed class InlineTable(
     string schema,
     string table,
@@ -43,16 +45,13 @@ internal sealed class InlineTable(
                         .. rows.Select(texts =>
                             (IRow)
                                 new Row(
-                                    new Collections.Generic.Dictionary<
-                                        int,
-                                        IColumn,
-                                        ICell
-                                    >(
-                                        Enumerable.Range(0, _columns.Count),
-                                        index => _columns[index],
-                                        index => new Cell(new String(texts[index])),
-                                        column => new ColumnHash(column)
-                                    )
+                                    Enumerable
+                                        .Range(0, _columns.Count)
+                                        .ToDictionary<int, IColumn, ICell>(
+                                            index => _columns[index],
+                                            index => new Cell(new String(texts[index])),
+                                            ReferenceEqualityComparer.Instance
+                                        )
                                 )
                         ),
                     ]

@@ -30,7 +30,7 @@ public sealed class ScaleTests
 
     private const int Tickets = 2_000;
 
-    private const int Amounts = 30_000;
+    private const int Amounts = 100_000;
 
     private static readonly TimeSpan Bound = TimeSpan.FromSeconds(3);
 
