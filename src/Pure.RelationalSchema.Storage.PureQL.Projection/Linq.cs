@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -27,6 +28,28 @@ internal static class Linq
         >
     >(Queryable.SelectMany);
 
+    private static readonly MethodInfo JoinMethod = Definition<
+        Func<
+            IQueryable<object>,
+            IEnumerable<object>,
+            Expression<Func<object, object>>,
+            Expression<Func<object, object>>,
+            Expression<Func<object, object, object>>,
+            IQueryable<object>
+        >
+    >(Queryable.Join);
+
+    private static readonly MethodInfo GroupJoinMethod = Definition<
+        Func<
+            IQueryable<object>,
+            IEnumerable<object>,
+            Expression<Func<object, object>>,
+            Expression<Func<object, object>>,
+            Expression<Func<object, IEnumerable<object>, object>>,
+            IQueryable<object>
+        >
+    >(Queryable.GroupJoin);
+
     private static readonly MethodInfo DefaultIfEmptyMethod = Definition<
         Func<IQueryable<object>, IQueryable<object?>>
     >(Queryable.DefaultIfEmpty);
@@ -36,6 +59,10 @@ internal static class Linq
     >(Queryable.Concat);
 
     private static readonly MethodInfo AnyMethod = Definition<
+        Func<IQueryable<object>, bool>
+    >(Queryable.Any);
+
+    private static readonly MethodInfo AnyWhereMethod = Definition<
         Func<IQueryable<object>, Expression<Func<object, bool>>, bool>
     >(Queryable.Any);
 
@@ -208,6 +235,56 @@ internal static class Linq
         );
     }
 
+    // The pairs of an outer and an inner row whose keys are equal.
+    public static Expression Join(
+        Expression outer,
+        Expression inner,
+        LambdaExpression outerKey,
+        LambdaExpression innerKey,
+        LambdaExpression result
+    )
+    {
+        return Call(
+            JoinMethod,
+            [
+                ElementType(outer.Type),
+                ElementType(inner.Type),
+                outerKey.ReturnType,
+                result.ReturnType,
+            ],
+            outer,
+            inner,
+            outerKey,
+            innerKey,
+            result
+        );
+    }
+
+    // Each outer row with the inner rows whose keys equal its key.
+    public static Expression GroupJoin(
+        Expression outer,
+        Expression inner,
+        LambdaExpression outerKey,
+        LambdaExpression innerKey,
+        LambdaExpression result
+    )
+    {
+        return Call(
+            GroupJoinMethod,
+            [
+                ElementType(outer.Type),
+                ElementType(inner.Type),
+                outerKey.ReturnType,
+                result.ReturnType,
+            ],
+            outer,
+            inner,
+            outerKey,
+            innerKey,
+            result
+        );
+    }
+
     public static Expression DefaultIfEmpty(Expression source)
     {
         return Call(DefaultIfEmptyMethod, [ElementType(source.Type)], source);
@@ -218,9 +295,14 @@ internal static class Linq
         return Call(ConcatMethod, [ElementType(first.Type)], first, second);
     }
 
+    public static Expression Any(Expression source)
+    {
+        return Call(AnyMethod, [ElementType(source.Type)], source);
+    }
+
     public static Expression Any(Expression source, LambdaExpression predicate)
     {
-        return Call(AnyMethod, [ElementType(source.Type)], source, predicate);
+        return Call(AnyWhereMethod, [ElementType(source.Type)], source, predicate);
     }
 
     public static Expression All(Expression source, LambdaExpression predicate)
@@ -385,6 +467,32 @@ internal static class Linq
         );
     }
 
+    // A Queryable call as the Enumerable call over the same arguments, for a
+    // source that is no longer an IQueryable: the counterpart method, with
+    // the lambdas unquoted.
+    public static Expression OverEnumerable(
+        MethodInfo queryable,
+        IReadOnlyList<Expression> arguments
+    )
+    {
+        MethodInfo definition = Counterparts.GetOrAdd(
+            queryable.GetGenericMethodDefinition(),
+            Counterpart
+        );
+
+        return Expression.Call(
+            definition.MakeGenericMethod(queryable.GetGenericArguments()),
+            [.. arguments.Select(Unquoted)]
+        );
+    }
+
+    private static Expression Unquoted(Expression argument)
+    {
+        return argument is UnaryExpression { NodeType: ExpressionType.Quote } quote
+            ? quote.Operand
+            : argument;
+    }
+
     private static MethodInfo Definition<T>(T method)
         where T : Delegate
     {
@@ -453,7 +561,17 @@ internal static class Linq
 
         if (!type.IsGenericType)
         {
-            return type == enumerable;
+            return type == enumerable
+                || (type == typeof(IQueryable) && enumerable == typeof(IEnumerable));
+        }
+
+        if (
+            !enumerable.IsGenericType
+            || type.GetGenericArguments().Length
+                != enumerable.GetGenericArguments().Length
+        )
+        {
+            return false;
         }
 
         Type definition = type.GetGenericTypeDefinition();
@@ -462,8 +580,7 @@ internal static class Linq
             : definition == typeof(IOrderedQueryable<>) ? typeof(IOrderedEnumerable<>)
             : definition;
 
-        return enumerable.IsGenericType
-            && enumerable.GetGenericTypeDefinition() == expected
+        return enumerable.GetGenericTypeDefinition() == expected
             && type.GetGenericArguments()
                 .Zip(enumerable.GetGenericArguments())
                 .All(pair => Same(pair.First, pair.Second));

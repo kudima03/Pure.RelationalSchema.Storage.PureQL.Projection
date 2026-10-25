@@ -71,7 +71,7 @@ IStoredTableDataSet result = new PureQLProjection(
 `projection.Expression` is built only from constructs a SQL provider translates: `Queryable` operators (`Enumerable` ones only over a group or a list), members and methods of the BCL's value types, strings and `Math`, value tuples, constants and captured parameters. Nothing in it is compiled, invoked or evaluated on the client except the result rows, built by the last `Select`. Its shape is fixed:
 
 ```
-scan(from) [.Where] (.SelectMany(join))* [.Where(rest of where)]
+scan(from) [.Where] (.Join | .GroupJoin.SelectMany | .SelectMany)* [.Where(rest of where)]
   plain:   [.OrderBy/ThenBy] .Select(columns)
   grouped: .GroupBy(keys) [.Where(having)] [.OrderBy/ThenBy] .Select(columns)
   total:   one-row constant .Select(aggregates over the rows)
@@ -80,18 +80,18 @@ scan(from) [.Where] (.SelectMany(join))* [.Where(rest of where)]
 
 - **Sources.** Every stored table is its own root, `Constant(IStoredTableDataSet)` typed `IQueryable<IRow>`, so a provider can tell tables (and their databases) apart and split the tree there. A table is always scanned as `root.Select(row => (field, ...))`, reading only the fields the query reads; a field read is `IsNullOrEmpty(row.Cells[column].Value.TextValue) ? null : Parse(row.Cells[column].Value.TextValue, ...)`, the `IColumn` a constant. A subquery is inlined where it is read.
 - **Rows** are value tuples: a source row holds its fields, a joined row one source row per source, a group key one value per key, a query result one value per column. Every value is nullable: `long?` (integer), `decimal?`, `string`, `bool?`, `DateOnly?`, `TimeOnly?`, `DateTime?` (UTC), `Guid?`.
-- **Joins** are a correlated `SelectMany` (`DefaultIfEmpty` for an outer side); `full` is the left join `Concat` the unmatched joined rows (`!Any(...)`). An unmatched side is the default tuple: all nulls.
+- **Joins** are hash joins on the equalities of their condition: each and-ed condition of `on` (or of `where`, when it moves into an inner join) that equates an expression over the rows so far with one over the joined source is a join key. An inner join is `Join` on the tuple of keys, the remaining conditions in a `Where` after it; an outer side is `GroupJoin` (keyed by the driving side: the rows so far for `left`, the joined source for `right`) then `SelectMany` over the matches the remaining conditions hold for, `DefaultIfEmpty`; `full` is the left join `Concat` the joined rows whose group of matches is empty (`!Any()`). A tuple of keys is never null, so `null` keys match, as `=` does. A join whose condition has no such equality is a correlated `SelectMany` over the joined rows the condition holds for (`DefaultIfEmpty` for an outer side; `full` adds the joined rows `!Any(...)` row matches). An unmatched side is the default tuple: all nulls.
 - **Aggregates** are LINQ's over the group or, over all rows, over the query's rows, which are one shared subtree. A total query reads a one-row constant source, as SQL's `SELECT` without `FROM`.
 - **Semantics** are C#'s, which match the specification: `null == null`, an ordering comparison with null is false, lifted operators. Strings compare with `string.CompareOrdinal` and order with `StringComparer.Ordinal` (SQL's `"C"` collation, code point order); ascending order puts null first. Parameters are captured variables, the `Value` of a constant holding the parameter, as C# closures are, bound or not; reading an unbound one fails.
 
 Built in, before any provider sees it:
 
-- constants fold (an operation that fails, like `1 / 0`, is kept and fails the query), `true`/`false` fold out of conditions, lifting is dropped where a value cannot be null and an operation over a `null` literal is `null`;
+- constants fold (an operation that fails, like `1 / 0`, is kept and fails the query; two constant strings compare by code point), `true`/`false` fold out of conditions, lifting is dropped where a value cannot be null and an operation over a `null` literal is `null`;
 - `where` is split into its and-ed conditions, each moved to the scan of the source it reads, or into the join that first sees every source it reads, unless an outer join may leave one of them without a row; a condition on a subquery source moves into the subquery (onto its `having` when it reads an aggregate);
 - adjacent `Where`s merge, `Where(true)` and identity `Select`s are dropped, consecutive `Select`s are one, and pagination comes last;
 - a repeated order key or one that is the same for every row is dropped, a `distinctBy` over every group key is dropped, and a subquery read only by `in` (without pagination) is neither ordered nor `distinctBy`-filtered.
 
-Run in memory, each stored table is read once per enumeration, a query nested in a lambda that reads nothing of it (a joined source, an `in` list, an aggregate over all rows) is computed once, and strings order by code point.
+Run in memory, the tree is compiled once per enumeration as `Enumerable` calls: each stored table is read once, a query nested in a lambda that reads nothing of it (a joined source, an `in` list, an aggregate over all rows) is computed once and answers `in` from a hash set, hash joins cost the rows of both sides rather than their product, and strings order by code point.
 
 ### Storage mapping
 
