@@ -6,8 +6,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // Simplifies a tree once it is built, bottom up, without changing what it
 // computes:
 // - an operation over constants is folded to its value (unless computing it
-//   fails, which is left to the query), a captured parameter is never read,
-//   and a value boxed to object keeps its type;
+//   fails, which is left to the query; constant strings compare by code
+//   point), a captured parameter is never read, and a value boxed to object
+//   keeps its type;
 // - true and false fold out of and, or, not and conditionals, a value that
 //   cannot be null is not checked for null, a lifted operation over null is
 //   null, over values that cannot be null it is not lifted, and a conversion
@@ -104,6 +105,7 @@ internal sealed class Simplifier : ExpressionVisitor
 
         return visited is not MethodCallExpression call ? visited
             : call.Method.DeclaringType == typeof(Queryable) ? Query(call)
+            : IsOrdinalComparison(call) ? CodePointComparison(call)
             : IsPure(call) ? Fold(call)
             : call;
     }
@@ -425,6 +427,27 @@ internal sealed class Simplifier : ExpressionVisitor
         {
             return node;
         }
+    }
+
+    // Two constant strings compare by code point, the specification's order,
+    // which running the tree in memory also uses (CodePoints); UTF-16 ordinal
+    // order, which the tree names, differs for surrogates.
+    private static Expression CodePointComparison(MethodCallExpression call)
+    {
+        return Expression.Constant(
+            CodePoints.Compare(
+                (string?)((ConstantExpression)call.Arguments[0]).Value,
+                (string?)((ConstantExpression)call.Arguments[1]).Value
+            )
+        );
+    }
+
+    private static bool IsOrdinalComparison(MethodCallExpression call)
+    {
+        return call.Method.DeclaringType == typeof(string)
+            && call.Method.Name == nameof(string.CompareOrdinal)
+            && call.Arguments.Count == 2
+            && call.Arguments.All(argument => argument is ConstantExpression);
     }
 
     // A call of a pure method over constants, which folds to its value.

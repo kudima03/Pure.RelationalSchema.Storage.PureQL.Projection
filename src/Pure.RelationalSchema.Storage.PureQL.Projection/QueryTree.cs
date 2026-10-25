@@ -13,7 +13,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // The tree of one query, in the specification's order, as standard query
 // operators over IQueryable:
 //
-//   scan(from) [.Where] (.SelectMany(join))* [.Where(rest of where)]
+//   scan(from) [.Where] (join)* [.Where(rest of where)]
 //     plain:   [.OrderBy/ThenBy] .Select(columns)
 //     grouped: .GroupBy(keys) [.Where(having)] [.OrderBy/ThenBy] .Select(columns)
 //     total:   one-row constant .Select(aggregates over the rows)
@@ -23,7 +23,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // root per source, reading only the fields the query reads. A where condition
 // is split into its and-ed conditions and each moves to the source it reads
 // (or to the join that first sees all the sources it reads), unless an outer
-// join may leave one of them without a row. An order key the rows do not
+// join may leave one of them without a row. A join is a hash join (Join, or
+// GroupJoin then SelectMany with DefaultIfEmpty for an outer side) on the
+// equalities of its condition between the rows so far and the joined source,
+// or a correlated SelectMany when there is none (see Join). An order key the rows do not
 // change, a repeated order key and a distinctBy the rows already satisfy are
 // dropped, and a subquery read only for membership or by aggregates is not
 // ordered. Rows are value tuples (Tuples); the query's own rows, which
@@ -326,10 +329,17 @@ internal sealed class QueryTree
 
     // inner keeps the pairs on is true for; left also keeps every row so far
     // that matched nothing, right every joined row that matched nothing, and
-    // full both, with an all-null source row for the missing side. Each is
-    // the LINQ shape SQL providers translate to that join: a correlated
-    // SelectMany, with DefaultIfEmpty for an outer side, and for full the
-    // left join plus the unmatched right rows.
+    // full both, with an all-null source row for the missing side. An and-ed
+    // condition of on (or of where, moved into an inner join) that equates
+    // an expression over the rows so far with one over the joined source is
+    // a join key. With keys the join is a hash join on them, which costs the
+    // rows of both sides rather than their product: Join for inner, GroupJoin
+    // then DefaultIfEmpty for an outer side, the other conditions filtering
+    // the pairs; full is the left join plus the joined rows whose group of
+    // matches is empty. Keys compare as equal does (null equals null, an
+    // integer equals its decimal), and a tuple of keys is never null, so a
+    // null key matches. Without a key the join is a correlated SelectMany
+    // over the joined rows the condition holds for.
     private Expression Join(
         Expression rows,
         int source,
@@ -338,17 +348,276 @@ internal sealed class QueryTree
     )
     {
         JoinClause join = _query.Joins[source - 1];
-        Type leftType = Linq.ElementType(rows.Type);
-        Type rightType = Linq.ElementType(right.Type);
-        ParameterExpression left = Expression.Parameter(leftType, "left");
+        ParameterExpression left = Expression.Parameter(
+            Linq.ElementType(rows.Type),
+            "left"
+        );
         ParameterExpression joined = Expression.Parameter(
-            rightType,
+            Linq.ElementType(right.Type),
             _sources[source].Name
         );
+        List<(object Left, object Right)> keys = [];
+        List<object> rest = [];
+
+        foreach (object condition in Conjuncts(join.On).Concat(conditions))
+        {
+            if (KeySides(condition, source) is (object l, object r))
+            {
+                keys.Add((l, r));
+            }
+            else
+            {
+                rest.Add(condition);
+            }
+        }
+
+        if (keys.Count == 0)
+        {
+            return NestedLoopJoin(rows, source, right, left, joined, rest);
+        }
+
         Scope scope = new(this, field => JoinField(left, joined, source, field), null);
-        Expression on = Typed.All(
-            [scope.Test(join.On), .. conditions.Select(scope.Test)]
+        List<(Expression Left, Expression Right)> compiled =
+        [
+            .. keys.Select(key =>
+            {
+                Expression l = scope.Compile(key.Left);
+                Expression r = scope.Compile(key.Right);
+                Type type = Typed.Common(l.Type, r.Type);
+                return (Typed.As(l, type), Typed.As(r, type));
+            }),
+        ];
+        LambdaExpression leftKey = Expression.Lambda(
+            Tuples.New([.. compiled.Select(key => key.Left)]),
+            left
         );
+        LambdaExpression rightKey = Expression.Lambda(
+            Tuples.New([.. compiled.Select(key => key.Right)]),
+            joined
+        );
+
+        return join.Kind switch
+        {
+            JoinKind.Left => OuterJoin(
+                rows,
+                right,
+                leftKey,
+                rightKey,
+                (left, joined),
+                source,
+                rest,
+                false
+            ),
+            JoinKind.Right => OuterJoin(
+                right,
+                rows,
+                rightKey,
+                leftKey,
+                (left, joined),
+                source,
+                rest,
+                true
+            ),
+            JoinKind.Full => Linq.Concat(
+                OuterJoin(
+                    rows,
+                    right,
+                    leftKey,
+                    rightKey,
+                    (left, joined),
+                    source,
+                    rest,
+                    false
+                ),
+                Unmatched(rows, right, leftKey, rightKey, (left, joined), source, rest)
+            ),
+            JoinKind.Inner or _ => InnerJoin(
+                rows,
+                right,
+                leftKey,
+                rightKey,
+                (left, joined),
+                source,
+                rest
+            ),
+        };
+    }
+
+    // The pairs equal on the keys, filtered by the other conditions.
+    private Expression InnerJoin(
+        Expression rows,
+        Expression right,
+        LambdaExpression leftKey,
+        LambdaExpression rightKey,
+        (ParameterExpression Left, ParameterExpression Joined) sides,
+        int source,
+        List<object> rest
+    )
+    {
+        LambdaExpression pair = Expression.Lambda(
+            Pair(sides.Left, sides.Joined, source),
+            sides.Left,
+            sides.Joined
+        );
+        Expression pairs = Linq.Join(rows, right, leftKey, rightKey, pair);
+
+        if (rest.Count == 0)
+        {
+            return pairs;
+        }
+
+        ParameterExpression row = Expression.Parameter(pair.ReturnType, "row");
+        Scope scope = RowScope(row);
+
+        return Linq.Where(
+            pairs,
+            Expression.Lambda(Typed.All(rest.Select(scope.Test)), row)
+        );
+    }
+
+    // Each driving row with its matches, (row, matches), then the pairs with
+    // each match the other conditions hold for, or with the default row of
+    // the other side when there is none. The joined source drives a right
+    // join, the rows so far a left join.
+    private Expression OuterJoin(
+        Expression driving,
+        Expression other,
+        LambdaExpression drivingKey,
+        LambdaExpression otherKey,
+        (ParameterExpression Left, ParameterExpression Joined) sides,
+        int source,
+        List<object> rest,
+        bool rightDriven
+    )
+    {
+        Expression groups = Groups(driving, other, drivingKey, otherKey, rightDriven);
+        ParameterExpression match = Expression.Parameter(
+            Linq.ElementType(groups.Type),
+            "match"
+        );
+        ParameterExpression inner = rightDriven ? sides.Left : sides.Joined;
+        Expression driver = Tuples.Item(match, 0);
+        (Expression Left, Expression Joined) pair = rightDriven
+            ? (inner, driver)
+            : (driver, inner);
+
+        return Linq.SelectMany(
+            groups,
+            Expression.Lambda(
+                typeof(Func<,>).MakeGenericType(
+                    match.Type,
+                    typeof(IEnumerable<>).MakeGenericType(inner.Type)
+                ),
+                Linq.DefaultIfEmpty(Matches(match, inner, pair, source, rest)),
+                match
+            ),
+            Expression.Lambda(Pair(pair.Left, pair.Joined, source), match, inner)
+        );
+    }
+
+    // The joined rows no row so far matches, each paired with the default row
+    // of the rows so far.
+    private Expression Unmatched(
+        Expression rows,
+        Expression right,
+        LambdaExpression leftKey,
+        LambdaExpression rightKey,
+        (ParameterExpression Left, ParameterExpression Joined) sides,
+        int source,
+        List<object> rest
+    )
+    {
+        Expression groups = Groups(right, rows, rightKey, leftKey, true);
+        ParameterExpression match = Expression.Parameter(
+            Linq.ElementType(groups.Type),
+            "match"
+        );
+        Expression joined = Tuples.Item(match, 0);
+
+        return Linq.Select(
+            Linq.Where(
+                groups,
+                Expression.Lambda(
+                    Expression.Not(
+                        Linq.Any(Matches(match, sides.Left, (sides.Left, joined), source, rest))
+                    ),
+                    match
+                )
+            ),
+            Expression.Lambda(
+                Pair(Expression.Default(sides.Left.Type), joined, source),
+                match
+            )
+        );
+    }
+
+    // (driving row, the other side's rows equal on the keys).
+    private static Expression Groups(
+        Expression driving,
+        Expression other,
+        LambdaExpression drivingKey,
+        LambdaExpression otherKey,
+        bool rightDriven
+    )
+    {
+        ParameterExpression row = drivingKey.Parameters[0];
+        ParameterExpression matches = Expression.Parameter(
+            typeof(IEnumerable<>).MakeGenericType(Linq.ElementType(other.Type)),
+            rightDriven ? "lefts" : "matches"
+        );
+
+        return Linq.GroupJoin(
+            driving,
+            other,
+            drivingKey,
+            otherKey,
+            Expression.Lambda(Tuples.New([row, matches]), row, matches)
+        );
+    }
+
+    // The matches of a driving row the other conditions hold for.
+    private Expression Matches(
+        ParameterExpression match,
+        ParameterExpression inner,
+        (Expression Left, Expression Joined) pair,
+        int source,
+        List<object> rest
+    )
+    {
+        Expression matches = Tuples.Item(match, 1);
+
+        if (rest.Count == 0)
+        {
+            return matches;
+        }
+
+        Scope scope = new(
+            this,
+            field => JoinField(pair.Left, pair.Joined, source, field),
+            null
+        );
+
+        return Linq.Where(
+            matches,
+            Expression.Lambda(Typed.All(rest.Select(scope.Test)), inner)
+        );
+    }
+
+    // A correlated SelectMany: the joined rows the condition holds for, for
+    // each row so far (or the other way round for right), DefaultIfEmpty for
+    // an outer side; full is the left join plus the unmatched joined rows.
+    private Expression NestedLoopJoin(
+        Expression rows,
+        int source,
+        Expression right,
+        ParameterExpression left,
+        ParameterExpression joined,
+        List<object> conditions
+    )
+    {
+        JoinClause join = _query.Joins[source - 1];
+        Scope scope = new(this, field => JoinField(left, joined, source, field), null);
+        Expression on = Typed.All(conditions.Select(scope.Test));
 
         LambdaExpression pair = Expression.Lambda(
             Pair(left, joined, source),
@@ -364,8 +633,8 @@ internal sealed class QueryTree
                 rows,
                 Expression.Lambda(
                     typeof(Func<,>).MakeGenericType(
-                        leftType,
-                        typeof(IEnumerable<>).MakeGenericType(rightType)
+                        left.Type,
+                        typeof(IEnumerable<>).MakeGenericType(joined.Type)
                     ),
                     outer ? Linq.DefaultIfEmpty(matches) : matches,
                     left
@@ -381,8 +650,8 @@ internal sealed class QueryTree
                 right,
                 Expression.Lambda(
                     typeof(Func<,>).MakeGenericType(
-                        rightType,
-                        typeof(IEnumerable<>).MakeGenericType(leftType)
+                        joined.Type,
+                        typeof(IEnumerable<>).MakeGenericType(left.Type)
                     ),
                     Linq.DefaultIfEmpty(Linq.Where(rows, Expression.Lambda(on, left))),
                     joined
@@ -400,13 +669,48 @@ internal sealed class QueryTree
                         )
                     ),
                     Expression.Lambda(
-                        Pair(Expression.Default(leftType), joined, source),
+                        Pair(Expression.Default(left.Type), joined, source),
                         joined
                     )
                 )
             ),
             JoinKind.Inner or _ => leftJoin(false),
         };
+    }
+
+    // The sides of an equality that is a join key: one reads only sources
+    // before the joined one, the other only the joined source. The one over
+    // the rows so far comes first.
+    private (object Left, object Right)? KeySides(object condition, int source)
+    {
+        object leaf = ModelNode.Unwrap(condition);
+
+        if (
+            leaf is not IOperator
+            || !leaf.GetType().Name.StartsWith("Equal", StringComparison.Ordinal)
+        )
+        {
+            return null;
+        }
+
+        object left = ModelNode.Child(leaf, "Left");
+        object right = ModelNode.Child(leaf, "Right");
+        int[] leftReads = [.. Sources(left)];
+        int[] rightReads = [.. Sources(right)];
+
+        bool before(int[] read)
+        {
+            return read.Length > 0 && read.All(index => index < source);
+        }
+
+        bool joined(int[] read)
+        {
+            return read.Length == 1 && read[0] == source;
+        }
+
+        return before(leftReads) && joined(rightReads) ? (left, right)
+            : joined(leftReads) && before(rightReads) ? (right, left)
+            : null;
     }
 
     // The joined row of the rows so far and the row of the joined source.

@@ -20,8 +20,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Tree;
 
 // The expression tree a projection exposes for a LINQ provider to translate:
 // one constant root per stored table, read for only the fields the query
-// reads; conditions at the sources they read; folded constants; no redundant
-// Where, Select, OrderBy or DistinctBy; and pagination last.
+// reads; conditions at the sources they read; joins hashed on the equalities
+// of their conditions; folded constants; no redundant Where, Select, OrderBy
+// or DistinctBy; and pagination last.
 public sealed class ExpressionTreeTests
 {
     private static readonly IStoredSchemaDataSet Items = new InlineTable(
@@ -165,8 +166,8 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => (i[id]))"
-                + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
-                + ".Where(g => (g.Item1 == left.Item1)), (left, g) => (left, g))"
+                + ".Join([tags].Select(g => (g[item_id], g[tag])), "
+                + "left => (left.Item1), g => (g.Item1), (left, g) => (left, g))"
                 + ".Select(row => new ResultRow([tag], "
                 + "new[] { (object)row.Item2.Item2 }))",
             TreeText.Of(projection.Expression)
@@ -305,7 +306,7 @@ public sealed class ExpressionTreeTests
     }
 
     [Fact]
-    public void ConditionsMoveToTheSourcesTheyReadAndMergeWithTheJoinCondition()
+    public void ConditionsMoveToTheSourcesTheyReadOrBecomeJoinKeys()
     {
         PureQLProjection projection = new(
             [Items, Tags],
@@ -406,9 +407,10 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[id], i[name], i[active]))"
                 + ".Where(i => (i.Item3 == true))"
-                + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
-                + ".Where(g => ((g.Item2 != \"spare\") && ((g.Item1 == left.Item1) && "
-                + "(g.Item2 == left.Item2)))), (left, g) => (left, g))"
+                + ".Join([tags].Select(g => (g[item_id], g[tag]))"
+                + ".Where(g => (g.Item2 != \"spare\")), "
+                + "left => (left.Item1, left.Item2), g => (g.Item1, g.Item2), "
+                + "(left, g) => (left, g))"
                 + ".Select(row => new ResultRow([name], "
                 + "new[] { (object)row.Item1.Item2 }))",
             TreeText.Of(projection.Expression)
@@ -506,9 +508,11 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[id], i[name], i[active]))"
                 + ".Where(i => (i.Item3 == true))"
-                + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
-                + ".Where(g => (g.Item1 == left.Item1)).DefaultIfEmpty(), "
-                + "(left, g) => (left, g))"
+                + ".GroupJoin([tags].Select(g => (g[item_id], g[tag])), "
+                + "left => (left.Item1), g => (g.Item1), "
+                + "(left, matches) => (left, matches))"
+                + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
+                + "(match, g) => (match.Item1, g))"
                 + ".Where(row => (row.Item2.Item2 == null))"
                 + ".Select(row => new ResultRow([name], "
                 + "new[] { (object)row.Item1.Item2 }))",
@@ -584,9 +588,10 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[tags].Select(g => (g[item_id], g[tag]))"
-                + ".SelectMany(g => [items].Select(i => (i[id], i[name]))"
-                + ".Where(left => (g.Item1 == left.Item1)).DefaultIfEmpty(), "
-                + "(g, left) => (left, g))"
+                + ".GroupJoin([items].Select(i => (i[id], i[name])), "
+                + "g => (g.Item1), left => (left.Item1), (g, lefts) => (g, lefts))"
+                + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
+                + "(match, left) => (left, match.Item1))"
                 + ".Select(row => new ResultRow([tag, name], "
                 + "new[] { (object)row.Item2.Item2, (object)row.Item1.Item2 }))",
             TreeText.Of(projection.Expression)
@@ -667,13 +672,16 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => (i[id], i[name]))"
-                + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
-                + ".Where(g => (g.Item1 == left.Item1)).DefaultIfEmpty(), "
-                + "(left, g) => (left, g))"
+                + ".GroupJoin([tags].Select(g => (g[item_id], g[tag])), "
+                + "left => (left.Item1), g => (g.Item1), "
+                + "(left, matches) => (left, matches))"
+                + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
+                + "(match, g) => (match.Item1, g))"
                 + ".Concat([tags].Select(g => (g[item_id], g[tag]))"
-                + ".Where(g => ![items].Select(i => (i[id], i[name]))"
-                + ".Any(left => (g.Item1 == left.Item1)))"
-                + ".Select(g => (default(ValueTuple<long?, string>), g)))"
+                + ".GroupJoin([items].Select(i => (i[id], i[name])), "
+                + "g => (g.Item1), left => (left.Item1), (g, lefts) => (g, lefts))"
+                + ".Where(match => !match.Item2.Any())"
+                + ".Select(match => (default(ValueTuple<long?, string>), match.Item1)))"
                 + ".Select(row => new ResultRow([name, tag], "
                 + "new[] { (object)row.Item1.Item2, (object)row.Item2.Item2 }))",
             TreeText.Of(projection.Expression)
@@ -683,6 +691,324 @@ public sealed class ExpressionTreeTests
             ["pen", "", "office", "spare"],
             ResultColumn.Texts(projection, "tag")
         );
+    }
+
+    [Fact]
+    public void JoinWithoutAnEqualityIsACorrelatedSelectMany()
+    {
+        PureQLProjection projection = new(
+            [Items, Tags],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNullable(
+                                new SelectItemProjectionStringNullable(
+                                    "tag",
+                                    new ExactStringNullableProjection(
+                                        new FieldStringNullable("g", "tag")
+                                    )
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries: null,
+                    joins:
+                    [
+                        new Join(
+                            new JoinEntity(
+                                JoinKind.Left,
+                                "s.tags",
+                                new BooleanRow(
+                                    new ComparisonRow(
+                                        new GreaterThanRow(
+                                            new GreaterThanDecimalRow(
+                                                new DecimalNullableRow(
+                                                    new ExactIntegerNullableRow(
+                                                        new FieldIntegerNullable(
+                                                            "g",
+                                                            "item_id"
+                                                        )
+                                                    )
+                                                ),
+                                                new DecimalNullableRow(
+                                                    new IntegerRow(
+                                                        new FieldInteger("i", "id")
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                ),
+                                "g"
+                            )
+                        ),
+                    ],
+                    where: null,
+                    orderBy: null,
+                    pagination: null,
+                    distinctBy: null
+                )
+            )
+        );
+
+        Assert.Equal(
+            "[items].Select(i => (i[id]))"
+                + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
+                + ".Where(g => (g.Item1 > left.Item1)).DefaultIfEmpty(), "
+                + "(left, g) => (left, g))"
+                + ".Select(row => new ResultRow([tag], "
+                + "new[] { (object)row.Item2.Item2 }))",
+            TreeText.Of(projection.Expression)
+        );
+        Assert.Equal(
+            ["office", "spare", "office", "spare", "spare"],
+            ResultColumn.Texts(projection, "tag")
+        );
+    }
+
+    [Fact]
+    public void JoinConditionsBesideTheKeysFilterThePairsOfAHashJoin()
+    {
+        Join join(JoinKind kind)
+        {
+            return new Join(
+                new JoinEntity(
+                    kind,
+                    "s.tags",
+                    new BooleanRow(
+                        new LogicalRow(
+                            new AndRow(
+                                [
+                                    new BooleanRow(
+                                        new ComparisonRow(
+                                            new EqualRow(
+                                                new EqualDecimalRow(
+                                                    new DecimalNullableRow(
+                                                        new ExactIntegerNullableRow(
+                                                            new FieldIntegerNullable(
+                                                                "g",
+                                                                "item_id"
+                                                            )
+                                                        )
+                                                    ),
+                                                    new DecimalNullableRow(
+                                                        new IntegerRow(
+                                                            new FieldInteger("i", "id")
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    new BooleanRow(
+                                        new ComparisonRow(
+                                            new NotEqualRow(
+                                                new NotEqualStringRow(
+                                                    new StringNullableRow(
+                                                        new ExactStringNullableRow(
+                                                            new FieldStringNullable(
+                                                                "g",
+                                                                "tag"
+                                                            )
+                                                        )
+                                                    ),
+                                                    new StringNullableRow(
+                                                        new StringRow(
+                                                            new FieldString("i", "name")
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    ),
+                                ]
+                            )
+                        )
+                    ),
+                    "g"
+                )
+            );
+        }
+
+        PureQLQuery query(JoinKind kind)
+        {
+            return new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNullable(
+                                new SelectItemProjectionStringNullable(
+                                    "tag",
+                                    new ExactStringNullableProjection(
+                                        new FieldStringNullable("g", "tag")
+                                    )
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries: null,
+                    joins: [join(kind)],
+                    where: null,
+                    orderBy: null,
+                    pagination: null,
+                    distinctBy: null
+                )
+            );
+        }
+
+        PureQLProjection inner = new([Items, Tags], query(JoinKind.Inner));
+        PureQLProjection left = new([Items, Tags], query(JoinKind.Left));
+
+        Assert.Equal(
+            "[items].Select(i => (i[id], i[name]))"
+                + ".Join([tags].Select(g => (g[item_id], g[tag])), "
+                + "left => (left.Item1), g => (g.Item1), (left, g) => (left, g))"
+                + ".Where(row => (row.Item2.Item2 != row.Item1.Item2))"
+                + ".Select(row => new ResultRow([tag], "
+                + "new[] { (object)row.Item2.Item2 }))",
+            TreeText.Of(inner.Expression)
+        );
+        Assert.Equal(
+            "[items].Select(i => (i[id], i[name]))"
+                + ".GroupJoin([tags].Select(g => (g[item_id], g[tag])), "
+                + "left => (left.Item1), g => (g.Item1), "
+                + "(left, matches) => (left, matches))"
+                + ".SelectMany(match => match.Item2"
+                + ".Where(g => (g.Item2 != match.Item1.Item2)).DefaultIfEmpty(), "
+                + "(match, g) => (match.Item1, g))"
+                + ".Select(row => new ResultRow([tag], "
+                + "new[] { (object)row.Item2.Item2 }))",
+            TreeText.Of(left.Expression)
+        );
+        Assert.Equal(["office"], ResultColumn.Texts(inner, "tag"));
+        Assert.Equal(["", "", "office"], ResultColumn.Texts(left, "tag"));
+    }
+
+    [Fact]
+    public void JoinKeyOfAnIntegerAndADecimalCompareInDecimal()
+    {
+        PureQLProjection projection = new(
+            [Items, Tags],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionString(
+                                    "tag",
+                                    new StringProjection(new FieldString("g", "tag"))
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries: null,
+                    joins:
+                    [
+                        new Join(
+                            new JoinEntity(
+                                JoinKind.Inner,
+                                "s.tags",
+                                new BooleanRow(
+                                    new ComparisonRow(
+                                        new EqualRow(
+                                            new EqualDecimalRow(
+                                                new DecimalNullableRow(
+                                                    new ExactDecimalNullableRow(
+                                                        new FieldDecimalNullable(
+                                                            "i",
+                                                            "price"
+                                                        )
+                                                    )
+                                                ),
+                                                new DecimalNullableRow(
+                                                    new IntegerRow(
+                                                        new FieldInteger("g", "item_id")
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                ),
+                                "g"
+                            )
+                        ),
+                    ],
+                    where: null,
+                    orderBy: null,
+                    pagination: null,
+                    distinctBy: null
+                )
+            )
+        );
+
+        Assert.Equal(
+            "[items].Select(i => (i[price]))"
+                + ".Join([tags].Select(g => (g[item_id], g[tag])), "
+                + "left => (left.Item1), g => ((decimal?)g.Item1), "
+                + "(left, g) => (left, g))"
+                + ".Select(row => new ResultRow([tag], "
+                + "new[] { (object)row.Item2.Item2 }))",
+            TreeText.Of(projection.Expression)
+        );
+        Assert.Equal(["spare"], ResultColumn.Texts(projection, "tag"));
+    }
+
+    [Fact]
+    public void ConstantStringsCompareByCodePointWhenFolded()
+    {
+        PureQLProjection projection = new(
+            [Items],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionBoolean(
+                                    "above",
+                                    new BooleanProjection(
+                                        new ComparisonProjection(
+                                            new GreaterThanProjection(
+                                                new GreaterThanStringProjection(
+                                                    new StringNullableProjection(
+                                                        new StringProjection(
+                                                            new LiteralString("\U0001F600")
+                                                        )
+                                                    ),
+                                                    new StringNullableProjection(
+                                                        new StringProjection(
+                                                            new LiteralString("\uE000")
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries: null,
+                    joins: null,
+                    where: null,
+                    orderBy: null,
+                    pagination: new Pagination(0, 1),
+                    distinctBy: null
+                )
+            )
+        );
+
+        Assert.Equal(
+            "[items].Select(i => ())"
+                + ".Select(row => new ResultRow([above], new[] { (object)true }))"
+                + ".Take(1)",
+            TreeText.Of(projection.Expression)
+        );
+        Assert.Equal(["True"], ResultColumn.Texts(projection, "above"));
     }
 
     [Fact]
