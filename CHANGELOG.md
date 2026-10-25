@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.4.4.1] — 2026-10-25
+
+### Changed
+
+- Joins whose condition equates the rows so far with the joined source are
+  hash joins instead of nested loops: `Join` for inner joins, `GroupJoin`
+  with `DefaultIfEmpty` for left and right joins, and a left join plus the
+  unmatched joined rows for full joins. Null keys still match, as `=` says.
+  A chain of joins over thousands of rows no longer takes minutes.
+- Running a projection in memory compiles its tree once per run, reads each
+  stored table once, and computes each uncorrelated subquery once; `in`
+  over a subquery is a hash-set lookup.
+
+### Fixed
+
+- A comparison of two string literals folded at build time uses code-point
+  order, as the specification requires, instead of UTF-16 ordinal order.
+
 ## [0.1.0-preview.4.4.0] — 2026-10-23
 
 ### Changed
