@@ -5,8 +5,10 @@ using Pure.RelationalSchema.Storage.Abstractions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// Runs a projection's tree in memory, as LINQ to Objects. The tree itself is
-// left as built, for providers that translate it; the copy that runs
+// Runs a tree in memory, as LINQ to Objects: a projection's tree when the
+// stored tables' provider does not run its query (see Execution), and a
+// query composed over a projection. The tree itself is left as built; the
+// copy that runs
 // - reads each stored table once per run, through its enumerator;
 // - computes a query nested in a lambda that reads nothing of the lambda (a
 //   joined source, an in list, an aggregate over all rows) once per run, the
@@ -17,7 +19,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 //   reads it, and is compiled once per run;
 // - orders strings by code point, as the specification (and SQL's "C"
 //   collation) does, rather than by UTF-16 code unit.
-internal sealed class LocalProvider : IQueryProvider
+internal static class LocalProvider
 {
     private static readonly MethodInfo CompareOrdinal = typeof(string).GetMethod(
         nameof(string.CompareOrdinal),
@@ -38,29 +40,12 @@ internal sealed class LocalProvider : IQueryProvider
         BindingFlags.NonPublic | BindingFlags.Static
     )!;
 
-    private LocalProvider() { }
-
-    public static LocalProvider Instance { get; } = new();
-
-    public IQueryable CreateQuery(Expression expression)
-    {
-        return (IQueryable)Activator.CreateInstance(
-            typeof(LocalQuery<>).MakeGenericType(Linq.ElementType(expression.Type)),
-            expression
-        )!;
-    }
-
-    public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
-    {
-        return new LocalQuery<TElement>(expression);
-    }
-
-    public object? Execute(Expression expression)
+    public static object? Execute(Expression expression)
     {
         return Compile<object?>(Expression.Convert(InMemory(expression), typeof(object)))();
     }
 
-    public TResult Execute<TResult>(Expression expression)
+    public static TResult Execute<TResult>(Expression expression)
     {
         return Compile<TResult>(InMemory(expression))();
     }

@@ -168,8 +168,8 @@ public sealed class ExpressionTreeTests
             "[items].Select(i => (i[id]))"
                 + ".Join([tags].Select(g => (g[item_id], g[tag])), "
                 + "left => (left.Item1), g => (g.Item1), (left, g) => (left, g))"
-                + ".Select(row => new ResultRow([tag], "
-                + "new[] { (object)row.Item2.Item2 }))",
+                + ".Select(row => (row.Item2.Item2))"
+                + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(
@@ -252,7 +252,8 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => (i[id])).Where(i => (i.Item1 > 2L))"
-                + ".Select(row => new ResultRow([label], new[] { (object)\"ab\" }))",
+                + ".Select(row => (\"ab\"))"
+                + ".Select(row => new ResultRow([label], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["ab"], ResultColumn.Texts(projection, "label"));
@@ -299,7 +300,8 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => ())"
-                + ".Select(row => new ResultRow([ratio], new[] { (object)(1m / 0m) }))",
+                + ".Select(row => ((decimal?)(1m / 0m)))"
+                + ".Select(row => new ResultRow([ratio], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         _ = Assert.Throws<DivideByZeroException>(() => projection.ToList());
@@ -411,8 +413,8 @@ public sealed class ExpressionTreeTests
                 + ".Where(g => (g.Item2 != \"spare\")), "
                 + "left => (left.Item1, left.Item2), g => (g.Item1, g.Item2), "
                 + "(left, g) => (left, g))"
-                + ".Select(row => new ResultRow([name], "
-                + "new[] { (object)row.Item1.Item2 }))",
+                + ".Select(row => (row.Item1.Item2))"
+                + ".Select(row => new ResultRow([name], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["pen"], ResultColumn.Texts(projection, "name"));
@@ -514,8 +516,8 @@ public sealed class ExpressionTreeTests
                 + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
                 + "(match, g) => (match.Item1, g))"
                 + ".Where(row => (row.Item2.Item2 == null))"
-                + ".Select(row => new ResultRow([name], "
-                + "new[] { (object)row.Item1.Item2 }))",
+                + ".Select(row => (row.Item1.Item2))"
+                + ".Select(row => new ResultRow([name], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Empty(ResultColumn.Texts(projection, "name"));
@@ -592,8 +594,9 @@ public sealed class ExpressionTreeTests
                 + "g => (g.Item1), left => (left.Item1), (g, lefts) => (g, lefts))"
                 + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
                 + "(match, left) => (left, match.Item1))"
-                + ".Select(row => new ResultRow([tag, name], "
-                + "new[] { (object)row.Item2.Item2, (object)row.Item1.Item2 }))",
+                + ".Select(row => (row.Item2.Item2, row.Item1.Item2))"
+                + ".Select(row => new ResultRow([tag, name], new[] { (object)row.Item1, "
+                + "(object)row.Item2 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["pen", "office", "spare"], ResultColumn.Texts(projection, "tag"));
@@ -682,8 +685,9 @@ public sealed class ExpressionTreeTests
                 + "g => (g.Item1), left => (left.Item1), (g, lefts) => (g, lefts))"
                 + ".Where(match => !match.Item2.Any())"
                 + ".Select(match => (default(ValueTuple<long?, string>), match.Item1)))"
-                + ".Select(row => new ResultRow([name, tag], "
-                + "new[] { (object)row.Item1.Item2, (object)row.Item2.Item2 }))",
+                + ".Select(row => (row.Item1.Item2, row.Item2.Item2))"
+                + ".Select(row => new ResultRow([name, tag], new[] { (object)row.Item1, "
+                + "(object)row.Item2 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["pen", "ink", "pad", ""], ResultColumn.Texts(projection, "name"));
@@ -758,8 +762,8 @@ public sealed class ExpressionTreeTests
                 + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
                 + ".Where(g => (g.Item1 > left.Item1)).DefaultIfEmpty(), "
                 + "(left, g) => (left, g))"
-                + ".Select(row => new ResultRow([tag], "
-                + "new[] { (object)row.Item2.Item2 }))",
+                + ".Select(row => (row.Item2.Item2))"
+                + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(
@@ -867,8 +871,8 @@ public sealed class ExpressionTreeTests
                 + ".Join([tags].Select(g => (g[item_id], g[tag])), "
                 + "left => (left.Item1), g => (g.Item1), (left, g) => (left, g))"
                 + ".Where(row => (row.Item2.Item2 != row.Item1.Item2))"
-                + ".Select(row => new ResultRow([tag], "
-                + "new[] { (object)row.Item2.Item2 }))",
+                + ".Select(row => (row.Item2.Item2))"
+                + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
             TreeText.Of(inner.Expression)
         );
         Assert.Equal(
@@ -879,8 +883,8 @@ public sealed class ExpressionTreeTests
                 + ".SelectMany(match => match.Item2"
                 + ".Where(g => (g.Item2 != match.Item1.Item2)).DefaultIfEmpty(), "
                 + "(match, g) => (match.Item1, g))"
-                + ".Select(row => new ResultRow([tag], "
-                + "new[] { (object)row.Item2.Item2 }))",
+                + ".Select(row => (row.Item2.Item2))"
+                + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
             TreeText.Of(left.Expression)
         );
         Assert.Equal(["office"], ResultColumn.Texts(inner, "tag"));
@@ -950,8 +954,8 @@ public sealed class ExpressionTreeTests
                 + ".Join([tags].Select(g => (g[item_id], g[tag])), "
                 + "left => (left.Item1), g => ((decimal?)g.Item1), "
                 + "(left, g) => (left, g))"
-                + ".Select(row => new ResultRow([tag], "
-                + "new[] { (object)row.Item2.Item2 }))",
+                + ".Select(row => (row.Item2.Item2))"
+                + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["spare"], ResultColumn.Texts(projection, "tag"));
@@ -1004,8 +1008,8 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => ())"
-                + ".Select(row => new ResultRow([above], new[] { (object)true }))"
-                + ".Take(1)",
+                + ".Select(row => (true)).Take(1)"
+                + ".Select(row => new ResultRow([above], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["True"], ResultColumn.Texts(projection, "above"));
@@ -1094,7 +1098,8 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[id], i[name], i[active]))"
                 + ".Where(i => ((i.Item3 == true) && (i.Item1 > 1L)))"
-                + ".Select(row => new ResultRow([name], new[] { (object)row.Item2 }))",
+                + ".Select(row => (row.Item2))"
+                + ".Select(row => new ResultRow([name], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["pad"], ResultColumn.Texts(projection, "name"));
@@ -1190,8 +1195,8 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[active])).GroupBy(row => (row.Item1))"
                 + ".Where(group => (group.LongCount() > 1L))"
-                + ".Select(group => new ResultRow([active], "
-                + "new[] { (object)group.Key.Item1 }))",
+                + ".Select(group => (group.Key.Item1))"
+                + ".Select(row => new ResultRow([active], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["True"], ResultColumn.Texts(projection, "active"));
@@ -1269,6 +1274,7 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[id], i[name]))"
                 + ".OrderBy(row => row.Item2, Ordinal).ThenByDescending(row => row.Item1)"
+                + ".Select(row => (row.Item1))"
                 + ".Select(row => new ResultRow([id], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
@@ -1510,9 +1516,8 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[active])).GroupBy(row => (row.Item1))"
                 + ".OrderBy(group => group.Key.Item1)"
-                + ".Select(group => new ResultRow([active], "
-                + "new[] { (object)group.Key.Item1 }))"
-                + ".Take(5)",
+                + ".Select(group => (group.Key.Item1)).Take(5)"
+                + ".Select(row => new ResultRow([active], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["False", "True"], ResultColumn.Texts(projection, "active"));
@@ -1556,9 +1561,9 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => (i[name], i[active])).DistinctBy(row => (row.Item2))"
+                + ".Skip(1).Take(5)"
                 + ".Select(row => new ResultRow([name, active], "
-                + "new[] { (object)row.Item1, (object)row.Item2 }))"
-                + ".Skip(1).Take(5)",
+                + "new[] { (object)row.Item1, (object)row.Item2 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["ink"], ResultColumn.Texts(projection, "name"));
@@ -1661,11 +1666,13 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[one row].Select(one => new ResultRow([items, total], new[] { "
-                + "(object)[items].Select(i => (i[price], i[active]))"
+            "[one row]"
+                + ".Select(one => ((long?)[items].Select(i => (i[price], i[active]))"
                 + ".Where(i => (i.Item2 == true)).LongCount(), "
-                + "(object)[items].Select(i => (i[price], i[active]))"
-                + ".Where(i => (i.Item2 == true)).Sum(row => row.Item1) }))",
+                + "[items].Select(i => (i[price], i[active]))"
+                + ".Where(i => (i.Item2 == true)).Sum(row => row.Item1)))"
+                + ".Select(row => new ResultRow([items, total], "
+                + "new[] { (object)row.Item1, (object)row.Item2 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Same(
@@ -1746,8 +1753,8 @@ public sealed class ExpressionTreeTests
         Assert.Equal(
             "[items].Select(i => (i[active])).GroupBy(row => (row.Item1))"
                 + ".Where(group => (group.LongCount() >= 2L))"
-                + ".Select(group => new ResultRow([next], "
-                + "new[] { (object)(group.LongCount() + 1L) }))",
+                + ".Select(group => ((long?)(group.LongCount() + 1L)))"
+                + ".Select(row => new ResultRow([next], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
         Assert.Equal(["3"], ResultColumn.Texts(projection, "next"));
@@ -1797,7 +1804,8 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => (i[price]))"
-                + ".Select(row => new ResultRow([nothing], new[] { (object)null }))",
+                + ".Select(row => (null))"
+                + ".Select(row => new ResultRow([nothing], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
     }

@@ -6,7 +6,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Tree;
 
 // Every query of the sample catalogue compiles to a tree a SQL provider can
 // translate: no node is evaluated on the client but the result rows, built
-// once, by the last Select before pagination.
+// once, by the last Select, over the query a provider is given.
 public sealed class TranslatableTreeTests
 {
     public static TheoryData<string> Samples =>
@@ -34,12 +34,6 @@ public sealed class TranslatableTreeTests
         );
 
         MethodCallExpression last = (MethodCallExpression)projection.Expression;
-
-        while (last.Method.Name is nameof(Queryable.Skip) or nameof(Queryable.Take))
-        {
-            last = (MethodCallExpression)last.Arguments[0];
-        }
-
         LambdaExpression selector = (LambdaExpression)
             ((UnaryExpression)last.Arguments[1]).Operand;
 

@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Enumerating a projection hands the query below its result rows to the
+  provider of the stored tables it reads, as `provider.CreateQuery(query)`,
+  and maps the values it returns to result rows; a translating provider
+  thus runs the whole query as one SQL statement, and the tables are no
+  longer read in full for every query (#237). The tree runs in memory only
+  over tables held in memory (LINQ to Objects' `EnumerableQuery`) or when
+  the provider refuses the query with `NotSupportedException` before its
+  first value; any other exception of the provider fails the enumeration.
+
+### Added
+
+- `PureQLProjection.Execution` (`QueryExecution.NotRun`, `Translated` or
+  `InMemory`) tells where the last enumeration ran the query, and
+  `PureQLProjection.FallbackReason` holds the provider's
+  `NotSupportedException` when the query fell back to memory.
+
+### Changed
+
+- The projection's tree always ends in the `Select` that builds the result
+  rows, which is no longer simplified into the query: it only maps the
+  items of the query's row tuple, and pagination ends the query below it.
+
 ## [0.1.0-preview.4.4.1] — 2026-10-25
 
 ### Changed
