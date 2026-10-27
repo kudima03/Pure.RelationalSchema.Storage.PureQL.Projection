@@ -11,7 +11,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // memory and run through the provider of the fixtures' tables.
 public sealed class SampleCatalogueTests
 {
-    private static readonly Dictionary<string, ILiteral> Parameters = new()
+    internal static readonly Dictionary<string, ILiteral> Parameters = new()
     {
         ["min_age"] = new LiteralDecimal(18m),
         ["min_total"] = new LiteralDecimal(100m),
