@@ -20,7 +20,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 // cells) in columns of every type. Objects are named as those packages name
 // them: the first 63 hexadecimal characters of the model's hash. The database
 // starts when the datasets are first read, so a class whose tests are all
-// skipped needs no Docker.
+// skipped needs no Docker. The server logs the plan of every statement
+// (auto_explain), which LastPlan reads back, and the session disables nested
+// loops, so a join is a nested loop only when PostgreSQL has no other way to
+// run its condition: a hash join needs an equality it can hash (issue #243).
 public sealed class PostgreSqlDatabase : IDisposable
 {
     private const int MaxIdentifierLength = 63;
@@ -37,12 +40,55 @@ public sealed class PostgreSqlDatabase : IDisposable
             .WithDatabase("testdb")
             .WithUsername("postgres")
             .WithPassword("postgres")
+            .WithCommand(
+                "-c",
+                "shared_preload_libraries=auto_explain",
+                "-c",
+                "auto_explain.log_min_duration=0"
+            )
             .Build();
 
         _datasets = new Lazy<IReadOnlyList<IStoredSchemaDataSet>>(Started);
     }
 
     public IReadOnlyList<IStoredSchemaDataSet> Datasets => _datasets.Value;
+
+    // The plan of the last statement the server ran, as auto_explain logged
+    // it: the statement's text, then its plan nodes, one per line, each line
+    // of the entry indented below the log line that opens it.
+    public string LastPlan()
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            string[] lines = _postgres
+                .GetLogsAsync(timestampsEnabled: false)
+                .GetAwaiter()
+                .GetResult()
+                .Stderr.Split('\n');
+            int start = Array.FindLastIndex(
+                lines,
+                line => line.EndsWith("plan:", StringComparison.Ordinal)
+            );
+
+            if (start >= 0)
+            {
+                return string.Join(
+                    '\n',
+                    lines
+                        .Skip(start + 1)
+                        .TakeWhile(line => line.StartsWith('\t'))
+                        .Select(line => line.Trim())
+                );
+            }
+
+            if (attempt == 20)
+            {
+                throw new InvalidOperationException("The server logged no plan.");
+            }
+
+            Thread.Sleep(100);
+        }
+    }
 
     public void Dispose()
     {
@@ -56,6 +102,7 @@ public sealed class PostgreSqlDatabase : IDisposable
 
         _connection.ConnectionString = _postgres.GetConnectionString();
         _connection.Open();
+        Execute("SET enable_nestloop = off;");
 
         return [Stored(new SchemaDataSetWithForeignKeys()), Stored(new AuditSchemaDataSet())];
     }

@@ -17,7 +17,7 @@
     />
     <PackageReference
       Include="Pure.RelationalSchema.Storage.PostgreSQL.Querying"
-      Version="0.1.0-preview.0.6.0"
+      Version="0.1.0-preview.0.7.0"
     />
     <PackageReference
       Include="Pure.RelationalSchema.Storage.Samples"
