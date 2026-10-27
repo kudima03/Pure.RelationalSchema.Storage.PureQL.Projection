@@ -29,35 +29,36 @@ internal sealed class DocumentTree(
 
     private readonly Dictionary<(string Name, QueryUse Use), CompiledQuery> _built = [];
 
-    // The main query, its rows turned into IRow by the last Select: the only
-    // step that runs outside the query, as a LINQ provider's projection does.
+    // The main query, its rows turned into IRow by the last Select, which
+    // only maps each row of the query, item by item: the one step that runs
+    // outside the query, as a LINQ provider's projection does. The query is
+    // simplified as built; the mapping is not simplified into it, so the
+    // query stays one subtree, which a provider runs on its own.
     public Expression Rows(QueryClauses main, IReadOnlyList<IColumn> columns)
     {
         CompiledQuery query = QueryTree.Build(this, main, QueryUse.Rows);
         ParameterExpression row = Expression.Parameter(query.RowType, "row");
 
-        return Simplifier.Simplify(
-            Linq.Select(
-                query.Rows,
-                Expression.Lambda(
-                    typeof(Func<,>).MakeGenericType(query.RowType, typeof(IRow)),
-                    Expression.New(
-                        ResultRow.Constructor,
-                        Expression.Constant(columns, typeof(IReadOnlyList<IColumn>)),
-                        Expression.NewArrayInit(
-                            typeof(object),
-                            [
-                                .. query.Columns.Select(
-                                    (_, index) => Expression.Convert(
-                                        Tuples.Item(row, index),
-                                        typeof(object)
-                                    )
-                                ),
-                            ]
-                        )
-                    ),
-                    row
-                )
+        return Linq.Select(
+            query.Rows,
+            Expression.Lambda(
+                typeof(Func<,>).MakeGenericType(query.RowType, typeof(IRow)),
+                Expression.New(
+                    ResultRow.Constructor,
+                    Expression.Constant(columns, typeof(IReadOnlyList<IColumn>)),
+                    Expression.NewArrayInit(
+                        typeof(object),
+                        [
+                            .. query.Columns.Select(
+                                (_, index) => Expression.Convert(
+                                    Tuples.Item(row, index),
+                                    typeof(object)
+                                )
+                            ),
+                        ]
+                    )
+                ),
+                row
             )
         );
     }

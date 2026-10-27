@@ -1,6 +1,6 @@
 # Pure.RelationalSchema.Storage.PureQL.Projection
 
-Compiles PureQL queries over relational schema datasets into one LINQ expression tree: a `PureQLQuery` from `PureQL.CSharp.Model` becomes an `IStoredTableDataSet` whose `IQueryable<IRow>` tree a LINQ provider can translate to SQL, and which runs in memory when enumerated.
+Compiles PureQL queries over relational schema datasets into one LINQ expression tree: a `PureQLQuery` from `PureQL.CSharp.Model` becomes an `IStoredTableDataSet` whose `IQueryable<IRow>` tree is handed, when enumerated, to the LINQ provider of the stored tables it reads (which translates it to SQL), and runs in memory when the provider cannot run it or the tables are held in memory.
 
 [![.NET build & test](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection/actions/workflows/build-and-test.yml/badge.svg?branch=main)](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection/actions/workflows/build-and-test.yml)
 [![Build and Deploy](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection/actions/workflows/publish-nuget.yml/badge.svg?branch=main)](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection/actions/workflows/publish-nuget.yml)
@@ -11,7 +11,7 @@ Compiles PureQL queries over relational schema datasets into one LINQ expression
 
 `Pure.RelationalSchema.Storage.PureQL.Projection` is an interpreter for the [PureQL specification](https://github.com/kudima03/PureQL-Specification) `0.1.0-preview.2.0.1` over the Pure relational storage model. Given a collection of `IStoredSchemaDataSet` objects and a `PureQLQuery`, it produces an `IStoredTableDataSet` whose rows are the query's result under the specification's semantics.
 
-The query is compiled when the projection is built to a single `IQueryable<IRow>` expression tree made of standard query operators over one root per stored table (see [Expression tree](#expression-tree)). Enumerating the projection runs that tree in memory with LINQ to Objects; a provider that translates the tree (to PostgreSQL, across several databases) reads `projection.Expression` instead.
+The query is compiled when the projection is built to a single `IQueryable<IRow>` expression tree made of standard query operators over one root per stored table, ending in the `Select` that builds the result rows (see [Expression tree](#expression-tree)). Enumerating the projection hands the query below the result rows to the provider of the stored tables it reads, so that a provider that translates it (to PostgreSQL) runs it as one SQL statement and the projection only maps its values to result rows (see [Running a query](#running-a-query)). The tree runs in memory, with LINQ to Objects, only over tables held in memory, or when the provider refuses the query.
 
 ## Public API
 
@@ -25,10 +25,12 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
 | `PureQLProjection(..., IReadOnlyDictionary<string, ILiteral> parameters)` | Either of the above with parameters bound by name to literals (see [Parameters](#parameters)). |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
-| `IEnumerator<IRow> GetEnumerator()` | Runs the query and enumerates the result rows. Every enumeration runs the query again. |
+| `IEnumerator<IRow> GetEnumerator()` | Runs the query, through the stored tables' provider or in memory, and enumerates the result rows. Every enumeration runs the query again. |
 | `IAsyncEnumerator<IRow> GetAsyncEnumerator(...)` | Async enumeration over the same rows. |
-| `Expression Expression` | The query's expression tree, for a LINQ provider to translate (see below). |
-| `Type ElementType / IQueryProvider Provider` | `IQueryable<IRow>` plumbing: LINQ composed over the projection runs in memory. |
+| `QueryExecution Execution` | Where the last enumeration ran the query: `NotRun`, `Translated` (the stored tables' provider ran it) or `InMemory`. |
+| `NotSupportedException? FallbackReason` | The exception the provider refused the last query with, when the query ran in memory for that reason; `null` otherwise. |
+| `Expression Expression` | The query's expression tree (see below). |
+| `Type ElementType / IQueryProvider Provider` | `IQueryable<IRow>` plumbing: LINQ composed over the projection runs in memory over the projection's rows. |
 
 ### What is supported
 
@@ -68,7 +70,7 @@ IStoredTableDataSet result = new PureQLProjection(
 
 ### Expression tree
 
-`projection.Expression` is built only from constructs a SQL provider translates: `Queryable` operators (`Enumerable` ones only over a group or a list), members and methods of the BCL's value types, strings and `Math`, value tuples, constants and captured parameters. Nothing in it is compiled, invoked or evaluated on the client except the result rows, built by the last `Select`. Its shape is fixed:
+`projection.Expression` is built only from constructs a SQL provider translates: `Queryable` operators (`Enumerable` ones only over a group or a list), members and methods of the BCL's value types, strings and `Math`, value tuples, constants and captured parameters. Nothing in it is compiled, invoked or evaluated on the client except the result rows, built by the last `Select`, which only maps each row of the query, item by item, to an `IRow`. Its shape is fixed:
 
 ```
 scan(from) [.Where] (.Join | .GroupJoin.SelectMany | .SelectMany)* [.Where(rest of where)]
@@ -76,7 +78,10 @@ scan(from) [.Where] (.Join | .GroupJoin.SelectMany | .SelectMany)* [.Where(rest 
   grouped: .GroupBy(keys) [.Where(having)] [.OrderBy/ThenBy] .Select(columns)
   total:   one-row constant .Select(aggregates over the rows)
 [.DistinctBy(columns)] [.Skip] [.Take]
+.Select(row => new ResultRow(columns, new object[] { row.Item1, ... }))
 ```
+
+Everything above the last line is the query a provider is given (see [Running a query](#running-a-query)); its rows are value tuples of the result columns, in order.
 
 - **Sources.** Every stored table is its own root, `Constant(IStoredTableDataSet)` typed `IQueryable<IRow>`, so a provider can tell tables (and their databases) apart and split the tree there. A table is always scanned as `root.Select(row => (field, ...))`, reading only the fields the query reads; a field read is `IsNullOrEmpty(row.Cells[column].Value.TextValue) ? null : Parse(row.Cells[column].Value.TextValue, ...)`, the `IColumn` a constant. A subquery is inlined where it is read.
 - **Rows** are value tuples: a source row holds its fields, a joined row one source row per source, a group key one value per key, a query result one value per column. Every value is nullable: `long?` (integer), `decimal?`, `string`, `bool?`, `DateOnly?`, `TimeOnly?`, `DateTime?` (UTC), `Guid?`.
@@ -88,10 +93,16 @@ Built in, before any provider sees it:
 
 - constants fold (an operation that fails, like `1 / 0`, is kept and fails the query; two constant strings compare by code point), `true`/`false` fold out of conditions, lifting is dropped where a value cannot be null and an operation over a `null` literal is `null`;
 - `where` is split into its and-ed conditions, each moved to the scan of the source it reads, or into the join that first sees every source it reads, unless an outer join may leave one of them without a row; a condition on a subquery source moves into the subquery (onto its `having` when it reads an aggregate);
-- adjacent `Where`s merge, `Where(true)` and identity `Select`s are dropped, consecutive `Select`s are one, and pagination comes last;
+- adjacent `Where`s merge, `Where(true)` and identity `Select`s are dropped, consecutive `Select`s are one, and pagination ends the query (only the result rows' `Select` follows it);
 - a repeated order key or one that is the same for every row is dropped, a `distinctBy` over every group key is dropped, and a subquery read only by `in` (without pagination) is neither ordered nor `distinctBy`-filtered.
 
-Run in memory, the tree is compiled once per enumeration as `Enumerable` calls: each stored table is read once, a query nested in a lambda that reads nothing of it (a joined source, an `in` list, an aggregate over all rows) is computed once and answers `in` from a hash set, hash joins cost the rows of both sides rather than their product, and strings order by code point.
+### Running a query
+
+Enumerating the projection hands the query below the result rows (`projection.Expression` without its last `Select`) to the `Provider` of the first stored table the query reads whose provider is not LINQ to Objects' (`EnumerableQuery`, the provider of a table held in memory), as `provider.CreateQuery(query)`, and maps each value the provider returns to a result row. A provider that translates the tree, such as `Pure.RelationalSchema.Storage.PostgreSQL.Querying`, thus runs the whole query (filters, joins, grouping, ordering, pagination) as one SQL statement, and reads only the result; the stored tables are never enumerated in full. For that, the provider must understand the tree's shape: value tuples, and a field read as `IsNullOrEmpty(row.Cells[column].Value.TextValue) ? null : Parse(row.Cells[column].Value.TextValue, ...)` (`long.Parse`, `decimal.Parse`, `bool.Parse`, `DateOnly.Parse`, `TimeOnly.Parse`, `DateTime.Parse`, `Guid.Parse` with the invariant culture, or the text itself for a string column), which is the typed read of the column and maps to the column as a whole.
+
+The tree runs in memory, with LINQ to Objects, when the tables are held in memory, or when the provider refuses the query with `NotSupportedException` (when the query is created, enumerated, or before its first value): a construct the provider cannot translate, tables of more than one database, or a source that is not a stored table (a total query's one-row constant). Any other exception the provider raises fails the enumeration. After an enumeration, `Execution` says which happened (`Translated` or `InMemory`) and `FallbackReason` holds the provider's exception when the query fell back to memory, so that a host can log it.
+
+Run in memory, the tree is compiled once per enumeration as `Enumerable` calls: each stored table is read once, a query nested in a lambda that reads nothing of it (a joined source, an `in` list, an aggregate over all rows) is computed once and answers `in` from a hash set, hash joins cost the rows of both sides rather than their product, and strings order by code point. LINQ composed over the projection (`projection.Take(10)`, `projection.Count()`) runs in memory over the projection's rows, which are read as above.
 
 ### Storage mapping
 

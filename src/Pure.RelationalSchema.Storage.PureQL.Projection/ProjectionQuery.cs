@@ -3,18 +3,21 @@ using System.Linq.Expressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// A query over the projection, run in memory when enumerated.
-internal sealed class LocalQuery<T>(Expression expression) : IOrderedQueryable<T>
+// A query over a projection: the projection's tree, or one composed over it.
+internal sealed class ProjectionQuery<T>(ProjectionProvider provider, Expression expression)
+    : IOrderedQueryable<T>
 {
+    private readonly ProjectionProvider _provider = provider;
+
     public Type ElementType => typeof(T);
 
     public Expression Expression { get; } = expression;
 
-    public IQueryProvider Provider => LocalProvider.Instance;
+    public IQueryProvider Provider => _provider;
 
     public IEnumerator<T> GetEnumerator()
     {
-        return LocalProvider.Run<T>(Expression).GetEnumerator();
+        return _provider.Enumerate<T>(Expression);
     }
 
     IEnumerator IEnumerable.GetEnumerator()
