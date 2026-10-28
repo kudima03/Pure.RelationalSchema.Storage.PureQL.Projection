@@ -5,18 +5,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // Every query of PureQL.CSharp.Model.Samples, over its fixtures stored in
 // PostgreSQL, is translated by the provider of the stored tables to one SQL
 // statement and returns the sample's result: the provider never refuses it,
-// so it never falls back to running in memory. Skipped until the provider
-// translates every sample: today it refuses all but three of them (parsing a
-// cell's text, Guid.Parse, reading Guid, date, time and decimal values from a
-// SQL result), and the projection runs them in memory. Remove the Skip to run
-// them; Docker must be available.
+// so it never falls back to running in memory. Needs Docker.
 public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
     : IClassFixture<PostgreSqlDatabase>
 {
-    private const string NotYetTranslated =
-        "Pure.RelationalSchema.Storage.PostgreSQL.Querying does not translate "
-        + "every sample yet.";
-
     private readonly PostgreSqlDatabase _database = database;
 
     public static TheoryData<string> SamplesWithResult =>
@@ -25,7 +17,7 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
     public static TheoryData<string> SamplesWithParameters =>
         SampleCatalogueTests.SamplesWithParameters;
 
-    [Theory(Skip = NotYetTranslated)]
+    [Theory]
     [MemberData(nameof(SamplesWithResult))]
     public void SampleIsTranslatedAndReturnsItsExpectedResult(string name)
     {
@@ -47,7 +39,7 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         Assert.Equal(QueryExecution.Translated, actual.Execution);
     }
 
-    [Theory(Skip = NotYetTranslated)]
+    [Theory]
     [MemberData(nameof(SamplesWithParameters))]
     public void SampleWithBoundParametersIsTranslated(string name)
     {

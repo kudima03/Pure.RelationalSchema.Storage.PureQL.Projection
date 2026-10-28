@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `0.33333333333333337`), and a decimal result column is typed by a column
   type named `decimal` that holds it exactly, instead of `double` (#252).
 
+### Changed
+
+- Every sample of `PureQL.CSharp.Model.Samples` is verified to be translated
+  by `Pure.RelationalSchema.Storage.PostgreSQL.Querying` 0.1.0-preview.0.8.1
+  with `Linq.Expressions.Translation.PostgreSql` 0.1.0-preview.0.6.2 to one
+  SQL statement over PostgreSQL and to return its expected result, without
+  falling back to memory (`TranslatedSampleTests`, no longer skipped).
+
 ## [0.1.0-preview.4.5.1] — 2026-10-28
 
 ### Fixed
