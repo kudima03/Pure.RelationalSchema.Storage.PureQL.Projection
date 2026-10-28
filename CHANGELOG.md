@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- A stored field is read by `Pure.RelationalSchema.Storage.PostgreSQL.Querying`
+  0.1.0-preview.0.9.0 as its typed column instead of its cell text parsed
+  back: a join or filter on a `date`, `datetime`, `time`, `uuid`, integer or
+  boolean field compares the column itself, so PostgreSQL hashes or merges
+  the join, uses its statistics and indexes, and no longer formats and
+  parses every pair of rows (#250). A date range join of a few thousand rows
+  a side takes under a second instead of half a minute. A field declared
+  non-null is the column's value, which the provider and the translator
+  (`Linq.Expressions.Translation.PostgreSql` 0.1.0-preview.0.7.0) take as
+  never null, so it still compares with `=`; an empty cell there is now a
+  NULL that matches nothing, where the text parse failed the query.
+- An aggregate over all rows in a plain `select` is translated by the
+  translator 0.1.0-preview.0.7.0 as a window aggregate (`COUNT(*) OVER ()`,
+  `SUM(...) OVER ()`, ...) computed in the pass that reads the rows, instead
+  of a scalar subquery that ran the whole `from`/`joins`/`where` a second
+  time (#248). The tree is unchanged: the aggregate reads the one shared
+  subtree of the query's rows, which the translator recognises below the
+  projection.
+
+### Changed
+
+- The translated sample, join and plan tests run with the provider
+  0.1.0-preview.0.9.0 and the translator 0.1.0-preview.0.7.0; the plan
+  tests of #248 and #250 are no longer skipped.
+
 ## [0.1.0-preview.4.6.0] — 2026-10-28
 
 ### Fixed

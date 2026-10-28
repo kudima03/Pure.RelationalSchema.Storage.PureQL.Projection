@@ -10,24 +10,21 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 
 // The cost of a query translated over the fixtures stored in PostgreSQL, read
 // from its plan: an aggregate over all rows in a plain select reads the
-// sources once (issue #248), and a stored field is compared as its typed
-// column, not as its cell text parsed back (issue #250). Skipped until those
-// issues are fixed. Needs Docker.
+// sources once, as a window aggregate (issue #248), and a stored field is
+// compared as its typed column, not as its cell text parsed back (issue #250).
+// Needs Docker.
 public sealed class TranslatedPlanTests(PostgreSqlDatabase database)
     : IClassFixture<PostgreSqlDatabase>
 {
-    private const string Issue248 =
-        "Issue #248: an aggregate over all rows in a plain select repeats the "
-        + "whole query as a subquery.";
-
-    private const string Issue250 =
-        "Issue #250: a stored field is read as its cell text and parsed back.";
-
     private const string Orders = "schema_with_foreign_keys.orders";
+
+    // A hash or merge condition over two stored columns as they are.
+    private const string ColumnsCompared =
+        @" Cond: \(t\d\.""[0-9A-F]+"" = t\d\.""[0-9A-F]+""\)";
 
     private readonly PostgreSqlDatabase _database = database;
 
-    [Fact(Skip = Issue248)]
+    [Fact]
     public void AggregateOverAllRowsInAPlainSelectReadsTheSourceOnce()
     {
         Sample sample = Sample.Named("ShareOfTotalQuery");
@@ -43,7 +40,7 @@ public sealed class TranslatedPlanTests(PostgreSqlDatabase database)
         );
     }
 
-    [Fact(Skip = Issue250)]
+    [Fact]
     public void DateRangeJoinComparesTheStoredDates()
     {
         PureQLProjection projection = new(_database.Datasets, DateRangeJoin());
@@ -57,7 +54,7 @@ public sealed class TranslatedPlanTests(PostgreSqlDatabase database)
         Assert.DoesNotContain("::text", plan, StringComparison.Ordinal);
     }
 
-    [Fact(Skip = Issue250)]
+    [Fact]
     public void JoinOnUuidKeysComparesTheStoredUuids()
     {
         PureQLProjection projection = new(
@@ -70,7 +67,8 @@ public sealed class TranslatedPlanTests(PostgreSqlDatabase database)
 
         Assert.Equal(QueryExecution.Translated, projection.Execution);
         Assert.DoesNotContain("::text", plan, StringComparison.Ordinal);
-        Assert.DoesNotContain("COALESCE", plan, StringComparison.Ordinal);
+        Assert.DoesNotContain("CAST(", plan, StringComparison.Ordinal);
+        Assert.Matches(ColumnsCompared, plan);
     }
 
     // The count of the pairs of orders o and p where p is placed on o's day or
