@@ -68,7 +68,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[name]))"
+            "[items].Select(i => (i[name]!))"
                 + ".Select(row => new ResultRow([name], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
@@ -79,7 +79,7 @@ public sealed class ExpressionTreeTests
     }
 
     [Fact]
-    public void StoredCellIsReadAsItsParsedTextWithEmptyTextAsNull()
+    public void StoredCellDeclaredNullableIsReadAsItsParsedTextWithEmptyTextAsNull()
     {
         PureQLProjection projection = new(
             [Items],
@@ -88,10 +88,12 @@ public sealed class ExpressionTreeTests
                     new From(new FromEntity("t.items", "i")),
                     [
                         new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
+                            new SelectItemProjectionNullable(
+                                new SelectItemProjectionIntegerNullable(
                                     "id",
-                                    new IntegerProjection(new FieldInteger("i", "id"))
+                                    new ExactIntegerNullableProjection(
+                                        new FieldIntegerNullable("i", "id")
+                                    )
                                 )
                             )
                         ),
@@ -107,6 +109,198 @@ public sealed class ExpressionTreeTests
                 + ".Select(row => new ResultRow([id], new[] { (object)row.Item1 }))",
             TreeText.Full(projection.Expression)
         );
+        Assert.Equal(
+            "[items].Select(i => (i[id]))"
+                + ".Select(row => new ResultRow([id], new[] { (object)row.Item1 }))",
+            TreeText.Of(projection.Expression)
+        );
+    }
+
+    // A provider sees a value that is never null, so SQL compares, joins and
+    // filters on it with =, which a hash join or an index serves (issue #243).
+    [Fact]
+    public void StoredCellDeclaredNonNullIsReadAsItsParsedTextWithoutANullCheck()
+    {
+        PureQLProjection projection = new(
+            [Items],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionInteger(
+                                    "id",
+                                    new IntegerProjection(new FieldInteger("i", "id"))
+                                )
+                            )
+                        ),
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionString(
+                                    "name",
+                                    new StringProjection(new FieldString("i", "name"))
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        Assert.Equal(
+            "[items].Select(i => ((long?)Int64.Parse(i.Cells[id].Value.TextValue, "
+                + "NumberStyles.Integer, CultureInfo.InvariantCulture), "
+                + "i.Cells[name].Value.TextValue))"
+                + ".Select(row => new ResultRow([id, name], "
+                + "new[] { (object)row.Item1, (object)row.Item2 }))",
+            TreeText.Full(projection.Expression)
+        );
+        Assert.Equal(
+            "[items].Select(i => (i[id]!, i[name]!))"
+                + ".Select(row => new ResultRow([id, name], "
+                + "new[] { (object)row.Item1, (object)row.Item2 }))",
+            TreeText.Of(projection.Expression)
+        );
+    }
+
+    // Storage does not say whether a column holds NULL, so a query may declare
+    // a field both ways; a nullable declaration where the source has a row of
+    // its own wins, so the read never fails on a cell the query allows.
+    [Fact]
+    public void StoredCellDeclaredNullableAnywhereItsSourceHasARowIsReadNullable()
+    {
+        PureQLProjection projection = new(
+            [Items],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionInteger(
+                                    "id",
+                                    new IntegerProjection(new FieldInteger("i", "id"))
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries: null,
+                    joins: null,
+                    where: new BooleanRow(
+                        new ComparisonRow(
+                            new GreaterThanRow(
+                                new GreaterThanDecimalRow(
+                                    new DecimalNullableRow(
+                                        new ExactIntegerNullableRow(
+                                            new FieldIntegerNullable("i", "id")
+                                        )
+                                    ),
+                                    new DecimalNullableRow(
+                                        new IntegerRow(new LiteralInteger(1))
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    orderBy: null,
+                    pagination: null,
+                    distinctBy: null
+                )
+            )
+        );
+
+        Assert.Equal(
+            "[items].Select(i => (i[id])).Where(i => (i.Item1 > 1L))"
+                + ".Select(row => new ResultRow([id], new[] { (object)row.Item1 }))",
+            TreeText.Of(projection.Expression)
+        );
+        Assert.Equal(["2", "3"], ResultColumn.Texts(projection, "id"));
+    }
+
+    // A field of the optional side of an outer join is declared nullable
+    // after the join whatever it holds, so only its declarations before the
+    // join, in on, say whether its cells are read without a null check.
+    [Fact]
+    public void StoredCellOfAnOptionalSourceIsReadAsItsJoinConditionDeclaresIt()
+    {
+        PureQLProjection projection = new(
+            [Items, Tags],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.items", "i")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNullable(
+                                new SelectItemProjectionStringNullable(
+                                    "tag",
+                                    new ExactStringNullableProjection(
+                                        new FieldStringNullable("g", "tag")
+                                    )
+                                )
+                            )
+                        ),
+                        new SelectItemProjection(
+                            new SelectItemProjectionNullable(
+                                new SelectItemProjectionIntegerNullable(
+                                    "item",
+                                    new ExactIntegerNullableProjection(
+                                        new FieldIntegerNullable("g", "item_id")
+                                    )
+                                )
+                            )
+                        ),
+                    ],
+                    subqueries: null,
+                    joins:
+                    [
+                        new Join(
+                            new JoinEntity(
+                                JoinKind.Left,
+                                "s.tags",
+                                new BooleanRow(
+                                    new ComparisonRow(
+                                        new EqualRow(
+                                            new EqualDecimalRow(
+                                                new DecimalNullableRow(
+                                                    new IntegerRow(
+                                                        new FieldInteger("g", "item_id")
+                                                    )
+                                                ),
+                                                new DecimalNullableRow(
+                                                    new IntegerRow(
+                                                        new FieldInteger("i", "id")
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                ),
+                                "g"
+                            )
+                        ),
+                    ],
+                    where: null,
+                    orderBy: null,
+                    pagination: null,
+                    distinctBy: null
+                )
+            )
+        );
+
+        Assert.Equal(
+            "[items].Select(i => (i[id]!))"
+                + ".GroupJoin([tags].Select(g => (g[item_id]!, g[tag])), "
+                + "left => (left.Item1), g => (g.Item1), "
+                + "(left, matches) => (left, matches))"
+                + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
+                + "(match, g) => (match.Item1, g))"
+                + ".Select(row => (row.Item2.Item2, row.Item2.Item1))"
+                + ".Select(row => new ResultRow([tag, item], "
+                + "new[] { (object)row.Item1, (object)row.Item2 }))",
+            TreeText.Of(projection.Expression)
+        );
+        Assert.Equal(["pen", "", "office"], ResultColumn.Texts(projection, "tag"));
     }
 
     [Fact]
@@ -165,8 +359,8 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id]))"
-                + ".Join([tags].Select(g => (g[item_id], g[tag])), "
+            "[items].Select(i => (i[id]!))"
+                + ".Join([tags].Select(g => (g[item_id]!, g[tag]!)), "
                 + "left => (left.Item1), g => (g.Item1), (left, g) => (left, g))"
                 + ".Select(row => (row.Item2.Item2))"
                 + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
@@ -251,7 +445,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id])).Where(i => (i.Item1 > 2L))"
+            "[items].Select(i => (i[id]!)).Where(i => (i.Item1 > 2L))"
                 + ".Select(row => (\"ab\"))"
                 + ".Select(row => new ResultRow([label], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
@@ -407,9 +601,9 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name], i[active]))"
+            "[items].Select(i => (i[id]!, i[name]!, i[active]!))"
                 + ".Where(i => (i.Item3 == true))"
-                + ".Join([tags].Select(g => (g[item_id], g[tag]))"
+                + ".Join([tags].Select(g => (g[item_id]!, g[tag]!))"
                 + ".Where(g => (g.Item2 != \"spare\")), "
                 + "left => (left.Item1, left.Item2), g => (g.Item1, g.Item2), "
                 + "(left, g) => (left, g))"
@@ -508,7 +702,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name], i[active]))"
+            "[items].Select(i => (i[id]!, i[name]!, i[active]!))"
                 + ".Where(i => (i.Item3 == true))"
                 + ".GroupJoin([tags].Select(g => (g[item_id], g[tag])), "
                 + "left => (left.Item1), g => (g.Item1), "
@@ -589,7 +783,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[tags].Select(g => (g[item_id], g[tag]))"
+            "[tags].Select(g => (g[item_id]!, g[tag]!))"
                 + ".GroupJoin([items].Select(i => (i[id], i[name])), "
                 + "g => (g.Item1), left => (left.Item1), (g, lefts) => (g, lefts))"
                 + ".SelectMany(match => match.Item2.DefaultIfEmpty(), "
@@ -758,7 +952,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id]))"
+            "[items].Select(i => (i[id]!))"
                 + ".SelectMany(left => [tags].Select(g => (g[item_id], g[tag]))"
                 + ".Where(g => (g.Item1 > left.Item1)).DefaultIfEmpty(), "
                 + "(left, g) => (left, g))"
@@ -867,7 +1061,7 @@ public sealed class ExpressionTreeTests
         PureQLProjection left = new([Items, Tags], query(JoinKind.Left));
 
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name]))"
+            "[items].Select(i => (i[id]!, i[name]!))"
                 + ".Join([tags].Select(g => (g[item_id], g[tag])), "
                 + "left => (left.Item1), g => (g.Item1), (left, g) => (left, g))"
                 + ".Where(row => (row.Item2.Item2 != row.Item1.Item2))"
@@ -876,7 +1070,7 @@ public sealed class ExpressionTreeTests
             TreeText.Of(inner.Expression)
         );
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name]))"
+            "[items].Select(i => (i[id]!, i[name]!))"
                 + ".GroupJoin([tags].Select(g => (g[item_id], g[tag])), "
                 + "left => (left.Item1), g => (g.Item1), "
                 + "(left, matches) => (left, matches))"
@@ -951,7 +1145,7 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[items].Select(i => (i[price]))"
-                + ".Join([tags].Select(g => (g[item_id], g[tag])), "
+                + ".Join([tags].Select(g => (g[item_id]!, g[tag]!)), "
                 + "left => (left.Item1), g => ((decimal?)g.Item1), "
                 + "(left, g) => (left, g))"
                 + ".Select(row => (row.Item2.Item2))"
@@ -1096,7 +1290,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name], i[active]))"
+            "[items].Select(i => (i[id]!, i[name]!, i[active]!))"
                 + ".Where(i => ((i.Item3 == true) && (i.Item1 > 1L)))"
                 + ".Select(row => (row.Item2))"
                 + ".Select(row => new ResultRow([name], new[] { (object)row.Item1 }))",
@@ -1193,7 +1387,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[active])).GroupBy(row => (row.Item1))"
+            "[items].Select(i => (i[active]!)).GroupBy(row => (row.Item1))"
                 + ".Where(group => (group.LongCount() > 1L))"
                 + ".Select(group => (group.Key.Item1))"
                 + ".Select(row => new ResultRow([active], new[] { (object)row.Item1 }))",
@@ -1272,7 +1466,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name]))"
+            "[items].Select(i => (i[id]!, i[name]!))"
                 + ".OrderBy(row => row.Item2, Ordinal).ThenByDescending(row => row.Item1)"
                 + ".Select(row => (row.Item1))"
                 + ".Select(row => new ResultRow([id], new[] { (object)row.Item1 }))",
@@ -1361,8 +1555,8 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[tags].Select(g => (g[tag]))"
-                + ".Where(g => [items].Select(i => (i[name]))"
+            "[tags].Select(g => (g[tag]!))"
+                + ".Where(g => [items].Select(i => (i[name]!))"
                 + ".Select(names => names.Item1)"
                 + ".Contains(g.Item1))"
                 + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
@@ -1455,8 +1649,8 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[tags].Select(g => (g[tag]))"
-                + ".Where(g => [items].Select(i => (i[id], i[name]))"
+            "[tags].Select(g => (g[tag]!))"
+                + ".Where(g => [items].Select(i => (i[id]!, i[name]!))"
                 + ".OrderBy(row => row.Item1).Select(row => row.Item2)"
                 + ".Take(1).Contains(g.Item1))"
                 + ".Select(row => new ResultRow([tag], new[] { (object)row.Item1 }))",
@@ -1514,7 +1708,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[active])).GroupBy(row => (row.Item1))"
+            "[items].Select(i => (i[active]!)).GroupBy(row => (row.Item1))"
                 + ".OrderBy(group => group.Key.Item1)"
                 + ".Select(group => (group.Key.Item1)).Take(5)"
                 + ".Select(row => new ResultRow([active], new[] { (object)row.Item1 }))",
@@ -1560,7 +1754,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[name], i[active])).DistinctBy(row => (row.Item2))"
+            "[items].Select(i => (i[name]!, i[active]!)).DistinctBy(row => (row.Item2))"
                 + ".Skip(1).Take(5)"
                 + ".Select(row => new ResultRow([name, active], "
                 + "new[] { (object)row.Item1, (object)row.Item2 }))",
@@ -1611,7 +1805,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[id])).Where(i => (i.Item1 > @min_id))"
+            "[items].Select(i => (i[id]!)).Where(i => (i.Item1 > @min_id))"
                 + ".Select(row => new ResultRow([id], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
@@ -1667,9 +1861,9 @@ public sealed class ExpressionTreeTests
 
         Assert.Equal(
             "[one row]"
-                + ".Select(one => ((long?)[items].Select(i => (i[price], i[active]))"
+                + ".Select(one => ((long?)[items].Select(i => (i[price], i[active]!))"
                 + ".Where(i => (i.Item2 == true)).LongCount(), "
-                + "[items].Select(i => (i[price], i[active]))"
+                + "[items].Select(i => (i[price], i[active]!))"
                 + ".Where(i => (i.Item2 == true)).Sum(row => row.Item1)))"
                 + ".Select(row => new ResultRow([items, total], "
                 + "new[] { (object)row.Item1, (object)row.Item2 }))",
@@ -1751,7 +1945,7 @@ public sealed class ExpressionTreeTests
         );
 
         Assert.Equal(
-            "[items].Select(i => (i[active])).GroupBy(row => (row.Item1))"
+            "[items].Select(i => (i[active]!)).GroupBy(row => (row.Item1))"
                 + ".Where(group => (group.LongCount() >= 2L))"
                 + ".Select(group => ((long?)(group.LongCount() + 1L)))"
                 + ".Select(row => new ResultRow([next], new[] { (object)row.Item1 }))",

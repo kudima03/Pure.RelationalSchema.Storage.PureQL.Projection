@@ -168,6 +168,7 @@ internal sealed class QueryTree
                 field => field.Field,
                 StringComparer.Ordinal
             );
+        HashSet<(string Source, string Field)> required = Required();
 
         return
         [
@@ -175,6 +176,7 @@ internal sealed class QueryTree
                 (source, index) => Scan(
                     source,
                     new HashSet<string>(fields[source.Name], StringComparer.Ordinal),
+                    field => !required.Contains((source.Name, field)),
                     optional[index],
                     use
                 )
@@ -182,9 +184,70 @@ internal sealed class QueryTree
         ];
     }
 
+    // The fields the query declares non-null: one of their references
+    // declares them so, and none declares them nullable where its source
+    // still has a row of its own. A reference on the optional side of an
+    // outer join is declared nullable whatever the field holds, so it says
+    // nothing about the field; the sources that are optional at a join's on
+    // are those the joins before it made so, as the validator sees them.
+    private HashSet<(string Source, string Field)> Required()
+    {
+        HashSet<(string Source, string Field)> nonNull = [];
+        HashSet<(string Source, string Field)> nullable = [];
+        HashSet<string> optional = new(StringComparer.Ordinal);
+        List<Source> sources = [_query.From, .. _query.Joins.Select(join => join.Source)];
+
+        void declare(object expression)
+        {
+            foreach (
+                IField field in ModelNode.Nodes(expression, _ => true).OfType<IField>()
+            )
+            {
+                if (!field.Type.Nullable)
+                {
+                    _ = nonNull.Add((field.Source, field.Field));
+                }
+                else if (!optional.Contains(field.Source))
+                {
+                    _ = nullable.Add((field.Source, field.Field));
+                }
+            }
+        }
+
+        for (int i = 0; i < _query.Joins.Count; i++)
+        {
+            JoinClause join = _query.Joins[i];
+            declare(join.On);
+            optional.UnionWith(
+                join.Kind switch
+                {
+                    JoinKind.Left => [join.Source.Name],
+                    JoinKind.Right => sources.Take(i + 1).Select(source => source.Name),
+                    JoinKind.Full => sources.Take(i + 2).Select(source => source.Name),
+                    JoinKind.Inner or _ => [],
+                }
+            );
+        }
+
+        foreach (
+            object expression in new object?[] { _query.Where, _query.Having }
+                .Concat((_query.GroupBy ?? []).Select(key => key.Expression))
+                .Concat(_query.Select.Select(column => column.Expression))
+                .Concat(_query.OrderBy.Select(key => key.Expression))
+                .OfType<object>()
+        )
+        {
+            declare(expression);
+        }
+
+        nonNull.ExceptWith(nullable);
+        return nonNull;
+    }
+
     private SourceScan Scan(
         Source source,
         HashSet<string> fields,
+        Func<string, bool> nullable,
         bool optional,
         QueryUse use
     )
@@ -234,7 +297,15 @@ internal sealed class QueryTree
                 Expression.Constant(table.Value, typeof(IQueryable<IRow>)),
                 Expression.Lambda(
                     Tuples.New(
-                        [.. columns.Select(column => StoredColumn.Read(stored, column))]
+                        [
+                            .. columns.Select(column =>
+                                StoredColumn.Read(
+                                    stored,
+                                    column,
+                                    nullable(column.Name.TextValue)
+                                )
+                            ),
+                        ]
                     ),
                     stored
                 )

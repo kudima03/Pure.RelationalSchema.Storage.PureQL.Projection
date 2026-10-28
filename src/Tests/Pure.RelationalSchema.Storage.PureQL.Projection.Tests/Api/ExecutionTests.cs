@@ -83,7 +83,7 @@ public sealed class ExecutionTests
         Expression query = Assert.Single(provider.Queries);
         Assert.Same(((MethodCallExpression)projection.Expression).Arguments[0], query);
         Assert.Equal(
-            "[items].Select(i => (i[id], i[name])).Where(i => (i.Item1 > 1L))"
+            "[items].Select(i => (i[id]!, i[name]!)).Where(i => (i.Item1 > 1L))"
                 + ".Select(row => (row.Item2))",
             TreeText.Of(query)
         );
@@ -285,7 +285,10 @@ public sealed class ExecutionTests
         Assert.Equal(QueryExecution.Translated, projection.Execution);
 
         Expression query = Assert.Single(provider.Queries);
-        Assert.StartsWith("[items].Select(i => (i[id])).Join([tags]", TreeText.Of(query));
+        Assert.StartsWith(
+            "[items].Select(i => (i[id]!)).Join([tags]",
+            TreeText.Of(query)
+        );
         Assert.All(
             items.Values.Concat(tags.Values).Cast<ProvidedTable>(),
             table => Assert.Equal(0, table.Reads)

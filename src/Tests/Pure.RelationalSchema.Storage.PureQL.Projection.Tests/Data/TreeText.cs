@@ -12,8 +12,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 // operator reads as a method of its source (rows.Where(row => ...)), a stored
 // table root as [table], a tuple as (a, b), a cast as (type)value, a captured
 // parameter as @name; quotes are not shown and every binary operation is
-// parenthesized. The read of a stored cell (null for empty text, the text
-// parsed otherwise) reads as row[column]; Full keeps it as built.
+// parenthesized. The read of a stored cell the query declares nullable (null
+// for empty text, the text parsed otherwise) reads as row[column], and of one
+// it declares non-null (the text parsed, whatever it is) as row[column]!;
+// Full keeps them as built.
 internal static class TreeText
 {
     private static readonly Dictionary<ExpressionType, string> Symbols = new()
@@ -59,6 +61,10 @@ internal static class TreeText
             null => "",
             ConditionalExpression read when !_full && StoredRead(read) is string cell =>
                 cell,
+            UnaryExpression read when !_full && RequiredRead(read) is string cell =>
+                cell + "!",
+            MemberExpression read when !_full && CellText(read) is string cell =>
+                cell + "!",
             ConstantExpression constant => Constant(constant.Value),
             ParameterExpression parameter => parameter.Name ?? "_",
             LambdaExpression lambda => Lambda(lambda),
@@ -83,20 +89,42 @@ internal static class TreeText
         return conditional.Test is MethodCallExpression
         {
             Method.Name: nameof(string.IsNullOrEmpty),
-            Arguments: [
-                    MemberExpression
+            Arguments: [Expression text],
+        }
+            ? CellText(text)
+            : null;
+    }
+
+    // (type?)parse(row.Cells[column].Value.TextValue), the parse of a type's
+    // Parse method converted to the nullable type; a string is the text itself.
+    private static string? RequiredRead(UnaryExpression conversion)
+    {
+        return conversion.NodeType == ExpressionType.Convert
+            && conversion.Operand is MethodCallExpression
             {
-                Expression: MemberExpression
+                Method.Name: "Parse",
+                Object: null,
+                Arguments: [Expression text, ..],
+            }
+            ? CellText(text)
+            : null;
+    }
+
+    // row[column] for row.Cells[column].Value.TextValue.
+    private static string? CellText(Expression text)
+    {
+        return text
+            is MemberExpression
+        {
+            Expression: MemberExpression
+            {
+                Expression: MethodCallExpression
                 {
-                    Expression: MethodCallExpression
-                    {
-                        Method.Name: "get_Item",
-                        Object: MemberExpression { Expression: Expression row },
-                        Arguments: [ConstantExpression { Value: IColumn column }],
-                    },
+                    Method.Name: "get_Item",
+                    Object: MemberExpression { Expression: Expression row },
+                    Arguments: [ConstantExpression { Value: IColumn column }],
                 },
             },
-                ],
         }
             ? $"{Text(row)}[{column.Name.TextValue}]"
             : null;
