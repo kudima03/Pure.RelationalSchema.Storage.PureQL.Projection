@@ -25,6 +25,10 @@ public sealed class TranslatedJoinTests(PostgreSqlDatabase database)
 {
     private const string Employees = "schema_with_foreign_keys.employees";
 
+    // A hash or merge condition over two stored columns as they are.
+    private const string ColumnsCompared =
+        @" Cond: \(t\d\.""[0-9A-F]+"" = t\d\.""[0-9A-F]+""\)";
+
     private readonly PostgreSqlDatabase _database = database;
 
     [Fact]
@@ -45,7 +49,8 @@ public sealed class TranslatedJoinTests(PostgreSqlDatabase database)
         Assert.DoesNotContain("Nested Loop", plan);
         Assert.DoesNotContain("Join Filter", plan);
         Assert.DoesNotContain("IS NOT DISTINCT FROM", plan);
-        Assert.Contains(" AS uuid) = CAST(", plan);
+        Assert.DoesNotContain("CAST(", plan);
+        Assert.Matches(ColumnsCompared, plan);
     }
 
     [Fact]
