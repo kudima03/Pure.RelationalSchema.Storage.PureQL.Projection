@@ -60,7 +60,7 @@ public sealed class ProjectionApiTests
         Assert.Equal(string.Empty, projection.TableSchema.Name.TextValue);
         Assert.Empty(projection.TableSchema.Indexes);
         Assert.Equal(
-            ["small:long", "ratio:double"],
+            ["small:long", "ratio:decimal"],
             projection.TableSchema.Columns.Select(column =>
                 $"{column.Name.TextValue}:{column.Type.Name.TextValue}"
             )

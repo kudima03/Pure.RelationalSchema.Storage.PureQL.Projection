@@ -1801,7 +1801,8 @@ public sealed class ExpressionTreeTests
                     pagination: null,
                     distinctBy: null
                 )
-            )
+            ),
+            new Dictionary<string, ILiteral> { ["min_id"] = new LiteralInteger(0) }
         );
 
         Assert.Equal(

@@ -7,6 +7,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <!-- Runs the translated tests with a newer translator than the one
+         Pure.RelationalSchema.Storage.PostgreSQL.Querying depends on. -->
+    <PackageReference
+      Include="Linq.Expressions.Translation.PostgreSql"
+      Version="0.1.0-preview.0.6.2"
+    />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Pure.Primitives.Random" Version="0.9.0" />

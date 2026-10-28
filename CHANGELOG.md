@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A join key the query declares nullable that `on` or `where` guards with
+  `notEqual(key, null)` is compiled as the key or, where it is null, the
+  default of its type, so a translating provider compares it with `=`
+  instead of `IS NOT DISTINCT FROM`, and PostgreSQL hashes or merges the
+  join instead of running a nested loop (#249). The guard drops every row
+  with a null key, so the result is unchanged.
+- A parameter given no literal is rejected with `ArgumentException` when
+  the projection is built, together with the other parameter checks,
+  instead of `NotSupportedException` when the query reads it (#251). A
+  query with parameters thus needs the constructor taking the literals.
+- A decimal result is written exactly, in the specification's spelling (no
+  exponent, no trailing zeros in the fraction), instead of as a double
+  (`divide(1, 3)` is `0.3333333333333333333333333333`, not
+  `0.33333333333333337`), and a decimal result column is typed by a column
+  type named `decimal` that holds it exactly, instead of `double` (#252).
+
+### Changed
+
+- Every sample of `PureQL.CSharp.Model.Samples` is verified to be translated
+  by `Pure.RelationalSchema.Storage.PostgreSQL.Querying` 0.1.0-preview.0.8.1
+  with `Linq.Expressions.Translation.PostgreSql` 0.1.0-preview.0.6.2 to one
+  SQL statement over PostgreSQL and to return its expected result, without
+  falling back to memory (`TranslatedSampleTests`, no longer skipped).
+
 ## [0.1.0-preview.4.5.1] — 2026-10-28
 
 ### Fixed

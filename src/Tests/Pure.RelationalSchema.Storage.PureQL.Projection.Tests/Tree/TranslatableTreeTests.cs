@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Tree;
@@ -18,7 +19,8 @@ public sealed class TranslatableTreeTests
     {
         PureQLProjection projection = new(
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
-            Sample.Named(name).Query
+            Sample.Named(name).Query,
+            SampleCatalogueTests.Parameters
         );
 
         Assert.Empty(Untranslatable.In(projection.Expression));
@@ -30,7 +32,8 @@ public sealed class TranslatableTreeTests
     {
         PureQLProjection projection = new(
             [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
-            Sample.Named(name).Query
+            Sample.Named(name).Query,
+            SampleCatalogueTests.Parameters
         );
 
         MethodCallExpression last = (MethodCallExpression)projection.Expression;

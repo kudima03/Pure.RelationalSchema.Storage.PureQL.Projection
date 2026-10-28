@@ -18,15 +18,11 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // rows can evaluate (issue #243). The fixture's session disables nested
 // loops, so one in the plan means the planner had no other way. A join on
 // keys the query declares nullable is hashed or merged too when on or where
-// also requires notEqual(key, null), as the specification says (issue #249,
-// skipped until fixed). Needs Docker.
+// also requires notEqual(key, null), as the specification says (issue #249).
+// Needs Docker.
 public sealed class TranslatedJoinTests(PostgreSqlDatabase database)
     : IClassFixture<PostgreSqlDatabase>
 {
-    private const string Issue249 =
-        "Issue #249: equal on nullable keys is IS NOT DISTINCT FROM even when "
-        + "notEqual(key, null) guards a key.";
-
     private const string Employees = "schema_with_foreign_keys.employees";
 
     private readonly PostgreSqlDatabase _database = database;
@@ -52,7 +48,7 @@ public sealed class TranslatedJoinTests(PostgreSqlDatabase database)
         Assert.Contains(" AS uuid) = CAST(", plan);
     }
 
-    [Fact(Skip = Issue249)]
+    [Fact]
     public void JoinOnNullableKeysGuardedInOnIsTranslatedToAHashOrMergeJoin()
     {
         Sample sample = Sample.Named("JoinOnNullableKeyQuery");
@@ -69,7 +65,7 @@ public sealed class TranslatedJoinTests(PostgreSqlDatabase database)
         Assert.DoesNotContain("DISTINCT FROM", plan);
     }
 
-    [Fact(Skip = Issue249)]
+    [Fact]
     public void JoinOnNullableKeysGuardedInWhereIsTranslatedToAHashOrMergeJoin()
     {
         PureQLQuery query = GuardedInWhere();

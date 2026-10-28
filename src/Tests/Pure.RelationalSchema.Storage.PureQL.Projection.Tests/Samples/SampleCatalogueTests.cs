@@ -67,14 +67,14 @@ public sealed class SampleCatalogueTests
 
     [Theory]
     [MemberData(nameof(SamplesWithParameters))]
-    public void SampleWithUnboundParameterFailsWhenItRuns(string name)
+    public void SampleWithUnboundParameterIsRejectedWhenItIsBuilt(string name)
     {
-        PureQLProjection projection = new(
-            [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
-            Sample.Named(name).Query
+        _ = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection(
+                [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
+                Sample.Named(name).Query
+            )
         );
-
-        _ = Assert.Throws<NotSupportedException>(() => projection.ToList());
     }
 
     // The catalogue gives no result for a sample with parameters, which is

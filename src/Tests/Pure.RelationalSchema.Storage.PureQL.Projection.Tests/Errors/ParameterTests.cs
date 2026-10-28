@@ -12,17 +12,11 @@ using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 
-// A parameter given no literal fails the query when it is read, wherever it
-// stands; a literal of another type than its parameter's, and a bound
-// pagination out of range, fail when the projection is built. A parameter
-// missing from the literals a projection is given is to fail when it is built
-// too, with ArgumentException (issue #251, skipped until fixed).
+// A parameter given no literal, wherever it stands, a literal of another
+// type than its parameter's, and a bound pagination out of range fail when
+// the projection is built, with ArgumentException (issue #251).
 public sealed class ParameterTests
 {
-    private const string Issue251 =
-        "Issue #251: a parameter missing from the values fails only when read, "
-        + "with NotSupportedException.";
-
     private static readonly IStoredSchemaDataSet Names = new InlineTable(
         "t",
         "names",
@@ -41,46 +35,27 @@ public sealed class ParameterTests
         };
 
     [Fact]
-    public void UnboundListParameterFailsWhenRead()
+    public void ListParameterGivenNoValuesIsRejectedWhenTheProjectionIsBuilt()
     {
-        PureQLProjection projection = new([Names], InList(new ListParamString("wanted")));
-
-        NotSupportedException error = Assert.Throws<NotSupportedException>(() =>
-            projection.ToList()
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection([Names], InList(new ListParamString("wanted")))
         );
-        Assert.Contains("'wanted'", error.Message, StringComparison.Ordinal);
+        Assert.Equal("Parameter 'wanted' is not bound to a value.", error.Message);
     }
 
     [Fact]
-    public void UnboundPaginationParameterFailsWhenRead()
+    public void PaginationParameterGivenNoValuesIsRejectedWhenTheProjectionIsBuilt()
     {
-        PureQLProjection projection = new(
-            [Names],
-            Paged(new Pagination(0, new ParamInteger("page_size")))
-        );
-
-        NotSupportedException error = Assert.Throws<NotSupportedException>(() =>
-            projection.ToList()
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection(
+                [Names],
+                Paged(new Pagination(0, new ParamInteger("page_size")))
+            )
         );
         Assert.Contains("'page_size'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ParameterMissingFromTheValuesFailsWhenRead()
-    {
-        PureQLProjection projection = new(
-            [Names],
-            Paged(new Pagination(0, new ParamInteger("page_size"))),
-            new Dictionary<string, ILiteral> { ["page"] = new LiteralInteger(1) }
-        );
-
-        NotSupportedException error = Assert.Throws<NotSupportedException>(() =>
-            projection.ToList()
-        );
-        Assert.Contains("'page_size'", error.Message, StringComparison.Ordinal);
-    }
-
-    [Fact(Skip = Issue251)]
     public void ParameterMissingFromTheValuesIsRejectedWhenTheProjectionIsBuilt()
     {
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
@@ -93,7 +68,7 @@ public sealed class ParameterTests
         Assert.Contains("'page_size'", error.Message, StringComparison.Ordinal);
     }
 
-    [Fact(Skip = Issue251)]
+    [Fact]
     public void ConditionParameterMissingFromNoValuesIsRejectedWhenTheProjectionIsBuilt()
     {
         ArgumentException error = Assert.Throws<ArgumentException>(() =>

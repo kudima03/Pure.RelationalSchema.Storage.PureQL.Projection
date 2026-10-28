@@ -5,6 +5,7 @@ using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Keys;
+using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.RowExpressions;
 
@@ -448,12 +449,18 @@ internal sealed class QueryTree
         }
 
         Scope scope = new(this, field => JoinField(left, joined, source, field), null);
+        List<object> guards =
+        [
+            .. Conjuncts(join.On),
+            .. conditions,
+            .. _query.Where is null ? [] : Conjuncts(_query.Where),
+        ];
         List<(Expression Left, Expression Right)> compiled =
         [
             .. keys.Select(key =>
             {
-                Expression l = scope.Compile(key.Left);
-                Expression r = scope.Compile(key.Right);
+                Expression l = Key(scope, key.Left, guards);
+                Expression r = Key(scope, key.Right, guards);
                 Type type = Typed.Common(l.Type, r.Type);
                 return (Typed.As(l, type), Typed.As(r, type));
             }),
@@ -747,6 +754,58 @@ internal sealed class QueryTree
             ),
             JoinKind.Inner or _ => leftJoin(false),
         };
+    }
+
+    // A key side the join's on (or where) guards with notEqual(side, null) is
+    // read as its value, or the default of its type where it is null: the key
+    // is then never null, so a provider compares it with =, which a hash or
+    // merge join serves, instead of IS NOT DISTINCT FROM, which needs a nested
+    // loop (issue #249). The rows whose key is null pair with those whose key
+    // is the default, and the guard drops every row with a null key, those
+    // pairs with it, so the join's result is the same.
+    private static Expression Key(Scope scope, object side, List<object> guards)
+    {
+        Expression compiled = scope.Compile(side);
+        Type? underlying = Nullable.GetUnderlyingType(compiled.Type);
+        bool guarded = guards.Any(guard =>
+            NullGuarded(guard) is object operand && operand.Equals(ModelNode.Unwrap(side))
+        );
+
+        return !guarded || (underlying is null && compiled.Type != typeof(string))
+            ? compiled
+            : Expression.Coalesce(
+                compiled,
+                underlying is null
+                    ? Expression.Constant(string.Empty)
+                    : Expression.Constant(Activator.CreateInstance(underlying), underlying)
+            );
+    }
+
+    // The operand a condition of the form notEqual(operand, null) requires
+    // not to be null.
+    private static object? NullGuarded(object condition)
+    {
+        object leaf = ModelNode.Unwrap(condition);
+
+        if (
+            leaf is not IOperator
+            || !leaf.GetType().Name.StartsWith("NotEqual", StringComparison.Ordinal)
+        )
+        {
+            return null;
+        }
+
+        object left = ModelNode.Unwrap(ModelNode.Child(leaf, "Left"));
+        object right = ModelNode.Unwrap(ModelNode.Child(leaf, "Right"));
+
+        return IsNullLiteral(right) ? left
+            : IsNullLiteral(left) ? right
+            : null;
+    }
+
+    private static bool IsNullLiteral(object leaf)
+    {
+        return leaf is ILiteral literal && Literals.Of(literal) is null;
     }
 
     // The sides of an equality that is a join key: one reads only sources
