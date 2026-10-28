@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.1.0-preview.4.6.0] — 2026-10-28
 
 ### Fixed
 
@@ -27,7 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Every sample of `PureQL.CSharp.Model.Samples` is verified to be translated
-  by `Pure.RelationalSchema.Storage.PostgreSQL.Querying` 0.1.0-preview.0.8.1
+  by `Pure.RelationalSchema.Storage.PostgreSQL.Querying` 0.1.0-preview.0.8.0
   with `Linq.Expressions.Translation.PostgreSql` 0.1.0-preview.0.6.2 to one
   SQL statement over PostgreSQL and to return its expected result, without
   falling back to memory (`TranslatedSampleTests`, no longer skipped).
