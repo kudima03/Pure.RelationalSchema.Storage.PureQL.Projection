@@ -6,11 +6,12 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // Maps between PureQL types, storage column types and the CLR types values
 // have in the tree. A stored column holds one PureQL type: every integral
-// column type is an integer, double and float are decimals. A result column
-// is typed the way PureQL.CSharp.Model.Samples types its expected results:
-// integer as long, decimal as double. In the tree every value may be null:
-// integer is long?, decimal decimal?, string string, boolean bool?, date
-// DateOnly?, time TimeOnly?, datetime DateTime? (a UTC instant), uuid Guid?.
+// column type is an integer, double and float are decimals, and so is the
+// decimal column of a result. A result column is typed long for integer and
+// DecimalColumnType for decimal, which holds a decimal exactly where double
+// does not (issue #252). In the tree every value may be null: integer is
+// long?, decimal decimal?, string string, boolean bool?, date DateOnly?,
+// time TimeOnly?, datetime DateTime? (a UTC instant), uuid Guid?.
 internal static class ValueTypes
 {
     public static string? OfColumn(IColumnType columnType)
@@ -18,7 +19,7 @@ internal static class ValueTypes
         return columnType.Name.TextValue switch
         {
             "long" or "int" or "uint" or "ulong" or "ushort" => "integer",
-            "double" or "float" => "decimal",
+            "double" or "float" or "decimal" => "decimal",
             "string" => "string",
             "bool" => "boolean",
             "date" => "date",
@@ -34,7 +35,7 @@ internal static class ValueTypes
         return type.Name switch
         {
             "integer" => new LongColumnType(),
-            "decimal" => new DoubleColumnType(),
+            "decimal" => new DecimalColumnType(),
             "string" => new StringColumnType(),
             "boolean" => new BoolColumnType(),
             "date" => new DateColumnType(),

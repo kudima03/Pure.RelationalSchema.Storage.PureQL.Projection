@@ -5,10 +5,11 @@ using Pure.RelationalSchema.Storage.Abstractions;
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 
 // Compares a projection with an expected table: the same columns (names and
-// types, in order) and the same rows. Decimal cells are double text and are
-// compared to 12 significant digits, as the samples' expected decimals are
-// rounded before conversion to double; datetime cells compare as instants.
-// Rows compare in order when the query orders them, as a multiset otherwise.
+// types, in order) and the same rows. The samples type a decimal column
+// double and hold its expected value rounded and converted to double, so a
+// decimal column is compared as the samples' double, to 12 significant
+// digits; datetime cells compare as instants. Rows compare in order when the
+// query orders them, as a multiset otherwise.
 internal sealed class ExpectedTable(IStoredTableDataSet expected)
 {
     private readonly IStoredTableDataSet _expected = expected;
@@ -38,9 +39,14 @@ internal sealed class ExpectedTable(IStoredTableDataSet expected)
         return
         [
             .. table.TableSchema.Columns.Select(column =>
-                $"{column.Name.TextValue}:{column.Type.Name.TextValue}"
+                $"{column.Name.TextValue}:{Type(column.Type.Name.TextValue)}"
             ),
         ];
+    }
+
+    private static string Type(string columnType)
+    {
+        return columnType == "decimal" ? "double" : columnType;
     }
 
     private static List<string> Rows(IStoredTableDataSet table)
@@ -74,7 +80,8 @@ internal sealed class ExpectedTable(IStoredTableDataSet expected)
             ? "NULL"
             : columnType switch
             {
-                "double" => double.Parse(text, CultureInfo.InvariantCulture)
+                "double" or "decimal" => double
+                    .Parse(text, CultureInfo.InvariantCulture)
                     .ToString("G12", CultureInfo.InvariantCulture),
                 "datetime" => DateTime
                     .Parse(

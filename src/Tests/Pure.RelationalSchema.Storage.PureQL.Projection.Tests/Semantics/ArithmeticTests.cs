@@ -13,13 +13,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 // a checked 64-bit integer, decimal is exact, integerDivide truncates toward
 // zero, modulo takes the sign of its left operand, round rounds half away
 // from zero, and lifted operators are null when an operand is null. A decimal
-// result is to be written exactly, in a column that holds it exactly, not as
-// a double (issue #252, skipped until fixed).
+// result is written exactly, in a column that holds it exactly, not as a
+// double (issue #252).
 public sealed class ArithmeticTests
 {
-    private const string Issue252 =
-        "Issue #252: a decimal result is written as a double.";
-
     private static readonly IStoredSchemaDataSet Numbers = new InlineTable(
         "t",
         "numbers",
@@ -496,7 +493,7 @@ public sealed class ArithmeticTests
         Assert.Equal(["", ""], ResultColumn.Texts(projection, "label"));
     }
 
-    [Fact(Skip = Issue252)]
+    [Fact]
     public void DecimalDivisionIsWrittenWithItsTwentyEightDigits()
     {
         PureQLProjection projection = new(
@@ -541,7 +538,7 @@ public sealed class ArithmeticTests
         );
     }
 
-    [Fact(Skip = Issue252)]
+    [Fact]
     public void DecimalBeyondTheDoublePrecisionIsWrittenExactly()
     {
         PureQLProjection projection = new(
@@ -571,7 +568,7 @@ public sealed class ArithmeticTests
         );
     }
 
-    [Fact(Skip = Issue252)]
+    [Fact]
     public void DecimalResultColumnIsNotABinaryFloatingPointColumn()
     {
         PureQLProjection projection = new(

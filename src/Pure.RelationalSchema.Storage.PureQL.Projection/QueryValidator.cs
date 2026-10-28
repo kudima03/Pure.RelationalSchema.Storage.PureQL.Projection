@@ -145,14 +145,15 @@ internal static class QueryValidator
         }
     }
 
-    // A pagination parameter is checked when it is bound.
+    // A pagination parameter is checked like every other: bound to an integer
+    // literal, whose value is then in range.
     private static void ValidatePagination(
         Pagination pagination,
         ParameterValues parameters
     )
     {
-        long? skip = pagination.Skip.Match(number => number, parameters.Integer);
-        long? take = pagination.Take.Match(number => number, parameters.Integer);
+        long skip = pagination.Skip.Match(number => number, parameters.Integer);
+        long take = pagination.Take.Match(number => number, parameters.Integer);
 
         if (skip < 0)
         {
