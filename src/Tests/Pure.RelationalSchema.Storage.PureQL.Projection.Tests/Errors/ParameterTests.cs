@@ -14,9 +14,15 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 
 // A parameter given no literal fails the query when it is read, wherever it
 // stands; a literal of another type than its parameter's, and a bound
-// pagination out of range, fail when the projection is built.
+// pagination out of range, fail when the projection is built. A parameter
+// missing from the literals a projection is given is to fail when it is built
+// too, with ArgumentException (issue #251, skipped until fixed).
 public sealed class ParameterTests
 {
+    private const string Issue251 =
+        "Issue #251: a parameter missing from the values fails only when read, "
+        + "with NotSupportedException.";
+
     private static readonly IStoredSchemaDataSet Names = new InlineTable(
         "t",
         "names",
@@ -72,6 +78,32 @@ public sealed class ParameterTests
             projection.ToList()
         );
         Assert.Contains("'page_size'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact(Skip = Issue251)]
+    public void ParameterMissingFromTheValuesIsRejectedWhenTheProjectionIsBuilt()
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection(
+                [Names],
+                Paged(new Pagination(0, new ParamInteger("page_size"))),
+                new Dictionary<string, ILiteral> { ["page"] = new LiteralInteger(1) }
+            )
+        );
+        Assert.Contains("'page_size'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact(Skip = Issue251)]
+    public void ConditionParameterMissingFromNoValuesIsRejectedWhenTheProjectionIsBuilt()
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
+            new PureQLProjection(
+                [Names],
+                NamedAs(new ParamString("wanted")),
+                new Dictionary<string, ILiteral>()
+            )
+        );
+        Assert.Contains("'wanted'", error.Message, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -217,6 +249,33 @@ public sealed class ParameterTests
                 where: null,
                 orderBy: null,
                 pagination: pagination,
+                distinctBy: null
+            )
+        );
+    }
+
+    private static PureQLQuery NamedAs(ParamString name)
+    {
+        return new PureQLQuery(
+            new MainPlainQuery(
+                new From(new FromEntity("t.names")),
+                [Name()],
+                subqueries: null,
+                joins: null,
+                where: new BooleanRow(
+                    new ComparisonRow(
+                        new EqualRow(
+                            new EqualStringRow(
+                                new StringNullableRow(
+                                    new StringRow(new FieldString("t.names", "name"))
+                                ),
+                                new StringNullableRow(new StringRow(name))
+                            )
+                        )
+                    )
+                ),
+                orderBy: null,
+                pagination: null,
                 distinctBy: null
             )
         );

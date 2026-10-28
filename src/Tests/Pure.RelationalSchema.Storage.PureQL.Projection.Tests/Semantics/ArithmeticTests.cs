@@ -12,9 +12,14 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 // Integer and decimal arithmetic as the specification defines it: integer is
 // a checked 64-bit integer, decimal is exact, integerDivide truncates toward
 // zero, modulo takes the sign of its left operand, round rounds half away
-// from zero, and lifted operators are null when an operand is null.
+// from zero, and lifted operators are null when an operand is null. A decimal
+// result is to be written exactly, in a column that holds it exactly, not as
+// a double (issue #252, skipped until fixed).
 public sealed class ArithmeticTests
 {
+    private const string Issue252 =
+        "Issue #252: a decimal result is written as a double.";
+
     private static readonly IStoredSchemaDataSet Numbers = new InlineTable(
         "t",
         "numbers",
@@ -489,5 +494,109 @@ public sealed class ArithmeticTests
         );
 
         Assert.Equal(["", ""], ResultColumn.Texts(projection, "label"));
+    }
+
+    [Fact(Skip = Issue252)]
+    public void DecimalDivisionIsWrittenWithItsTwentyEightDigits()
+    {
+        PureQLProjection projection = new(
+            [Numbers],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.numbers")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionDecimal(
+                                    "third",
+                                    new ExactDecimalProjection(
+                                        new ArithmeticDecimalProjection(
+                                            new DivideDecimalProjection(
+                                                [
+                                                    new DecimalProjection(
+                                                        new ExactDecimalProjection(
+                                                            new LiteralDecimal(1m)
+                                                        )
+                                                    ),
+                                                    new DecimalProjection(
+                                                        new ExactDecimalProjection(
+                                                            new LiteralDecimal(3m)
+                                                        )
+                                                    ),
+                                                ]
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        Assert.Equal(
+            ["0.3333333333333333333333333333", "0.3333333333333333333333333333"],
+            ResultColumn.Texts(projection, "third")
+        );
+    }
+
+    [Fact(Skip = Issue252)]
+    public void DecimalBeyondTheDoublePrecisionIsWrittenExactly()
+    {
+        PureQLProjection projection = new(
+            [Numbers],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.numbers")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionDecimal(
+                                    "amount",
+                                    new ExactDecimalProjection(
+                                        new LiteralDecimal(90071992547409.93m)
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        Assert.Equal(
+            ["90071992547409.93", "90071992547409.93"],
+            ResultColumn.Texts(projection, "amount")
+        );
+    }
+
+    [Fact(Skip = Issue252)]
+    public void DecimalResultColumnIsNotABinaryFloatingPointColumn()
+    {
+        PureQLProjection projection = new(
+            [Numbers],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.numbers")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionDecimal(
+                                    "d",
+                                    new ExactDecimalProjection(
+                                        new FieldDecimal("t.numbers", "d")
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        string type = Assert.Single(projection.TableSchema.Columns).Type.Name.TextValue;
+        Assert.NotEqual("double", type);
+        Assert.NotEqual("float", type);
     }
 }
