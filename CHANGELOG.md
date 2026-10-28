@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.4.5.1] — 2026-10-28
+
+### Fixed
+
+- A field the query declares non-null is read without a null check, so a
+  translating provider joins and filters on it with `=` instead of
+  `IS NOT DISTINCT FROM`, and PostgreSQL hashes or merges such a join
+  instead of running a nested loop over every pair of rows (#243). An empty
+  cell under a non-null declaration fails to parse, as the declaration
+  rules it out.
+
 ## [0.1.0-preview.4.5.0] — 2026-10-27
 
 ### Fixed
