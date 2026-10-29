@@ -1,5 +1,7 @@
+using Pure.Primitives.Number;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.ListParameter;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
@@ -8,6 +10,7 @@ using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 using PureQL.CSharp.Model.SelectItems;
+using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
@@ -108,9 +111,9 @@ public sealed class MembershipTests
                     ]
                 )
             ),
-            new Dictionary<string, ILiteral>
+            new Dictionary<string, IParameter>
             {
-                ["weights"] = new ListLiteralInteger([2, 3]),
+                ["weights"] = new IntegerListParameter([new Long(2), new Long(3)]),
             }
         );
 

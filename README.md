@@ -23,8 +23,7 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 |--------|-------------|
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)` | Validates the query against the datasets' schemas and builds the projection. |
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
-| `PureQLProjection(..., IReadOnlyDictionary<string, ILiteral> parameters)` | Either of the above with parameters bound by name to literals (see [Parameters](#parameters)). |
-| `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters)` | The same with Pure parameters, which stand for the literals (see [Pure parameters](#pure-parameters)). |
+| `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters)` | Either of the above with parameters bound by name to Pure parameters (see [Parameters](#parameters)). |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
 | `IEnumerator<IRow> GetEnumerator()` | Runs the query, through the stored tables' provider or in memory, and enumerates the result rows. Every enumeration runs the query again. |
 | `IAsyncEnumerator<IRow> GetAsyncEnumerator(...)` | Async enumeration over the same rows. |
@@ -45,33 +44,23 @@ The checks the specification leaves to the interpreter run when the projection i
 
 ### Parameters
 
-Parameters are bound by name to literals of the query model (`PureQL.CSharp.Model.Literals` / `.Lists`), passed to the constructor that takes `parameters`. Binding a parameter substitutes the value of a literal of its type:
+Parameters are bound by name to an `IParameter` of [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions), implemented by [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters). They are passed to the constructor that takes `parameters`. A Pure parameter's `Type.Name` is a PureQL type, `Type.Nullable` makes it that type's typed null, and its `Value` is the invariant text a stored cell holds, parsed as a cell is (a datetime without an offset is UTC). An `IListParameter` binds a list parameter with its `Items`, each a scalar parameter of the item type; its `Value` is not read.
 
-| Parameter | Literal |
+| Parameter | Pure parameter |
 |---|---|
-| `integer`, `string`, `boolean`, `date`, `time`, `datetime`, `uuid` | `LiteralInteger`, `LiteralString`, `LiteralBoolean`, `LiteralDate`, `LiteralTime`, `LiteralDatetime`, `LiteralUuid` |
-| `decimal` | `LiteralDecimal`, or `LiteralInteger` (an integer stands for a decimal, as in decimal expressions) |
-| nullable `<type>` | the literal of its type, or that type's typed null (`LiteralIntegerNullable`, …) |
-| `<type>List` | `ListLiteral<Type>` (`ListLiteralInteger` also binds a `decimalList`); its items are copied when the projection is built |
+| `integer`, `string`, `boolean`, `date`, `time`, `datetime`, `uuid` | `IntegerParameter`, `StringParameter`, `BooleanParameter`, `DateParameter`, `TimeParameter`, `DateTimeParameter`, `UuidParameter` |
+| `decimal` | `DecimalParameter`, or `IntegerParameter` (an integer stands for a decimal, as in decimal expressions) |
+| nullable `<type>` | the parameter of its type, or that type's typed null (`NullableIntegerParameter`, …) |
+| `<type>List` | `<Type>ListParameter` (`IntegerListParameter` also binds a `decimalList`); its items are copied when the projection is built |
 
-A parameter given no literal (every parameter, with the constructors without `parameters`), a literal of another type, or a typed null for a parameter that is not nullable, raises `ArgumentException` when the projection is built, for every parameter of the document, read or not. Names the query does not use are ignored.
+The projection raises `ArgumentException` when it is built, for every parameter of the document, read or not, in any of these cases:
+- a parameter is given no value; with the constructors without `parameters`, that is every parameter
+- the value has another type, including a type name that is not a PureQL type
+- a typed null is given for a parameter that is not nullable
+- a `Value` is not a value of its type
+- a list parameter is given a parameter that is not an `IListParameter`, or a list item of another type or a typed null
 
-```csharp
-IStoredTableDataSet result = new PureQLProjection(
-    datasets,
-    query,
-    new Dictionary<string, ILiteral>
-    {
-        ["min_total"] = new LiteralDecimal(100m),
-        ["page_size"] = new LiteralInteger(20),
-        ["statuses"] = new ListLiteralString(["paid", "shipped"]),
-    }
-);
-```
-
-#### Pure parameters
-
-A scalar parameter can also be bound to an `IParameter` of [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions), implemented by [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters) (`IntegerParameter(INumber<long>)`, …, `NullableUuidParameter()`). Each stands for the literal of its type: its `Type.Name` is the PureQL type, `Type.Nullable` makes it that type's typed null, and its `Value` is the invariant text a stored cell holds, parsed as a cell is (a datetime without an offset is UTC). It binds, and is rejected, as that literal is; a type name that is not a scalar PureQL type, or a `Value` that is not a value of its type, raises `ArgumentException` when the projection is built. List parameters have no Pure counterpart: bind them with literals.
+Names the query does not use are ignored.
 
 ```csharp
 IStoredTableDataSet result = new PureQLProjection(
@@ -82,6 +71,7 @@ IStoredTableDataSet result = new PureQLProjection(
         ["min_total"] = new DecimalParameter(new Decimal(100m)),
         ["page_size"] = new IntegerParameter(new Long(20)),
         ["since"] = new NullableDateParameter(),
+        ["statuses"] = new StringListParameter([new String("paid"), new String("shipped")]),
     }
 );
 ```
