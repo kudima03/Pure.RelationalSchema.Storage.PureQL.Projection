@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Literals;
 
@@ -16,7 +17,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // below the result rows to the stored tables' provider, which translates it,
 // and runs the tree in memory when the tables are held in memory or the
 // provider cannot run the query (see Execution). Parameters are bound by
-// name (see ParameterValues); reading one that is not bound fails the query.
+// name to PureQL literals or to Pure parameters, which stand for the literals
+// (see ParameterValues, ParameterLiterals); reading one that is not bound
+// fails the query.
 public sealed record PureQLProjection : IStoredTableDataSet
 {
     private readonly Execution _execution;
@@ -52,6 +55,20 @@ public sealed record PureQLProjection : IStoredTableDataSet
             new ParameterValues(parameters)
         )
     { }
+
+    public PureQLProjection(
+        IEnumerable<IStoredSchemaDataSet> datasets,
+        PureQLQuery query,
+        IReadOnlyDictionary<string, IParameter> parameters
+    )
+        : this(datasets, query, ParameterLiterals.Of(parameters)) { }
+
+    public PureQLProjection(
+        IEnumerable<IStoredSchemaDataSet> datasets,
+        Query query,
+        IReadOnlyDictionary<string, IParameter> parameters
+    )
+        : this(datasets, query, ParameterLiterals.Of(parameters)) { }
 
     private PureQLProjection(
         Catalog catalog,

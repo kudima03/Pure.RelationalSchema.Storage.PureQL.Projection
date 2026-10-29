@@ -24,6 +24,7 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)` | Validates the query against the datasets' schemas and builds the projection. |
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
 | `PureQLProjection(..., IReadOnlyDictionary<string, ILiteral> parameters)` | Either of the above with parameters bound by name to literals (see [Parameters](#parameters)). |
+| `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters)` | The same with Pure parameters, which stand for the literals (see [Pure parameters](#pure-parameters)). |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
 | `IEnumerator<IRow> GetEnumerator()` | Runs the query, through the stored tables' provider or in memory, and enumerates the result rows. Every enumeration runs the query again. |
 | `IAsyncEnumerator<IRow> GetAsyncEnumerator(...)` | Async enumeration over the same rows. |
@@ -64,6 +65,23 @@ IStoredTableDataSet result = new PureQLProjection(
         ["min_total"] = new LiteralDecimal(100m),
         ["page_size"] = new LiteralInteger(20),
         ["statuses"] = new ListLiteralString(["paid", "shipped"]),
+    }
+);
+```
+
+#### Pure parameters
+
+A scalar parameter can also be bound to an `IParameter` of [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions), implemented by [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters) (`IntegerParameter(INumber<long>)`, …, `NullableUuidParameter()`). Each stands for the literal of its type: its `Type.Name` is the PureQL type, `Type.Nullable` makes it that type's typed null, and its `Value` is the invariant text a stored cell holds, parsed as a cell is (a datetime without an offset is UTC). It binds, and is rejected, as that literal is; a type name that is not a scalar PureQL type, or a `Value` that is not a value of its type, raises `ArgumentException` when the projection is built. List parameters have no Pure counterpart: bind them with literals.
+
+```csharp
+IStoredTableDataSet result = new PureQLProjection(
+    datasets,
+    query,
+    new Dictionary<string, IParameter>
+    {
+        ["min_total"] = new DecimalParameter(new Decimal(100m)),
+        ["page_size"] = new IntegerParameter(new Long(20)),
+        ["since"] = new NullableDateParameter(),
     }
 );
 ```
