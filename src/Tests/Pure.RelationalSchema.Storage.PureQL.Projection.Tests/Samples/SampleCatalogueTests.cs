@@ -1,8 +1,14 @@
+using Pure.Primitives.Date;
+using Pure.Primitives.Number;
 using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.ListParameter;
+using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Parameter;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
-using PureQL.CSharp.Model.Lists;
-using PureQL.CSharp.Model.Literals;
+using DateTime = Pure.Primitives.DateTime.DateTime;
+using Decimal = Pure.Primitives.Number.Decimal;
+using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
+using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 
@@ -11,16 +17,14 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // memory and run through the provider of the fixtures' tables.
 public sealed class SampleCatalogueTests
 {
-    internal static readonly Dictionary<string, ILiteral> Parameters = new()
+    internal static readonly Dictionary<string, IParameter> Parameters = new()
     {
-        ["min_age"] = new LiteralDecimal(18m),
-        ["min_total"] = new LiteralDecimal(100m),
-        ["min_orders"] = new LiteralInteger(2),
-        ["statuses"] = new ListLiteralString(["paid", "shipped"]),
-        ["currency"] = new LiteralString("USD"),
-        ["since"] = new LiteralDatetime(
-            new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero)
-        ),
+        ["min_age"] = new DecimalParameter(new Decimal(18m)),
+        ["min_total"] = new DecimalParameter(new Decimal(100m)),
+        ["min_orders"] = new IntegerParameter(new Long(2)),
+        ["statuses"] = new StringListParameter([new String("paid"), new String("shipped")]),
+        ["currency"] = new StringParameter(new String("USD")),
+        ["since"] = new DateTimeParameter(new DateTime(new Date(new DateOnly(2024, 1, 1)))),
     };
 
     public static TheoryData<string> SamplesWithResult =>

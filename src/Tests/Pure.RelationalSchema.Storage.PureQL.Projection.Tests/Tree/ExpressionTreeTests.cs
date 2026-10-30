@@ -1,7 +1,9 @@
 using System.Linq.Expressions;
+using Pure.Primitives.Number;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Parameter;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
@@ -15,6 +17,7 @@ using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
+using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Tree;
 
@@ -1802,7 +1805,10 @@ public sealed class ExpressionTreeTests
                     distinctBy: null
                 )
             ),
-            new Dictionary<string, ILiteral> { ["min_id"] = new LiteralInteger(0) }
+            new Dictionary<string, IParameter>
+            {
+                ["min_id"] = new IntegerParameter(new Long(0)),
+            }
         );
 
         Assert.Equal(
