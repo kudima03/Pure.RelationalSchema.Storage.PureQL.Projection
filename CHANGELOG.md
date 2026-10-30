@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.5.0.0] — 2026-10-30
+
 ### Fixed
 
 - A stored field is read by `Pure.RelationalSchema.Storage.PostgreSQL.Querying`
@@ -29,6 +31,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Breaking:** query parameters are bound to Pure parameters. The
+  `PureQLProjection` constructors that take parameters take
+  `IReadOnlyDictionary<string, IParameter>` (from
+  `Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions`,
+  a new dependency) instead of `IReadOnlyDictionary<string, ILiteral>`. A
+  parameter's `Type` is checked against the query's: an integer binds a
+  decimal, a typed null binds only a nullable parameter, and a list
+  (`IListParameter`) binds item by item. A missing parameter, a type
+  mismatch or a value that does not parse is an `ArgumentException` when
+  the projection is built.
 - The translated sample, join and plan tests run with the provider
   0.1.0-preview.0.9.0 and the translator 0.1.0-preview.0.7.0; the plan
   tests of #248 and #250 are no longer skipped.
