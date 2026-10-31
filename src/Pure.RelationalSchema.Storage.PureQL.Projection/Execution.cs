@@ -12,16 +12,20 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // never asked: the tree runs in memory (LocalProvider), as it does when the
 // provider cannot run the query, which it says with NotSupportedException
 // before it returns a row. Which happened is kept for the projection to
-// report.
+// report. A run that reads a parameter bound to date math reads the clock
+// once, when it starts, and runs the tree with those parameters bound at
+// that instant.
 internal sealed class Execution
 {
-    private readonly Expression _query;
+    private readonly TimeProvider _clock;
 
     private readonly IQueryProvider? _provider;
 
+    private readonly bool _relative;
+
     private readonly Lazy<Func<object?, IRow>> _row;
 
-    public Execution(Expression tree)
+    public Execution(Expression tree, TimeProvider clock)
     {
         if (
             tree is not MethodCallExpression call
@@ -36,9 +40,10 @@ internal sealed class Execution
         }
 
         Tree = tree;
-        _query = call.Arguments[0];
+        _clock = clock;
+        _relative = Relatives.In(tree);
         _provider = Roots
-            .In(_query)
+            .In(call.Arguments[0])
             .Select(table => table.Provider)
             .FirstOrDefault(provider => provider is not EnumerableQuery);
         _row = new Lazy<Func<object?, IRow>>(() => Row(map));
@@ -52,11 +57,18 @@ internal sealed class Execution
 
     public IEnumerator<IRow> Rows()
     {
+        Expression tree = _relative
+            ? Relatives.At(Tree, _clock.GetUtcNow().UtcDateTime)
+            : Tree;
+
         if (_provider is not null)
         {
             try
             {
-                IEnumerator<IRow> rows = Translated(_provider);
+                IEnumerator<IRow> rows = Translated(
+                    _provider,
+                    ((MethodCallExpression)tree).Arguments[0]
+                );
                 Path = QueryExecution.Translated;
                 FallbackReason = null;
                 return rows;
@@ -68,15 +80,15 @@ internal sealed class Execution
         }
 
         Path = QueryExecution.InMemory;
-        return LocalProvider.Run<IRow>(Tree).GetEnumerator();
+        return LocalProvider.Run<IRow>(tree).GetEnumerator();
     }
 
     // The query's values as the provider returns them, the first read now:
     // a provider that refuses a query does so when the query is created,
     // enumerated or first read, never after a value.
-    private IEnumerator<IRow> Translated(IQueryProvider provider)
+    private IEnumerator<IRow> Translated(IQueryProvider provider, Expression query)
     {
-        IEnumerator values = provider.CreateQuery(_query).GetEnumerator();
+        IEnumerator values = provider.CreateQuery(query).GetEnumerator();
 
         try
         {
@@ -114,6 +126,39 @@ internal sealed class Execution
                 value
             )
             .Compile();
+    }
+
+    // Whether a tree has query parameters bound to date math, and the tree
+    // with its parameters bound again at an instant (a parameter not bound to
+    // date math is itself at any instant).
+    private sealed class Relatives(DateTime? now) : ExpressionVisitor
+    {
+        private bool _any;
+
+        public static bool In(Expression tree)
+        {
+            Relatives relatives = new(null);
+            _ = relatives.Visit(tree);
+            return relatives._any;
+        }
+
+        public static Expression At(Expression tree, DateTime now)
+        {
+            return new Relatives(now).Visit(tree);
+        }
+
+        protected override Expression VisitConstant(ConstantExpression node)
+        {
+            if (node.Value is not IRelativeParameter parameter)
+            {
+                return node;
+            }
+
+            _any |= parameter.Relative;
+            return now is DateTime instant
+                ? Expression.Constant(parameter.At(instant), node.Type)
+                : node;
+        }
     }
 
     // The stored tables a query reads, in the order it reads them.

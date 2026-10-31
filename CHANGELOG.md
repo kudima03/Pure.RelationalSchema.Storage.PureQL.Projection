@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Date math parameters: the value of a `date`, `time` or `datetime`
+  parameter may be date math such as `now-10d` or `now-1M-5d`, which the
+  current and offset parameters of
+  `Pure.RelationalSchema.Storage.PureQL.Projection.Parameters` write. It has
+  its value at the instant each run starts: every enumeration reads the clock
+  once and binds the date math at that UTC instant, truncated to the
+  microsecond, before the query goes to the provider or runs in memory.
+  Years and months move it by calendar months together, the day clamped,
+  then days, hours, minutes and seconds; a time wraps around midnight.
+  Malformed date math (a unit the type does not take, units out of order or
+  repeated, parts that mix signs) and values out of range fail when the
+  projection is built, with `ArgumentException`.
+- `PureQLProjection` constructors taking a `TimeProvider`, the clock date
+  math reads; the other constructors use `TimeProvider.System`.
+
 ## [0.1.0-preview.5.0.0] — 2026-10-30
 
 ### Fixed

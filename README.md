@@ -24,6 +24,7 @@ The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>`
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)` | Validates the query against the datasets' schemas and builds the projection. |
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
 | `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters)` | Either of the above with parameters bound by name to Pure parameters (see [Parameters](#parameters)). |
+| `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters, TimeProvider clock)` | The same, with the clock that date math parameters such as `now-10d` read (see [Date math](#date-math)); the constructors without it use `TimeProvider.System`. |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
 | `IEnumerator<IRow> GetEnumerator()` | Runs the query, through the stored tables' provider or in memory, and enumerates the result rows. Every enumeration runs the query again. |
 | `IAsyncEnumerator<IRow> GetAsyncEnumerator(...)` | Async enumeration over the same rows. |
@@ -52,12 +53,13 @@ Parameters are bound by name to an `IParameter` of [`Pure.RelationalSchema.Stora
 | `decimal` | `DecimalParameter`, or `IntegerParameter` (an integer stands for a decimal, as in decimal expressions) |
 | nullable `<type>` | the parameter of its type, or that type's typed null (`NullableIntegerParameter`, …) |
 | `<type>List` | `<Type>ListParameter` (`IntegerListParameter` also binds a `decimalList`); its items are copied when the projection is built |
+| `date`, `time`, `datetime` relative to the run | `CurrentDateParameter`, `DateOffsetParameter`, `CurrentTimeParameter`, `TimeOffsetParameter`, `CurrentDateTimeParameter`, `DateTimeOffsetParameter`, whose `Value` is date math (see [Date math](#date-math)) |
 
 The projection raises `ArgumentException` when it is built, for every parameter of the document, read or not, in any of these cases:
 - a parameter is given no value; with the constructors without `parameters`, that is every parameter
 - the value has another type, including a type name that is not a PureQL type
 - a typed null is given for a parameter that is not nullable
-- a `Value` is not a value of its type
+- a `Value` is not a value of its type, or is date math that is malformed for its type or out of range
 - a list parameter is given a parameter that is not an `IListParameter`, or a list item of another type or a typed null
 
 Names the query does not use are ignored.
@@ -73,6 +75,35 @@ IStoredTableDataSet result = new PureQLProjection(
         ["since"] = new NullableDateParameter(),
         ["statuses"] = new StringListParameter([new String("paid"), new String("shipped")]),
     }
+);
+```
+
+#### Date math
+
+The value of a `date`, `time` or `datetime` parameter may be date math, the relative values of Elasticsearch and Grafana, which the current and offset parameters of `Pure.RelationalSchema.Storage.PureQL.Projection.Parameters` write: `now`, then at most one part per unit in the order `y` (years), `M` (months), `d` (days), `h` (hours), `m` (minutes) and `s` (seconds), each `+N` or `-N`, all of one sign, such as `now-10d` or `now-1M-5d`. A date takes `y`, `M` and `d`, a time `h`, `m` and `s`, a datetime all six. Any other text of these types is parsed as a cell is; a `string` parameter starting with `now` is its text.
+
+Its value is the one at the instant a run starts. Each enumeration reads the projection's clock once, `TimeProvider.GetUtcNow()` truncated to the microsecond, and binds every date math parameter at that instant before the query goes to the provider or runs in memory, so a projection built once and run tomorrow has tomorrow's dates. Years and months move the instant by calendar months together (`now+1y+1M` is `now+13M`), with the day clamped to the end of a shorter month; then the days, hours, minutes and seconds are added. A date is the UTC date of the result and a time its UTC time of day, which wraps around midnight (`now-9h` at 08:30 is 23:30). When the projection is built, date math is checked at the clock's instant, and `projection.Expression` holds that value as the captured variable; a run that reads no date math does not read the clock.
+
+On Thursday 2026-10-29 at 08:30 UTC:
+
+| Pure parameter | Date math | Value |
+|---|---|---|
+| `new CurrentDateParameter()` | `now` | `2026-10-29` |
+| `new DateOffsetParameter(new Long(-10))` | `now-10d` | `2026-10-19` |
+| `new DateOffsetParameter(new Long(-1), new Long(-5))` | `now-1M-5d` | `2026-09-24` |
+| `new TimeOffsetParameter(new Long(-30), new Long(0))` | `now-30m` | `08:00:00` |
+| `new DateTimeOffsetParameter(new Long(-7), new Long(0), new Long(0), new Long(0))` | `now-7d` | `2026-10-22T08:30:00` |
+
+```csharp
+IStoredTableDataSet lastTenDays = new PureQLProjection(
+    datasets,
+    query,
+    new Dictionary<string, IParameter>
+    {
+        ["since"] = new DateOffsetParameter(new Long(-10)),
+        ["until"] = new CurrentDateParameter(),
+    },
+    TimeProvider.System
 );
 ```
 

@@ -18,10 +18,17 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // expression. Its value is the invariant text a stored cell holds, parsed as
 // StoredColumn parses a cell, a datetime without an offset read as UTC; a
 // list's is its items', each a scalar parameter of its item type, copied
-// when the projection is built. A query parameter given no Pure parameter,
-// one of another type, or text that is not a value of its type fails the
-// query when it is validated (issue #251), instead of guessing a value.
-internal sealed class ParameterValues(IReadOnlyDictionary<string, IParameter> values)
+// when the projection is built. The value of a date, time or datetime
+// parameter may instead be date math, such as now-10d (see DateMath): it is
+// checked and bound at the clock's instant when the projection is built, and
+// bound again at the instant each run starts (see Execution). A query
+// parameter given no Pure parameter, one of another type, or text that is not
+// a value of its type fails the query when it is validated (issue #251),
+// instead of guessing a value.
+internal sealed class ParameterValues(
+    IReadOnlyDictionary<string, IParameter> values,
+    TimeProvider clock
+)
 {
     private const string List = "List";
 
@@ -29,24 +36,25 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, IParameter> va
         new Dictionary<string, IParameter>(values, StringComparer.Ordinal);
 
     public static ParameterValues None { get; } =
-        new(new Dictionary<string, IParameter>());
+        new(new Dictionary<string, IParameter>(), TimeProvider.System);
 
     // A scalar parameter has its type's value type, a list parameter is a
     // sequence of its item type.
     public Expression Value(ModelParameter parameter)
     {
         Type item = ValueTypes.Clr(parameter.Type);
-        Type type = IsList(parameter.Type.Name)
-            ? typeof(IEnumerable<>).MakeGenericType(item)
-            : item;
+        Type type = typeof(QueryParameter<>).MakeGenericType(
+            IsList(parameter.Type.Name)
+                ? typeof(IEnumerable<>).MakeGenericType(item)
+                : item
+        );
+        object? bound = Bound(parameter);
 
         return Expression.Property(
             Expression.Constant(
-                Activator.CreateInstance(
-                    typeof(QueryParameter<>).MakeGenericType(type),
-                    parameter.Name,
-                    Bound(parameter)
-                )
+                bound is DateMath dateMath
+                    ? Activator.CreateInstance(type, parameter.Name, dateMath, Now())
+                    : Activator.CreateInstance(type, parameter.Name, bound)
             ),
             nameof(QueryParameter<>.Value)
         );
@@ -81,7 +89,7 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, IParameter> va
     }
 
     // A parameter's value as the tree holds it: a value of its type's value
-    // type, or the items of a list in an array.
+    // type, its DateMath, or the items of a list in an array.
     private object? Bound(ModelParameter parameter)
     {
         if (!_values.TryGetValue(parameter.Name, out IParameter? bound))
@@ -110,7 +118,7 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, IParameter> va
             ? Items(parameter.Name, type.Name, bound, item)
             : nullable
             ? null
-            : Literals.As(Parsed(parameter.Name, name, bound.Value.TextValue), item);
+            : Literals.As(Value(parameter.Name, name, bound.Value.TextValue), item);
     }
 
     private static Array Items(string parameter, string type, IParameter bound, Type item)
@@ -147,6 +155,45 @@ internal sealed class ParameterValues(IReadOnlyDictionary<string, IParameter> va
         }
 
         return array;
+    }
+
+    // The date math of a date, time or datetime value that is date math,
+    // checked at the clock's instant; otherwise the value parsed.
+    private object Value(string parameter, string type, string text)
+    {
+        if (!DateMath.Is(type, text))
+        {
+            return Parsed(parameter, type, text);
+        }
+
+        try
+        {
+            DateMath dateMath = DateMath.Parse(type, text);
+            _ = dateMath.At(Now());
+            return dateMath;
+        }
+        catch (FormatException exception)
+        {
+            throw new ArgumentException(
+                $"Parameter '{parameter}' is bound to '{text}', which is not date "
+                    + $"math of a {type}, such as now-10d.",
+                exception
+            );
+        }
+        catch (Exception exception)
+            when (exception is OverflowException or ArgumentOutOfRangeException)
+        {
+            throw new ArgumentException(
+                $"Parameter '{parameter}' is bound to '{text}', which is out of the "
+                    + $"range of a {type}.",
+                exception
+            );
+        }
+    }
+
+    private DateTime Now()
+    {
+        return clock.GetUtcNow().UtcDateTime;
     }
 
     // The value of a stored cell's text, parsed as StoredColumn parses it.

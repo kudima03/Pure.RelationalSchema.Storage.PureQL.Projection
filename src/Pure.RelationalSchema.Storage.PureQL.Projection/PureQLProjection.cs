@@ -17,7 +17,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // and runs the tree in memory when the tables are held in memory or the
 // provider cannot run the query (see Execution). Parameters are bound by
 // name to Pure parameters (see ParameterValues); reading one that is not
-// bound fails the query.
+// bound fails the query. A date, time or datetime parameter bound to date
+// math, such as now-10d, has its value at the instant each run starts, read
+// from the clock (TimeProvider.System unless one is given).
 public sealed record PureQLProjection : IStoredTableDataSet
 {
     private readonly Execution _execution;
@@ -35,22 +37,40 @@ public sealed record PureQLProjection : IStoredTableDataSet
         PureQLQuery query,
         IReadOnlyDictionary<string, IParameter> parameters
     )
-        : this(
-            new Catalog(datasets),
-            QueryProgram.Of(query),
-            new ParameterValues(parameters)
-        )
-    { }
+        : this(datasets, query, parameters, TimeProvider.System) { }
 
     public PureQLProjection(
         IEnumerable<IStoredSchemaDataSet> datasets,
         Query query,
         IReadOnlyDictionary<string, IParameter> parameters
     )
+        : this(datasets, query, parameters, TimeProvider.System) { }
+
+    public PureQLProjection(
+        IEnumerable<IStoredSchemaDataSet> datasets,
+        PureQLQuery query,
+        IReadOnlyDictionary<string, IParameter> parameters,
+        TimeProvider clock
+    )
         : this(
             new Catalog(datasets),
             QueryProgram.Of(query),
-            new ParameterValues(parameters)
+            new ParameterValues(parameters, clock),
+            clock
+        )
+    { }
+
+    public PureQLProjection(
+        IEnumerable<IStoredSchemaDataSet> datasets,
+        Query query,
+        IReadOnlyDictionary<string, IParameter> parameters,
+        TimeProvider clock
+    )
+        : this(
+            new Catalog(datasets),
+            QueryProgram.Of(query),
+            new ParameterValues(parameters, clock),
+            clock
         )
     { }
 
@@ -58,6 +78,14 @@ public sealed record PureQLProjection : IStoredTableDataSet
         Catalog catalog,
         QueryProgram program,
         ParameterValues parameters
+    )
+        : this(catalog, program, parameters, TimeProvider.System) { }
+
+    private PureQLProjection(
+        Catalog catalog,
+        QueryProgram program,
+        ParameterValues parameters,
+        TimeProvider clock
     )
     {
         QueryValidator.Validate(program, catalog, parameters);
@@ -67,7 +95,8 @@ public sealed record PureQLProjection : IStoredTableDataSet
             new DocumentTree(catalog, program.Subqueries, parameters).Rows(
                 program.Main,
                 [.. table.Columns]
-            )
+            ),
+            clock
         );
         _rows = new ProjectionQuery<IRow>(new ProjectionProvider(_execution), _execution.Tree);
     }
