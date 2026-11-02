@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.6.0.0] — 2026-11-02
+
+### Changed
+
+- **Breaking:** `datetime` result cells are written in UTC with the `Z`
+  designator, the specification's one spelling of a `datetime`:
+  `2025-01-01T15:54:04Z`, with fractional seconds only when present
+  (`2025-01-01T15:54:04.5Z`). They were written without an offset, so
+  readers took them for local time and a cell was not a valid `datetime`
+  literal; a `datetime` literal now comes back exactly as it was sent, and a
+  result cell can be bound as a parameter value unchanged (#267). Readers
+  that append `Z` themselves or compare the old text must change. The public
+  API is unchanged.
+
 ## [0.1.0-preview.5.1.0] — 2026-10-31
 
 ### Added
