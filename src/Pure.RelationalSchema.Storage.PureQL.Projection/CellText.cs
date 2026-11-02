@@ -5,14 +5,15 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // Writes the invariant text a result cell holds: True/False, invariant
 // numbers (a decimal in the specification's one spelling: exact, no
 // exponent, no trailing zeros in the fraction, no -0), yyyy-MM-dd dates,
-// HH:mm:ss times, yyyy-MM-ddTHH:mm:ss datetimes in UTC and lower case uuids;
-// fractional seconds are written only when present. Null is empty text, the
+// HH:mm:ss times, yyyy-MM-ddTHH:mm:ssZ datetimes (UTC, written with Z, the
+// specification's one spelling) and lower case uuids; fractional seconds are
+// written only when present. Null is empty text, the
 // storage layer's NULL.
 internal static class CellText
 {
     private const string TimeFormat = "HH:mm:ss.FFFFFFF";
 
-    private const string DateTimeFormat = "yyyy-MM-ddTHH:mm:ss.FFFFFFF";
+    private const string DateTimeFormat = "yyyy-MM-ddTHH:mm:ss.FFFFFFF'Z'";
 
     // Dividing by one with the most decimal places gives the same value with
     // the fewest: the scale a decimal carries (1.50, 4.00) is dropped.

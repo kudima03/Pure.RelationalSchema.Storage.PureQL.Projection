@@ -1,3 +1,4 @@
+using System.Globalization;
 using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
@@ -54,7 +55,7 @@ public sealed class TemporalTests
         );
 
         Assert.Equal(
-            ["2024-01-01T00:00:00", "2024-01-01T00:00:01"],
+            ["2024-01-01T00:00:00Z", "2024-01-01T00:00:01Z"],
             ResultColumn.Texts(projection, "at")
         );
     }
@@ -205,9 +206,44 @@ public sealed class TemporalTests
 
         Assert.Equal(["0", "1"], ResultColumn.Texts(projection, "elapsed"));
         Assert.Equal(
-            ["2024-01-01T00:00:01.5", "2024-01-01T00:00:02.5"],
+            ["2024-01-01T00:00:01.5Z", "2024-01-01T00:00:02.5Z"],
             ResultColumn.Texts(projection, "later")
         );
+    }
+
+    [Theory]
+    [InlineData("2026-01-31T15:30:00Z")]
+    [InlineData("2026-01-31T15:30:00.5Z")]
+    [InlineData("2026-01-31T15:30:00.123456Z")]
+    public void DatetimeLiteralIsWrittenAsItsLiteralText(string literal)
+    {
+        PureQLProjection projection = new(
+            [Events],
+            new PureQLQuery(
+                new MainPlainQuery(
+                    new From(new FromEntity("t.events")),
+                    [
+                        new SelectItemProjection(
+                            new SelectItemProjectionNonNullable(
+                                new SelectItemProjectionDatetime(
+                                    "at",
+                                    new DatetimeProjection(
+                                        new LiteralDatetime(
+                                            DateTimeOffset.Parse(
+                                                literal,
+                                                CultureInfo.InvariantCulture
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                    ]
+                )
+            )
+        );
+
+        Assert.Equal([literal, literal], ResultColumn.Texts(projection, "at"));
     }
 
     [Fact]
@@ -314,7 +350,10 @@ public sealed class TemporalTests
 
         Assert.Equal(["2024-01-02"], ResultColumn.Texts(projection, "mean_day"));
         Assert.Equal(["12:14:59.5"], ResultColumn.Texts(projection, "mean_clock"));
-        Assert.Equal(["2024-01-01T00:00:00.5"], ResultColumn.Texts(projection, "mean_at"));
+        Assert.Equal(
+            ["2024-01-01T00:00:00.5Z"],
+            ResultColumn.Texts(projection, "mean_at")
+        );
     }
 
     [Fact]
@@ -379,7 +418,7 @@ public sealed class TemporalTests
 
         Assert.Equal(["00:00:00.000001"], ResultColumn.Texts(projection, "mean_clock"));
         Assert.Equal(
-            ["2024-01-01T00:00:00.000001"],
+            ["2024-01-01T00:00:00.000001Z"],
             ResultColumn.Texts(projection, "mean_at")
         );
     }
