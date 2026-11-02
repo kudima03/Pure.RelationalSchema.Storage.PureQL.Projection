@@ -97,13 +97,13 @@ public sealed class DateMathParameterTests
     }
 
     [Theory]
-    [InlineData("now", "2026-10-29T08:30:15.123456")]
-    [InlineData("now-7d", "2026-10-22T08:30:15.123456")]
-    [InlineData("now-2h", "2026-10-29T06:30:15.123456")]
-    [InlineData("now+90s", "2026-10-29T08:31:45.123456")]
-    [InlineData("now-1M-1d-1h-1m-1s", "2026-09-28T07:29:14.123456")]
-    [InlineData("now-1y", "2025-10-29T08:30:15.123456")]
-    [InlineData("now-9h", "2026-10-28T23:30:15.123456")]
+    [InlineData("now", "2026-10-29T08:30:15.123456Z")]
+    [InlineData("now-7d", "2026-10-22T08:30:15.123456Z")]
+    [InlineData("now-2h", "2026-10-29T06:30:15.123456Z")]
+    [InlineData("now+90s", "2026-10-29T08:31:45.123456Z")]
+    [InlineData("now-1M-1d-1h-1m-1s", "2026-09-28T07:29:14.123456Z")]
+    [InlineData("now-1y", "2025-10-29T08:30:15.123456Z")]
+    [InlineData("now-9h", "2026-10-28T23:30:15.123456Z")]
     public void DatetimeIsTheUtcInstantOfNowMovedByTheParts(
         string dateMath,
         string datetime

@@ -92,7 +92,7 @@ public sealed class ParameterBindingTests
         Assert.Equal(["True"], ResultColumn.Texts(row, "boolean"));
         Assert.Equal(["2024-02-29"], ResultColumn.Texts(row, "date"));
         Assert.Equal(["13:05:00.25"], ResultColumn.Texts(row, "time"));
-        Assert.Equal(["2024-01-01T10:00:00"], ResultColumn.Texts(row, "datetime"));
+        Assert.Equal(["2024-01-01T10:00:00Z"], ResultColumn.Texts(row, "datetime"));
         Assert.Equal(
             ["8c5e1a2b-0000-4000-8000-000000000001"],
             ResultColumn.Texts(row, "uuid")
@@ -351,7 +351,7 @@ public sealed class ParameterBindingTests
             )
         );
 
-        Assert.Equal("2024-01-01T00:00:00", ResultColumn.Texts(projection, "at")[0]);
+        Assert.Equal("2024-01-01T00:00:00Z", ResultColumn.Texts(projection, "at")[0]);
     }
 
     [Fact]
