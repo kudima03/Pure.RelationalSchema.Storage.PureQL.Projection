@@ -35,7 +35,7 @@
     />
     <PackageReference
       Include="PureQL.CSharp.Model.Samples"
-      Version="0.1.0-preview.2.3.0"
+      Version="0.1.0-preview.2.3.1"
     />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
