@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `PureQLFilteredSchemaDataSet`: an `IStoredSchemaDataSet` over another one
+  whose tables hold only the rows a PureQL condition (`BooleanRow`) is true
+  for, so a host can restrict what a query reads, per table, to the rows a
+  user may read (Elegant-soft/Concentrator#687). Conditions are given per
+  table, matched by `TableHash`; a table without one is the origin's table.
+  A `PureQLProjection` over it roots every scan of a filtered table, in the
+  main query and in subqueries, on `Constant(table).Where(row => condition)`,
+  below the joins and aggregates: a row the condition drops does not exist
+  for the query (an outer join still gives the preserved side, with nulls),
+  and the stored tables' provider still gets the whole query, so the
+  condition is part of the one SQL statement, at the table's scan. A row is
+  kept only where the condition is true, as with `where`.
+- A condition's fields are columns of its table, declared with their type
+  and nullability as a query's fields are; a field's source is not read.
+  A field that names no column, a field declared with another type, a read
+  of a parameter, a group key or a subquery column, or a condition given for
+  a table the dataset does not have raises `ArgumentException` when the
+  table (or, for an unknown table, the dataset) is read, before any row; a
+  table is never read unfiltered.
+
 ## [0.1.0-preview.6.0.0] — 2026-11-02
 
 ### Changed
