@@ -389,7 +389,7 @@ public sealed class FilteredSchemaTests
         Assert.False(filtered.ContainsKey(unknown));
         Assert.True(filtered.TryGetValue(people, out IStoredTableDataSet? table));
         Assert.False(filtered.TryGetValue(unknown, out _));
-        Assert.Same(people, table!.TableSchema);
+        Assert.Same(people, table.TableSchema);
         Assert.Equal(2, filtered.Values.Count());
         Assert.Equal(
             ["orders", "people"],
