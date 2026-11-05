@@ -17,8 +17,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // - adjacent Where calls merge into one, Where(true) and an identity Select
 //   are dropped, a Select over a Select is one Select and a Where not
 //   correlated with an enclosing row moves below a Select (except a stored
-//   source's scan, which keeps its shape), and a Select moves below Skip and
-//   Take, so a query ends in its pagination.
+//   source's scan, which keeps its shape, as does the Where of a filtered
+//   table below it), and a Select moves below Skip and Take, so a query ends
+//   in its pagination.
 internal sealed class Simplifier : ExpressionVisitor
 {
     // The types whose members compute values from their operands only.
@@ -317,8 +318,7 @@ internal sealed class Simplifier : ExpressionVisitor
     {
         LambdaExpression selector = Linq.Lambda(select.Arguments[1]);
 
-        return select.Arguments[0]
-                is not ConstantExpression { Value: IStoredTableDataSet }
+        return !IsStored(select.Arguments[0])
             && selector.Parameters.Count == 1
             && (
                 Cheap(selector.Body)
@@ -330,6 +330,19 @@ internal sealed class Simplifier : ExpressionVisitor
             )
             ? selector
             : null;
+    }
+
+    // The root of a stored source: the constant holding its table, under the
+    // Where of its condition when the table is filtered (FilteredTable). No
+    // other Where stands on a table: one over a scan stays above its Select.
+    private static bool IsStored(Expression rows)
+    {
+        return rows is ConstantExpression { Value: IStoredTableDataSet }
+            || (
+                rows is MethodCallExpression call
+                && Linq.Is(call, nameof(Queryable.Where))
+                && IsStored(call.Arguments[0])
+            );
     }
 
     // The outer lambda over the rows the inner lambda's body builds.
