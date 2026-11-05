@@ -11,14 +11,16 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // fields are members of a tuple parameter; in projection context a row
 // (absent in a total query) and every row left by where, which aggregates
 // fold; in group context a group parameter, whose key holds the group key
-// values and whose elements are the group's rows.
+// values and whose elements are the group's rows. The condition of a
+// filtered table (FilteredTable) compiles against a stored row alone, with no
+// query: it reads nothing of one.
 internal sealed class Scope(
-    QueryTree query,
+    QueryTree? query,
     Func<IField, Expression>? field,
     ParameterExpression? group
     )
 {
-    private readonly QueryTree _query = query;
+    private readonly QueryTree? _query = query;
 
     private readonly Func<IField, Expression>? _field = field;
 
@@ -31,7 +33,7 @@ internal sealed class Scope(
         return leaf switch
         {
             IField reference => Field(reference),
-            IKey key => _query.Key(
+            IKey key => Query().Key(
                 _group
                     ?? throw new InvalidOperationException(
                         $"Group key '{key.Key}' is read where there is no group."
@@ -54,28 +56,36 @@ internal sealed class Scope(
     {
         return over == AggregateOver.Group && _group is not null
             ? _group
-            : _query.AllRows;
+            : Query().AllRows;
     }
 
     public ParameterExpression RowParameter()
     {
-        return Expression.Parameter(_query.RowType, "row");
+        return Expression.Parameter(Query().RowType, "row");
     }
 
     // A row of the same query in row context, as aggregate bodies see it.
     public Scope Row(ParameterExpression row)
     {
-        return _query.RowScope(row);
+        return Query().RowScope(row);
     }
 
     public Expression SubqueryColumn(string subquery, string field, Type item)
     {
-        return _query.SubqueryColumn(subquery, field, item);
+        return Query().SubqueryColumn(subquery, field, item);
     }
 
     public Expression Parameter(IParameter parameter)
     {
-        return _query.Parameter(parameter);
+        return Query().Parameter(parameter);
+    }
+
+    private QueryTree Query()
+    {
+        return _query
+            ?? throw new InvalidOperationException(
+                "A query is read where there is none."
+            );
     }
 
     private Expression Field(IField field)

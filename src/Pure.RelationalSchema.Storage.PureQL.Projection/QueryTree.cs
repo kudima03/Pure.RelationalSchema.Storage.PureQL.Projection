@@ -21,7 +21,11 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 //   [.DistinctBy(columns)] [.Skip] [.Take]
 //
 // A stored source is scanned as Constant(dataset).Select(row => (fields)): a
-// root per source, reading only the fields the query reads. A where condition
+// root per source, reading only the fields the query reads; a filtered table
+// (FilteredTable) is rooted on its origin, as
+// Constant(origin).Where(row => condition).Select(row => (fields)), so every
+// scan of it, in any query of the document, reads only the rows its condition
+// is true for, below the joins and everything else. A where condition
 // is split into its and-ed conditions and each moves to the source it reads
 // (or to the join that first sees all the sources it reads), unless an outer
 // join may leave one of them without a row. A join is a hash join (Join, or
@@ -295,7 +299,7 @@ internal sealed class QueryTree
             source.Name,
             [.. columns.Select(column => column.Name.TextValue)],
             Linq.Select(
-                Expression.Constant(table.Value, typeof(IQueryable<IRow>)),
+                FilteredTable.Root(table.Value),
                 Expression.Lambda(
                     Tuples.New(
                         [

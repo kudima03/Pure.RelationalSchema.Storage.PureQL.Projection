@@ -17,7 +17,7 @@ The query is compiled when the projection is built to a single `IQueryable<IRow>
 
 ### `PureQLProjection`
 
-The only public type. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>` and `IQueryable<IRow>`.
+The entry point. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>` and `IQueryable<IRow>`.
 
 | Member | Description |
 |--------|-------------|
@@ -107,6 +107,51 @@ IStoredTableDataSet lastTenDays = new PureQLProjection(
 );
 ```
 
+### Filtered tables
+
+`PureQLFilteredSchemaDataSet` is an `IStoredSchemaDataSet` over another one whose tables hold only the rows a PureQL condition is true for: the rows a user may read, for instance. A `PureQLProjection` is given it in place of the dataset it filters.
+
+| Member | Description |
+|--------|-------------|
+| `PureQLFilteredSchemaDataSet(IStoredSchemaDataSet origin, IEnumerable<KeyValuePair<ITable, BooleanRow>> conditions)` | The origin's tables, each under the conditions given for it. Nothing is read or checked until the tables are. |
+| `ISchema Schema` | The origin's schema. |
+| `IReadOnlyDictionary<ITable, IStoredTableDataSet>` members | The origin's tables, by table hash (`TableHash`): a table given a condition is an `IStoredTableDataSet` of the rows the condition is true for, a table given none is the origin's own. |
+
+```csharp
+IStoredSchemaDataSet visible = new PureQLFilteredSchemaDataSet(
+    new PostgreSqlStoredSchemaDataSet(schema, connection),
+    [
+        // orders: an ITable of the schema; only the orders of the tenant
+        KeyValuePair.Create(
+            orders,
+            new BooleanRow(
+                new ComparisonRow(
+                    new EqualRow(
+                        new EqualUuidRow(
+                            new UuidNullableRow(
+                                new UuidRow(new FieldUuid("orders", "tenant_id"))
+                            ),
+                            new UuidNullableRow(new UuidRow(new LiteralUuid(tenant)))
+                        )
+                    )
+                )
+            )
+        ),
+    ]
+);
+
+IStoredTableDataSet result = new PureQLProjection([visible], query, parameters);
+```
+
+- **Conditions** are row expressions (`BooleanRow`), one or more per table. A condition belongs to the table with its table's hash (`TableHash`), so it may be given for any `ITable` equal to the dataset's. A table given several conditions holds the rows all of them are true for. A condition given for a table the origin does not have raises `ArgumentException` when the dataset's tables are first read (when a projection over it is built): it would otherwise filter nothing.
+- **Fields** of a condition are columns of its table: a field names a column and declares its type and whether it may be null, as a field of a query does (a field declared nullable reads an empty cell as `null`, one declared non-null is parsed as it is). The condition may read columns no query reads. A field's `source` is not read: every field of a table's condition reads that table, whatever alias a query gives it.
+- **A condition is closed:** it reads no parameter, no group key and no subquery column, only the table's fields and literals.
+- **Semantics** are those of a query's `where`: a row is a row of the table only when the condition is true; where it is false or `null`, the table does not have the row.
+- **Every read of the table is filtered:** `from`, every kind of join, subqueries, aggregates and `in` over a subquery, in the main query and in subqueries. The condition applies at the table's scan, below everything else, so for an outer join a row the condition drops is a row that does not exist: the preserved side still appears, with nulls.
+- **The filter runs where the query runs.** The scan of a filtered table is `Constant(table).Where(row => condition).Select(row => (field, ...))`, the constant holding the origin's table and the condition reading cells as a field read does (see [Expression tree](#expression-tree)), so the provider of the stored tables is still given the whole query and translates the condition into the statement, at the table's scan (`... FROM orders WHERE tenant_id = ...`, or `LEFT JOIN (SELECT ... FROM orders WHERE ...)`); `Execution` is `Translated`. Over tables held in memory the same tree runs in memory.
+- **A condition that cannot be applied fails, and never lets rows through:** a field that names no column of the table, a field declared with another type than its column holds, a parameter, a group key or a subquery column raises `ArgumentException` whenever the table is read, before any row: when a projection whose query reads the table is built, or when the table is enumerated. A query that does not read the table is not affected.
+- A filtered table read on its own (`visible[orders]`, enumerated or queried with LINQ) is `origin.Where(row => condition)` run by the origin's provider, so it is filtered in the store too.
+
 ### Expression tree
 
 `projection.Expression` is built only from constructs a SQL provider translates: `Queryable` operators (`Enumerable` ones only over a group or a list), members and methods of the BCL's value types, strings and `Math`, value tuples, constants and captured parameters. Nothing in it is compiled, invoked or evaluated on the client except the result rows, built by the last `Select`, which only maps each row of the query, item by item, to an `IRow`. Its shape is fixed:
@@ -122,7 +167,7 @@ scan(from) [.Where] (.Join | .GroupJoin.SelectMany | .SelectMany)* [.Where(rest 
 
 Everything above the last line is the query a provider is given (see [Running a query](#running-a-query)); its rows are value tuples of the result columns, in order.
 
-- **Sources.** Every stored table is its own root, `Constant(IStoredTableDataSet)` typed `IQueryable<IRow>`, so a provider can tell tables (and their databases) apart and split the tree there. A table is always scanned as `root.Select(row => (field, ...))`, reading only the fields the query reads; a field read is `IsNullOrEmpty(row.Cells[column].Value.TextValue) ? null : Parse(row.Cells[column].Value.TextValue, ...)` for a field the query declares nullable and `Parse(row.Cells[column].Value.TextValue, ...)` for one it declares non-null, the `IColumn` a constant. A subquery is inlined where it is read.
+- **Sources.** Every stored table is its own root, `Constant(IStoredTableDataSet)` typed `IQueryable<IRow>`, so a provider can tell tables (and their databases) apart and split the tree there. A table is always scanned as `root.Select(row => (field, ...))`, reading only the fields the query reads, and a filtered table (see [Filtered tables](#filtered-tables)) as `root.Where(row => condition).Select(row => (field, ...))`, its condition reading the row's cells as a field read does; a field read is `IsNullOrEmpty(row.Cells[column].Value.TextValue) ? null : Parse(row.Cells[column].Value.TextValue, ...)` for a field the query declares nullable and `Parse(row.Cells[column].Value.TextValue, ...)` for one it declares non-null, the `IColumn` a constant. A subquery is inlined where it is read.
 - **Rows** are value tuples: a source row holds its fields, a joined row one source row per source, a group key one value per key, a query result one value per column. Every value is nullable: `long?` (integer), `decimal?`, `string`, `bool?`, `DateOnly?`, `TimeOnly?`, `DateTime?` (UTC), `Guid?`.
 - **Joins** are hash joins on the equalities of their condition: each and-ed condition of `on` (or of `where`, when it moves into an inner join) that equates an expression over the rows so far with one over the joined source is a join key. An inner join is `Join` on the tuple of keys, the remaining conditions in a `Where` after it; an outer side is `GroupJoin` (keyed by the driving side: the rows so far for `left`, the joined source for `right`) then `SelectMany` over the matches the remaining conditions hold for, `DefaultIfEmpty`; `full` is the left join `Concat` the joined rows whose group of matches is empty (`!Any()`). A tuple of keys is never null, so `null` keys match, as `=` does. A join whose condition has no such equality is a correlated `SelectMany` over the joined rows the condition holds for (`DefaultIfEmpty` for an outer side; `full` adds the joined rows `!Any(...)` row matches). An unmatched side is the default tuple: all nulls.
 - **Aggregates** are LINQ's over the group or, over all rows, over the query's rows, which are one shared subtree. A total query reads a one-row constant source, as SQL's `SELECT` without `FROM`.
@@ -131,7 +176,7 @@ Everything above the last line is the query a provider is given (see [Running a 
 Built in, before any provider sees it:
 
 - constants fold (an operation that fails, like `1 / 0`, is kept and fails the query; two constant strings compare by code point), `true`/`false` fold out of conditions, lifting is dropped where a value cannot be null and an operation over a `null` literal is `null`;
-- `where` is split into its and-ed conditions, each moved to the scan of the source it reads, or into the join that first sees every source it reads, unless an outer join may leave one of them without a row; a condition on a subquery source moves into the subquery (onto its `having` when it reads an aggregate);
+- `where` is split into its and-ed conditions, each moved to the scan of the source it reads (above the scan's `Select`; only the condition of a filtered table stands below it), or into the join that first sees every source it reads, unless an outer join may leave one of them without a row; a condition on a subquery source moves into the subquery (onto its `having` when it reads an aggregate);
 - adjacent `Where`s merge, `Where(true)` and identity `Select`s are dropped, consecutive `Select`s are one, and pagination ends the query (only the result rows' `Select` follows it);
 - a repeated order key or one that is the same for every row is dropped, a `distinctBy` over every group key is dropped, and a subquery read only by `in` (without pagination) is neither ordered nor `distinctBy`-filtered.
 
