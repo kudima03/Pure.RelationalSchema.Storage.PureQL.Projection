@@ -51,7 +51,7 @@ The library is **not AOT-compatible** (`IsAotCompatible = false`): operands are 
 
 **Package validation:** `EnablePackageValidation = true` with `PackageValidationBaselineVersion` set in the csproj. Breaking API changes fail `dotnet pack`.
 
-**Multi-targeting:** net8.0, net9.0, net10.0.
+**Multi-targeting:** net8.0, net9.0, net10.0, net11.0.
 
 **Publishing:** triggered by pushing a semver tag matching `*.*.*`. The tag value becomes the `PackageVersion`.
 
