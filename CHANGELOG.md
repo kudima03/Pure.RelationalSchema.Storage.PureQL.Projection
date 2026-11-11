@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.6.2.0] — 2026-11-11
+
+### Added
+
+- Target framework `net11.0`; `net8.0`, `net9.0` and `net10.0` are kept.
+
+### Changed
+
+- Updated the Pure.* dependencies (`Pure.Primitives`, `Pure.RelationalSchema`,
+  `Pure.RelationalSchema.HashCodes`, `Pure.RelationalSchema.Storage`,
+  `Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions`,
+  `Pure.Collections.Generic`) to their .NET 11 releases.
+- Simplified collection initialization to satisfy the .NET 11 analyzers.
+
 ## [0.1.0-preview.6.1.0] — 2026-11-05
 
 ### Added
