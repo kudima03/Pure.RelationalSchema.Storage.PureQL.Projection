@@ -216,6 +216,7 @@ Empty cell text is `NULL`. The query says whether a field holds it: a field decl
 - .NET 8
 - .NET 9
 - .NET 10
+- .NET 11
 
 ## Installation
 

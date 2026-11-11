@@ -83,9 +83,9 @@ internal static class LocalProvider
 
     private sealed class Rewriter : ExpressionVisitor
     {
-        private readonly Dictionary<object, Expression> _tables = new(
+        private readonly Dictionary<object, Expression> _tables = [with(
             ReferenceEqualityComparer.Instance
-        );
+        )];
 
         private int _depth;
 

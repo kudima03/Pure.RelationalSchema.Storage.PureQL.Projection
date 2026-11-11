@@ -199,7 +199,7 @@ internal sealed class QueryTree
     {
         HashSet<(string Source, string Field)> nonNull = [];
         HashSet<(string Source, string Field)> nullable = [];
-        HashSet<string> optional = new(StringComparer.Ordinal);
+        HashSet<string> optional = [with(StringComparer.Ordinal)];
         List<Source> sources = [_query.From, .. _query.Joins.Select(join => join.Source)];
 
         void declare(object expression)
