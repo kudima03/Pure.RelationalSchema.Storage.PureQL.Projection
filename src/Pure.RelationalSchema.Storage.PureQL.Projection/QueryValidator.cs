@@ -23,7 +23,7 @@ internal static class QueryValidator
         ParameterValues parameters
     )
     {
-        Dictionary<string, QueryClauses> declared = new(StringComparer.Ordinal);
+        Dictionary<string, QueryClauses> declared = [with(StringComparer.Ordinal)];
 
         foreach (NamedQuery subquery in program.Subqueries)
         {
@@ -48,9 +48,9 @@ internal static class QueryValidator
     )
     {
         List<Source> sources = [query.From, .. query.Joins.Select(join => join.Source)];
-        Dictionary<string, IReadOnlyDictionary<string, DeclaredType>> columns = new(
+        Dictionary<string, IReadOnlyDictionary<string, DeclaredType>> columns = [with(
             StringComparer.Ordinal
-        );
+        )];
 
         foreach (Source source in sources)
         {
@@ -62,7 +62,7 @@ internal static class QueryValidator
             }
         }
 
-        HashSet<string> optional = new(StringComparer.Ordinal);
+        HashSet<string> optional = [with(StringComparer.Ordinal)];
 
         for (int i = 0; i < query.Joins.Count; i++)
         {
@@ -172,7 +172,7 @@ internal static class QueryValidator
         IReadOnlyDictionary<string, QueryClauses> subqueries
     )
     {
-        Dictionary<string, DeclaredType> columns = new(StringComparer.Ordinal);
+        Dictionary<string, DeclaredType> columns = [with(StringComparer.Ordinal)];
 
         if (source.IsSubquery)
         {

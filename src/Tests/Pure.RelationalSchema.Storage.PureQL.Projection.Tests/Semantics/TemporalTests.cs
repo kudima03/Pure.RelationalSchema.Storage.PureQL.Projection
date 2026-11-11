@@ -61,14 +61,14 @@ public sealed class TemporalTests
     }
 
     [Theory]
-    [InlineData(-3600, "23:30:00", "22:59:59")]
-    [InlineData(0.5, "00:30:00.5", "23:59:59.5")]
-    [InlineData(1, "00:30:01", "00:00:00")]
-    [InlineData(0.0000005, "00:30:00.000001", "23:59:59.000001")]
-    [InlineData(-0.0000005, "00:29:59.999999", "23:59:58.999999")]
-    [InlineData(0.0000004, "00:30:00", "23:59:59")]
+    [InlineData("-3600", "23:30:00", "22:59:59")]
+    [InlineData("0.5", "00:30:00.5", "23:59:59.5")]
+    [InlineData("1", "00:30:01", "00:00:00")]
+    [InlineData("0.0000005", "00:30:00.000001", "23:59:59.000001")]
+    [InlineData("-0.0000005", "00:29:59.999999", "23:59:58.999999")]
+    [InlineData("0.0000004", "00:30:00", "23:59:59")]
     public void TimeAddSecondsWrapsAroundMidnight(
-        double seconds,
+        string seconds,
         string first,
         string second
     )
@@ -90,7 +90,12 @@ public sealed class TemporalTests
                                             ),
                                             new DecimalProjection(
                                                 new ExactDecimalProjection(
-                                                    new LiteralDecimal((decimal)seconds)
+                                                    new LiteralDecimal(
+                                                        decimal.Parse(
+                                                            seconds,
+                                                            CultureInfo.InvariantCulture
+                                                        )
+                                                    )
                                                 )
                                             )
                                         )
