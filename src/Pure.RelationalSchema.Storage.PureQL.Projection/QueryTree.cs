@@ -7,7 +7,6 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.RowExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
@@ -15,7 +14,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // operators over IQueryable:
 //
 //   scan(from) [.Where] (join)* [.Where(rest of where)]
-//     plain:   [.OrderBy/ThenBy] .Select(columns)
+//     plain:   [.Over(window)]* [.OrderBy/ThenBy] .Select(columns)
 //     grouped: .GroupBy(keys) [.Where(having)] [.OrderBy/ThenBy] .Select(columns)
 //     total:   one-row constant .Select(aggregates over the rows)
 //   [.DistinctBy(columns)] [.Skip] [.Take]
@@ -35,13 +34,12 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // change, a repeated order key and a distinctBy the rows already satisfy are
 // dropped, and a subquery read only for membership or by aggregates is not
 // ordered. Rows are value tuples (Tuples); the query's own rows, which
-// aggregates over all rows read, are one shared subtree.
+// aggregates over all rows read, are one shared subtree. A window function
+// of a plain query is computed by a pass over the rows before they are
+// ordered and selected (Windows, PureQLWindows.Over): each pass pairs every
+// row with the function's value, (row, value), and the select reads it there.
 internal sealed class QueryTree
 {
-    // The source of a total query: one row, which SQL writes as a SELECT
-    // without FROM.
-    private static readonly IQueryable<int> OneRow = new[] { 0 }.AsQueryable();
-
     private readonly DocumentTree _document;
 
     private readonly QueryClauses _query;
@@ -98,7 +96,7 @@ internal sealed class QueryTree
         return new QueryTree(document, query, use).Build();
     }
 
-    public Scope RowScope(ParameterExpression row)
+    public Scope RowScope(Expression row)
     {
         return new Scope(this, field => Field(row, field), null);
     }
@@ -137,7 +135,7 @@ internal sealed class QueryTree
 
         return new CompiledQuery(
             Simplifier.Simplify(Page(Distinct(projected))),
-            _query.Select
+            Headers.Of(_query)
         );
     }
 
@@ -238,7 +236,7 @@ internal sealed class QueryTree
             object expression in new object?[] { _query.Where, _query.Having }
                 .Concat((_query.GroupBy ?? []).Select(key => key.Expression))
                 .Concat(_query.Select.Select(column => column.Expression))
-                .Concat(_query.OrderBy.Select(key => key.Expression))
+                .Concat(_query.OrderBy.Select(_query.Sorted))
                 .OfType<object>()
         )
         {
@@ -791,10 +789,7 @@ internal sealed class QueryTree
     {
         object leaf = ModelNode.Unwrap(condition);
 
-        if (
-            leaf is not IOperator
-            || !leaf.GetType().Name.StartsWith("NotEqual", StringComparison.Ordinal)
-        )
+        if (Operator.Name(leaf.GetType()) != "NotEqual")
         {
             return null;
         }
@@ -819,10 +814,7 @@ internal sealed class QueryTree
     {
         object leaf = ModelNode.Unwrap(condition);
 
-        if (
-            leaf is not IOperator
-            || !leaf.GetType().Name.StartsWith("Equal", StringComparison.Ordinal)
-        )
+        if (Operator.Name(leaf.GetType()) != "Equal")
         {
             return null;
         }
@@ -886,12 +878,172 @@ internal sealed class QueryTree
 
     private Expression Plain()
     {
-        ParameterExpression row = Expression.Parameter(RowType, "row");
-        Scope scope = RowScope(row);
+        (
+            Expression rows,
+            Func<Expression, Expression> source,
+            Func<Expression, IReadOnlyDictionary<object, Expression>> computed
+        ) = Windowed();
+        ParameterExpression row = Expression.Parameter(
+            Linq.ElementType(rows.Type),
+            "row"
+        );
+        Scope scope = new(this, field => Field(source(row), field), null, null, computed(row));
 
         return Linq.Select(
-            Ordered(AllRows, row, scope),
+            Ordered(rows, row, scope),
             Expression.Lambda(Columns(scope), row)
+        );
+    }
+
+    // The rows with the value of every window function the select and the
+    // orderBy read: one pass per function, each over the rows of the pass
+    // before and pairing every one of them with the function's value, so
+    // after the last pass a row is (...((row, value), value)..., value).
+    // Returns the rows, how the query's own row is read from one of them, and
+    // where each function's value is read from one of them.
+    private (
+        Expression Rows,
+        Func<Expression, Expression> Source,
+        Func<Expression, IReadOnlyDictionary<object, Expression>> Computed
+    ) Windowed()
+    {
+        List<object> functions =
+        [
+            .. _query
+                .Select.Select(column => column.Expression)
+                .Concat(_ordered ? _query.OrderBy.Select(_query.Sorted) : [])
+                .SelectMany(expression =>
+                    ModelNode.Nodes(expression, node => !Windows.IsFunction(node))
+                )
+                .Where(Windows.IsFunction)
+                .Distinct(ReferenceEqualityComparer.Instance),
+        ];
+        Expression rows = AllRows;
+        int passes = functions.Count;
+
+        // The query's own row inside a row of the pass at a depth: the first
+        // item, as many times as passes were made over it.
+        static Expression inner(Expression row, int depth)
+        {
+            return depth == 0 ? row : inner(Tuples.Item(row, 0), depth - 1);
+        }
+
+        for (int i = 0; i < passes; i++)
+        {
+            int depth = i;
+            rows = Pass(rows, functions[i], row => inner(row, depth));
+        }
+
+        return (
+            rows,
+            row => inner(row, passes),
+            row => functions
+                .Select(
+                    (function, index) => KeyValuePair.Create(
+                        function,
+                        Tuples.Item(inner(row, passes - index - 1), 1)
+                    )
+                )
+                .ToDictionary(ReferenceEqualityComparer.Instance)
+        );
+    }
+
+    // One window function over the rows: every row paired with its value.
+    private Expression Pass(
+        Expression rows,
+        object function,
+        Func<Expression, Expression> source
+    )
+    {
+        Type element = Linq.ElementType(rows.Type);
+        object over = ModelNode.Unwrap(ModelNode.Child(function, "Over"));
+        ParameterExpression row = Expression.Parameter(element, "row");
+        Scope scope = RowScope(source(row));
+        ParameterExpression partition = Expression.Parameter(
+            typeof(IEnumerable<>).MakeGenericType(element),
+            "partition"
+        );
+        List<object> orderBy = [.. ModelNode.OptionalChildren(over, "OrderBy")];
+        ParameterExpression window = Expression.Parameter(
+            typeof(PureQLWindow<>).MakeGenericType(element),
+            "window"
+        );
+        Scope windowed = new(
+            this,
+            field => Field(source(Expression.Property(window, "Row")), field),
+            null,
+            new RowSet(
+                Expression.Property(window, "Rows"),
+                element,
+                other => RowScope(source(other)),
+                window
+            )
+        );
+        LambdaExpression result = Expression.Lambda(
+            Tuples.New(
+                [
+                    Expression.Property(window, "Row"),
+                    Operator.Of(function.GetType()).Compile(function, windowed),
+                ]
+            ),
+            window
+        );
+        LambdaExpression partitionBy = Expression.Lambda(
+            Tuples.New(
+                [
+                    .. ModelNode
+                        .OptionalChildren(over, "PartitionBy")
+                        .Select(scope.Compile),
+                ]
+            ),
+            row
+        );
+        LambdaExpression peers = Expression.Lambda(
+            Tuples.New(
+                [
+                    .. orderBy.Select(item =>
+                        scope.Compile(ModelNode.Child(item, "Expression"))
+                    ),
+                ]
+            ),
+            row
+        );
+        LambdaExpression order = Expression.Lambda(
+            typeof(Func<,>).MakeGenericType(partition.Type, partition.Type),
+            Ordering.Sorted(
+                partition,
+                row,
+                orderBy.Select(item =>
+                    (
+                        ModelNode.Child(item, "Expression"),
+                        (SortDirection)ModelNode.Child(item, "Direction")
+                            == SortDirection.Desc
+                    )
+                ),
+                scope.Compile
+            ),
+            partition
+        );
+
+        return Expression.Call(
+            typeof(PureQLWindows)
+                .GetMethods()
+                .Single(method =>
+                    method.Name == nameof(PureQLWindows.Over)
+                    && Linq.IsQueryable(method.GetParameters()[0].ParameterType)
+                )
+                .MakeGenericMethod(
+                    element,
+                    partitionBy.ReturnType,
+                    peers.ReturnType,
+                    result.ReturnType
+                ),
+            rows,
+            Expression.Quote(partitionBy),
+            Expression.Quote(order),
+            Expression.Quote(peers),
+            Windows.Frame(over, scope),
+            Expression.Quote(result)
         );
     }
 
@@ -946,7 +1098,7 @@ internal sealed class QueryTree
         Scope scope = new(this, null, null);
 
         return Linq.Select(
-            Expression.Constant(OneRow, typeof(IQueryable<int>)),
+            DocumentTree.One,
             Expression.Lambda(Columns(scope), Expression.Parameter(typeof(int), "one"))
         );
     }
@@ -965,50 +1117,19 @@ internal sealed class QueryTree
         );
     }
 
-    // Each key breaks the ties of the previous one; null sorts first ascending
-    // and last descending, and strings order ordinally.
+    // Each key breaks the ties of the previous one (see Ordering).
     private Expression Ordered(Expression rows, ParameterExpression row, Scope scope)
     {
-        if (!_ordered)
-        {
-            return rows;
-        }
-
-        List<object> seen = [];
-        Expression ordered = rows;
-
-        foreach (OrderKey key in _query.OrderBy)
-        {
-            object leaf = ModelNode.Unwrap(key.Expression);
-
-            if (seen.Contains(leaf))
-            {
-                continue;
-            }
-
-            seen.Add(leaf);
-            Expression body = Simplifier.Simplify(scope.Compile(key.Expression));
-
-            if (!Simplifier.Reads(body, row))
-            {
-                continue;
-            }
-
-            ordered = Linq.Order(
-                ordered,
-                Expression.Lambda(body, row),
-                key.Direction == SortDirection.Desc,
-                ordered == rows,
-                body.Type == typeof(string)
-                    ? Expression.Constant(
-                        StringComparer.Ordinal,
-                        typeof(IComparer<string>)
-                    )
-                    : null
-            );
-        }
-
-        return ordered;
+        return _ordered
+            ? Ordering.Sorted(
+                rows,
+                row,
+                _query.OrderBy.Select(key =>
+                    (_query.Sorted(key), key.Direction == SortDirection.Desc)
+                ),
+                scope.Compile
+            )
+            : rows;
     }
 
     // Keeps, of the rows equal on the distinctBy columns, the first in order.
@@ -1039,6 +1160,8 @@ internal sealed class QueryTree
         );
     }
 
+    // Skips skip rows, or none without skip, then takes at most take rows,
+    // or every row that is left without take.
     private Expression Page(Expression rows)
     {
         if (_query.Pagination is null)
@@ -1046,30 +1169,36 @@ internal sealed class QueryTree
             return rows;
         }
 
-        Expression skip = Count(_query.Pagination.Skip);
-        Expression paged = skip is ConstantExpression { Value: 0 }
-            ? rows
-            : Linq.Skip(rows, skip);
+        Expression paged = rows;
 
-        return Linq.Take(paged, Count(_query.Pagination.Take));
+        if (
+            ModelNode.Optional(_query.Pagination, "Skip") is object skip
+            && Count(skip) is not ConstantExpression { Value: 0 }
+        )
+        {
+            paged = Linq.Skip(paged, Count(skip));
+        }
+
+        return ModelNode.Optional(_query.Pagination, "Take") is object take
+            ? Linq.Take(paged, Count(take))
+            : paged;
     }
 
-    private Expression Count(OneOf.OneOf<long, ParamInteger> count)
+    private Expression Count(object count)
     {
-        return count.Match<Expression>(
-            number => Expression.Constant((int)Math.Min(number, int.MaxValue)),
-            parameter => Expression.Convert(
+        return count is long number
+            ? Expression.Constant((int)Math.Min(number, int.MaxValue))
+            : Expression.Convert(
                 Expression.Call(
                     typeof(Math).GetMethod(
                         nameof(Math.Min),
                         [typeof(long), typeof(long)]
                     )!,
-                    Typed.As(Parameter(parameter), typeof(long)),
+                    Typed.As(Parameter((IParameter)count), typeof(long)),
                     Expression.Constant((long)int.MaxValue)
                 ),
                 typeof(int)
-            )
-        );
+            );
     }
 
     // Groups are unique on their keys, so a distinctBy listing a column of
@@ -1118,14 +1247,16 @@ internal sealed class QueryTree
             .Concat(_query.Joins.Select(join => join.On))
             .Concat((_query.GroupBy ?? []).Select(key => key.Expression))
             .Concat(_query.Select.Select(column => column.Expression))
-            .Concat(_ordered ? _query.OrderBy.Select(key => key.Expression) : [])
+            .Concat(_ordered ? _query.OrderBy.Select(_query.Sorted) : [])
             .OfType<object>();
     }
 
     private static IEnumerable<object> Conjuncts(object condition)
     {
-        return ModelNode.Unwrap(condition) is AndRow and
-            ? and.Conditions.SelectMany(Conjuncts)
-            : [condition];
+        object leaf = ModelNode.Unwrap(condition);
+
+        return Operator.Name(leaf.GetType()) == "And"
+            ? ModelNode.Children(leaf, "Conditions").SelectMany(Conjuncts)
+            : [leaf];
     }
 }

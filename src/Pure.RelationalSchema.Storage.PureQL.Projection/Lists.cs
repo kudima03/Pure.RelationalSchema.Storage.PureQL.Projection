@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
+using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.Types;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
@@ -18,10 +18,13 @@ internal static class Lists
         {
             IParameter parameter => Converted(scope.Parameter(parameter), item),
             ILiteral literal => Expression.Constant(Literals.Items(literal, item)),
-            _ => scope.SubqueryColumn(
-                (string)ModelNode.Child(leaf, "Subquery"),
-                (string)ModelNode.Child(leaf, "Field"),
+            ISubqueryColumn column => scope.SubqueryColumn(
+                column.Subquery,
+                column.Field,
                 item
+            ),
+            _ => throw new NotSupportedException(
+                $"{leaf.GetType().Name} is not a list this interpreter knows."
             ),
         };
     }
@@ -29,7 +32,7 @@ internal static class Lists
     // The type of the items of a list, by its declared type.
     public static Type Item(object list)
     {
-        return ValueTypes.Clr((IType)ModelNode.Child(ModelNode.Unwrap(list), "Type"));
+        return ValueTypes.Clr(ModelNode.TypeOf(list));
     }
 
     private static Expression Converted(Expression sequence, Type item)

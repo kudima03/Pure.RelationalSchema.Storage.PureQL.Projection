@@ -1,39 +1,16 @@
-using PureQL.CSharp.Model;
-
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // A whole PureQL document: the main query and the subqueries it declares, in
 // declaration order.
-internal sealed record QueryProgram(
-    QueryClauses Main,
-    IReadOnlyList<NamedQuery> Subqueries
-)
+internal sealed record QueryProgram(QueryShape Main, IReadOnlyList<NamedQuery> Subqueries)
 {
-    public static QueryProgram Of(PureQLQuery query)
+    public static QueryProgram Of(object query)
     {
-        return query.Match(
-            grouped => new QueryProgram(
-                QueryClauses.Of(grouped),
-                [.. (grouped.Subqueries ?? []).Select(Named)]
-            ),
-            plain => new QueryProgram(
-                QueryClauses.Of(plain),
-                [.. (plain.Subqueries ?? []).Select(Named)]
-            ),
-            total => new QueryProgram(
-                QueryClauses.Of(total),
-                [.. (total.Subqueries ?? []).Select(Named)]
-            )
+        object leaf = ModelNode.Unwrap(query);
+
+        return new QueryProgram(
+            QueryShape.Of(leaf),
+            [.. ModelNode.OptionalChildren(leaf, "Subqueries").Select(NamedQuery.Of)]
         );
-    }
-
-    public static QueryProgram Of(Query query)
-    {
-        return new QueryProgram(QueryClauses.Of(query), []);
-    }
-
-    private static NamedQuery Named(Subquery subquery)
-    {
-        return new NamedQuery(subquery.Name, QueryClauses.Of(subquery.Query));
     }
 }

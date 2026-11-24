@@ -5,6 +5,7 @@ using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Keys;
+using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.RowExpressions;
 
@@ -119,12 +120,11 @@ internal sealed class FilteredTable(IStoredTableDataSet origin, BooleanRow condi
     {
         return node switch
         {
-            IParameter parameter => $"parameter '{parameter.Name}'",
+            IParameter parameter => $"parameter '{parameter.Param}'",
             IKey key => $"group key '{key.Key}'",
-            _ => ModelNode.Has(node, "Subquery")
-                ? $"column '{ModelNode.Child(node, "Field")}' of subquery "
-                    + $"'{ModelNode.Child(node, "Subquery")}'"
-                : null,
+            ISubqueryColumn column => $"column '{column.Field}' of subquery "
+                + $"'{column.Subquery}'",
+            _ => null,
         };
     }
 

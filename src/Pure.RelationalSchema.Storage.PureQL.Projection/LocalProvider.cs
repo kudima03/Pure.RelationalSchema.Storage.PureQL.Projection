@@ -18,7 +18,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 //   that LINQ to Objects would rewrite and compile again every time a row
 //   reads it, and is compiled once per run;
 // - orders strings by code point, as the specification (and SQL's "C"
-//   collation) does, rather than by UTF-16 code unit.
+//   collation) does, rather than by UTF-16 code unit;
+// - computes decimals, sums and averages exactly, as the specification
+//   defines them (ExactArithmetic), rather than as .NET's operators do.
 internal static class LocalProvider
 {
     private static readonly MethodInfo CompareOrdinal = typeof(string).GetMethod(
@@ -81,7 +83,7 @@ internal static class LocalProvider
         );
     }
 
-    private sealed class Rewriter : ExpressionVisitor
+    private sealed class Rewriter : ExactArithmetic
     {
         private readonly Dictionary<object, Expression> _tables = [with(
             ReferenceEqualityComparer.Instance
@@ -94,7 +96,7 @@ internal static class LocalProvider
             if (
                 _depth == 0
                 || node is not MethodCallExpression call
-                || call.Method.DeclaringType != typeof(Queryable)
+                || !Linq.IsQueryOperator(call.Method)
                 || !Closed.Is(call)
             )
             {
@@ -138,8 +140,9 @@ internal static class LocalProvider
             };
         }
 
-        // A Queryable call whose source has become a plain sequence is the
-        // Enumerable call over it.
+        // A query operator whose source has become a plain sequence is its
+        // counterpart over one; a recursion's next then reads the level
+        // before as a plain sequence too.
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
             if (node.Method == CompareOrdinal)
@@ -151,12 +154,70 @@ internal static class LocalProvider
                 );
             }
 
-            Expression[] arguments = [.. node.Arguments.Select(argument => Visit(argument)!)];
+            if (IsRoundedQuotient(node))
+            {
+                return base.VisitMethodCall(node);
+            }
 
-            return node.Method.DeclaringType == typeof(Queryable)
+            Expression[] arguments =
+            [
+                .. node.Arguments.Select(argument =>
+                    Linq.IsQueryOperator(node.Method) && Level(argument) is Expression next
+                        ? next
+                        : Visit(argument)!
+                ),
+            ];
+
+            return Linq.IsQueryOperator(node.Method)
                 && !Linq.IsQueryable(arguments[0].Type)
-                ? Linq.OverEnumerable(node.Method, arguments)
-                : node.Update(Visit(node.Object), arguments);
+                    ? Exactly((MethodCallExpression)Linq.OverEnumerable(node.Method, arguments))
+                : Exactly(node.Update(Visit(node.Object), arguments));
+        }
+
+        // A lambda over a query, as a recursion's next is over the rows of
+        // the level before: the same lambda over a plain sequence, so the
+        // operators that read the level are those of plain sequences.
+        private Expression? Level(Expression argument)
+        {
+            if (
+                argument
+                    is not UnaryExpression
+                    {
+                        NodeType: ExpressionType.Quote,
+                        Operand: LambdaExpression lambda
+                    }
+                || !lambda.Parameters.Any(parameter => Linq.IsQueryable(parameter.Type))
+            )
+            {
+                return null;
+            }
+
+            ParameterExpression[] parameters =
+            [
+                .. lambda.Parameters.Select(parameter =>
+                    Linq.IsQueryable(parameter.Type)
+                        ? Expression.Parameter(
+                            typeof(IEnumerable<>).MakeGenericType(
+                                Linq.ElementType(parameter.Type)
+                            ),
+                            parameter.Name
+                        )
+                        : parameter
+                ),
+            ];
+
+            _depth++;
+            Expression body = Visit(
+                new Substitution(
+                    lambda.Parameters.Zip(parameters).ToDictionary(
+                        pair => pair.First,
+                        pair => (Expression)pair.Second
+                    )
+                ).Visit(lambda.Body)
+            )!;
+            _depth--;
+
+            return Expression.Lambda(body, parameters);
         }
 
         private static bool IsSequence(Type type)
@@ -176,6 +237,19 @@ internal static class LocalProvider
             }
 
             return table;
+        }
+    }
+
+    // An expression with parameters replaced.
+    private sealed class Substitution(
+        IReadOnlyDictionary<ParameterExpression, Expression> replacements
+    ) : ExpressionVisitor
+    {
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            return replacements.TryGetValue(node, out Expression? replacement)
+                ? replacement
+                : node;
         }
     }
 

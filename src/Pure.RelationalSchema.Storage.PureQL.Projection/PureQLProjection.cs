@@ -89,7 +89,7 @@ public sealed record PureQLProjection : IStoredTableDataSet
     )
     {
         QueryValidator.Validate(program, catalog, parameters);
-        ResultTable table = new(program.Main.Select);
+        ResultTable table = new(Headers.Of(program.Main));
         TableSchema = table;
         _execution = new Execution(
             new DocumentTree(catalog, program.Subqueries, parameters).Rows(

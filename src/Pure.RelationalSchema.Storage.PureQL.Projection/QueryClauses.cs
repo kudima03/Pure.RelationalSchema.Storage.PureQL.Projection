@@ -1,124 +1,54 @@
 using PureQL.CSharp.Model;
-using PureQL.CSharp.Model.GroupExpressions;
-using PureQL.CSharp.Model.RowExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// The clauses of one query, the main query or a subquery: plain, grouped or
-// total. GroupBy is null except in a grouped query; a total query's aggregate
-// columns are its Select, and it has no having, orderBy, distinctBy or
-// pagination.
+// The clauses of one plain, grouped or total query, or of the next of a
+// recursive subquery. GroupBy is null except in a grouped query; a total
+// query's aggregate columns are its Select, and it has no having, orderBy,
+// distinctBy or pagination.
 internal sealed record QueryClauses(
     Source From,
     IReadOnlyList<JoinClause> Joins,
-    BooleanRow? Where,
+    object? Where,
     IReadOnlyList<TypedExpression>? GroupBy,
-    BooleanGroup? Having,
+    object? Having,
     IReadOnlyList<TypedExpression> Select,
     IReadOnlyList<OrderKey> OrderBy,
     IReadOnlyList<string> DistinctBy,
     Pagination? Pagination,
     bool IsTotal
-)
+) : QueryShape
 {
-    public static QueryClauses Of(Query query)
+    public static new QueryClauses Of(object query)
     {
-        return query.Match(Of, Of, Of);
-    }
+        object leaf = ModelNode.Unwrap(query);
+        bool total = ModelNode.Has(leaf, "Aggregate");
 
-    public static QueryClauses Of(MainPlainQuery query)
-    {
         return new QueryClauses(
-            Source.Of(query.From),
-            [.. (query.Joins ?? []).Select(JoinClause.Of)],
-            query.Where,
-            null,
-            null,
-            [.. query.Select.Select(TypedExpression.Of)],
-            [.. (query.OrderBy ?? []).Select(OrderKey.Of)],
-            [.. query.DistinctBy ?? []],
-            query.Pagination,
-            false
+            Source.Of(ModelNode.Child(leaf, "From")),
+            [.. ModelNode.OptionalChildren(leaf, "Joins").Select(JoinClause.Of)],
+            ModelNode.Optional(leaf, "Where"),
+            ModelNode.Has(leaf, "GroupBy")
+                ? [.. ModelNode.Children(leaf, "GroupBy").Select(TypedExpression.Of)]
+                : null,
+            ModelNode.Optional(leaf, "Having"),
+            [
+                .. ModelNode
+                    .Children(leaf, total ? "Aggregate" : "Select")
+                    .Select(TypedExpression.Of),
+            ],
+            [.. ModelNode.OptionalChildren(leaf, "OrderBy").Select(OrderKey.Of)],
+            [.. ModelNode.OptionalChildren(leaf, "DistinctBy").Cast<string>()],
+            (Pagination?)ModelNode.Optional(leaf, "Pagination"),
+            total
         );
     }
 
-    public static QueryClauses Of(MainGroupedQuery query)
+    // The expression an orderBy item sorts by: its own, or that of the select
+    // column it names.
+    public object Sorted(OrderKey key)
     {
-        return new QueryClauses(
-            Source.Of(query.From),
-            [.. (query.Joins ?? []).Select(JoinClause.Of)],
-            query.Where,
-            [.. query.GroupBy.Select(TypedExpression.Of)],
-            query.Having,
-            [.. query.Select.Select(TypedExpression.Of)],
-            [.. (query.OrderBy ?? []).Select(OrderKey.Of)],
-            [.. query.DistinctBy ?? []],
-            query.Pagination,
-            false
-        );
-    }
-
-    public static QueryClauses Of(MainTotalQuery query)
-    {
-        return new QueryClauses(
-            Source.Of(query.From),
-            [.. (query.Joins ?? []).Select(JoinClause.Of)],
-            query.Where,
-            null,
-            null,
-            [.. query.Aggregate.Select(TypedExpression.Of)],
-            [],
-            [],
-            null,
-            true
-        );
-    }
-
-    private static QueryClauses Of(PlainQuery query)
-    {
-        return new QueryClauses(
-            Source.Of(query.From),
-            [.. (query.Joins ?? []).Select(JoinClause.Of)],
-            query.Where,
-            null,
-            null,
-            [.. query.Select.Select(TypedExpression.Of)],
-            [.. (query.OrderBy ?? []).Select(OrderKey.Of)],
-            [.. query.DistinctBy ?? []],
-            query.Pagination,
-            false
-        );
-    }
-
-    private static QueryClauses Of(GroupedQuery query)
-    {
-        return new QueryClauses(
-            Source.Of(query.From),
-            [.. (query.Joins ?? []).Select(JoinClause.Of)],
-            query.Where,
-            [.. query.GroupBy.Select(TypedExpression.Of)],
-            query.Having,
-            [.. query.Select.Select(TypedExpression.Of)],
-            [.. (query.OrderBy ?? []).Select(OrderKey.Of)],
-            [.. query.DistinctBy ?? []],
-            query.Pagination,
-            false
-        );
-    }
-
-    private static QueryClauses Of(TotalQuery query)
-    {
-        return new QueryClauses(
-            Source.Of(query.From),
-            [.. (query.Joins ?? []).Select(JoinClause.Of)],
-            query.Where,
-            null,
-            null,
-            [.. query.Aggregate.Select(TypedExpression.Of)],
-            [],
-            [],
-            null,
-            true
-        );
+        return key.Expression
+            ?? Select.First(column => column.Alias == key.Column).Expression;
     }
 }

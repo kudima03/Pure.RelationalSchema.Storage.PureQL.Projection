@@ -186,6 +186,34 @@ internal static class Linq
         >
     >(Queryable.ThenByDescending);
 
+    private static readonly MethodInfo MinPlainMethod = Definition<
+        Func<IQueryable<object>, object?>
+    >(Queryable.Min);
+
+    private static readonly MethodInfo MaxPlainMethod = Definition<
+        Func<IQueryable<object>, object?>
+    >(Queryable.Max);
+
+    private static readonly MethodInfo DistinctMethod = Definition<
+        Func<IQueryable<object>, IQueryable<object>>
+    >(Queryable.Distinct);
+
+    private static readonly MethodInfo FirstOrDefaultMethod = Definition<
+        Func<IQueryable<object>, object?>
+    >(Queryable.FirstOrDefault);
+
+    private static readonly MethodInfo UnionMethod = Definition<
+        Func<IQueryable<object>, IEnumerable<object>, IQueryable<object>>
+    >(Queryable.Union);
+
+    private static readonly MethodInfo IntersectMethod = Definition<
+        Func<IQueryable<object>, IEnumerable<object>, IQueryable<object>>
+    >(Queryable.Intersect);
+
+    private static readonly MethodInfo ExceptMethod = Definition<
+        Func<IQueryable<object>, IEnumerable<object>, IQueryable<object>>
+    >(Queryable.Except);
+
     private static readonly MethodInfo DistinctByMethod = Definition<
         Func<IQueryable<object>, Expression<Func<object, object>>, IQueryable<object>>
     >(Queryable.DistinctBy);
@@ -370,6 +398,48 @@ internal static class Linq
         return Call(MaxComparedMethod, [ElementType(source.Type)], source, comparer);
     }
 
+    public static Expression Min(Expression source)
+    {
+        return Call(MinPlainMethod, [ElementType(source.Type)], source);
+    }
+
+    public static Expression Max(Expression source)
+    {
+        return Call(MaxPlainMethod, [ElementType(source.Type)], source);
+    }
+
+    public static Expression Distinct(Expression source)
+    {
+        return Call(DistinctMethod, [ElementType(source.Type)], source);
+    }
+
+    public static Expression FirstOrDefault(Expression source)
+    {
+        return Call(FirstOrDefaultMethod, [ElementType(source.Type)], source);
+    }
+
+    // The rows of two queries put together by a set operation: rows compare
+    // column by column, as the items of a tuple do.
+    public static Expression Combined(
+        SetOperation operation,
+        Expression first,
+        Expression second
+    )
+    {
+        return Call(
+            operation switch
+            {
+                SetOperation.Union => UnionMethod,
+                SetOperation.Intersect => IntersectMethod,
+                SetOperation.Except => ExceptMethod,
+                SetOperation.UnionAll or _ => ConcatMethod,
+            },
+            [ElementType(first.Type)],
+            first,
+            second
+        );
+    }
+
     public static Expression GroupBy(Expression source, LambdaExpression key)
     {
         return Call(
@@ -440,6 +510,22 @@ internal static class Linq
     public static bool Is(MethodCallExpression call, string name)
     {
         return call.Method.DeclaringType == typeof(Queryable) && call.Method.Name == name;
+    }
+
+    // Whether a method is a query operator over an IQueryable: one of
+    // Queryable's, or one of this library's (a window, a recursion), each of
+    // which has a counterpart over plain sequences beside it.
+    public static bool IsQueryOperator(MethodInfo method)
+    {
+        return method.DeclaringType == typeof(Queryable)
+            || (
+                (
+                    method.DeclaringType == typeof(PureQLWindows)
+                    || method.DeclaringType == typeof(PureQLRecursion)
+                )
+                && method.GetParameters() is [{ ParameterType: Type first }, ..]
+                && IsQueryable(first)
+            );
     }
 
     public static Type ElementType(Type sequence)
@@ -524,16 +610,23 @@ internal static class Linq
         );
     }
 
-    // The Enumerable method a Queryable method stands for: the same name and
-    // generic arity, with IQueryable read as IEnumerable and Expression<F> as F.
+    // The method over plain sequences a query operator stands for: the same
+    // name and generic arity, with IQueryable read as IEnumerable and
+    // Expression<F> as F; Enumerable's for a Queryable method, the one beside
+    // it for an operator of this library.
     private static MethodInfo Counterpart(MethodInfo queryable)
     {
         Type[] parameters = [.. queryable.GetParameters().Select(p => p.ParameterType)];
 
-        return typeof(Enumerable)
+        Type owner = queryable.DeclaringType == typeof(Queryable)
+            ? typeof(Enumerable)
+            : queryable.DeclaringType!;
+
+        return owner
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Single(method =>
-                method.Name == queryable.Name
+                method != queryable
+                && method.Name == queryable.Name
                 && method.IsGenericMethodDefinition
                 && method.GetGenericArguments().Length
                     == queryable.GetGenericArguments().Length
