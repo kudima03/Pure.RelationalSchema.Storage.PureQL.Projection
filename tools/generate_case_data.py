@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""Generates UnicodeCaseData.cs: the full case mappings and the full case folding of
+one version of the Unicode Character Database, and the properties Cased and
+Case_Ignorable that the Final_Sigma rule of `lower` reads.
+
+    python3 -I generate_case_data.py 16.0.0 <directory of the UCD files> <UnicodeCaseData.cs>
+
+The directory holds UnicodeData.txt, SpecialCasing.txt, CaseFolding.txt and
+DerivedCoreProperties.txt of that version; a missing file is downloaded from
+https://www.unicode.org/Public/<version>/ucd/. Use the version that
+System.Globalization.CharUnicodeInfo of the target .NET implements, so that the
+mappings and the general categories read by removeDiacritics agree.
+"""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import ucd  # noqa: E402
+
+WIDTH = 90
+INDENT = " " * 8
+
+
+def runs(mapping):
+    """One-to-one mappings as (first, count, step, delta): `count` code points from
+    `first`, `step` apart, each mapped to itself plus `delta`."""
+    singles = sorted((code, target[0] - code) for code, target in mapping.items() if len(target) == 1)
+    result = []
+    index = 0
+    while index < len(singles):
+        first, delta = singles[index]
+        count, step = 1, 1
+        if index + 1 < len(singles) and singles[index + 1][1] == delta:
+            gap = singles[index + 1][0] - first
+            if gap in (1, 2):
+                step = gap
+                while (
+                    index + count < len(singles)
+                    and singles[index + count] == (first + count * step, delta)
+                ):
+                    count += 1
+        result.append((first, count, step, delta))
+        index += count
+    return result
+
+
+def expanded(quads):
+    return {first + i * step: first + i * step + delta for first, count, step, delta in quads for i in range(count)}
+
+
+def many(mapping):
+    """One-to-many mappings as (code point, length, targets...)."""
+    return [(code, len(target), *target) for code, target in sorted(mapping.items()) if len(target) != 1]
+
+
+def ranges(codes):
+    """A set of code points as (first, last) pairs."""
+    result = []
+    for code in sorted(codes):
+        if result and result[-1][1] == code - 1:
+            result[-1][1] = code
+        else:
+            result.append([code, code])
+    return [tuple(pair) for pair in result]
+
+
+def item(group, code_points):
+    """One group of numbers: the code points among them in hexadecimal."""
+    return ", ".join(f"0x{n:04X}" if i in code_points else str(n) for i, n in enumerate(group))
+
+
+def table(name, comment, groups, code_points):
+    lines = [f"    // {line}" for line in comment]
+    lines.append(f"    public static ReadOnlySpan<int> {name} =>")
+    lines.append("        [")
+    line = INDENT + "   "
+    for group in groups:
+        text = " " + item(group, code_points(group)) + ","
+        if len(line) + len(text) > WIDTH:
+            lines.append(line.rstrip())
+            line = INDENT + "   "
+        line += text
+    if line.strip():
+        lines.append(line.rstrip())
+    lines.append("        ];")
+    return lines
+
+
+def main():
+    if len(sys.argv) != 4:
+        raise SystemExit(__doc__)
+    version, directory, output = sys.argv[1:]
+    mappings, cased, ignorable = ucd.load(version, directory)
+
+    body = []
+    words = {"upper": "upper case", "lower": "lower case", "fold": "case folding"}
+    for kind in ("upper", "lower", "fold"):
+        mapping = mappings[kind]
+        quads = runs(mapping)
+        assert expanded(quads) == {c: t[0] for c, t in mapping.items() if len(t) == 1}
+        title = kind.capitalize()
+        body += table(
+            f"{title}Runs",
+            [
+                f"The {words[kind]} of one code point that is one code point, as runs of",
+                "first, count, step, delta: count code points from first, step apart, each",
+                "mapped to itself plus delta.",
+            ],
+            quads,
+            lambda group: (0,),
+        )
+        body.append("")
+        body += table(
+            f"{title}Sequences",
+            [
+                f"The {words[kind]} of one code point that is several code points, as",
+                "the code point, the length of its mapping, and the mapping.",
+            ],
+            many(mapping),
+            lambda group: {0, *range(2, len(group))},
+        )
+        body.append("")
+    body += table(
+        "Cased",
+        ["The code points with the property Cased, as first, last of each range."],
+        ranges(cased),
+        lambda group: (0, 1),
+    )
+    body.append("")
+    body += table(
+        "CaseIgnorable",
+        ["The code points with the property Case_Ignorable, as first, last of each range."],
+        ranges(ignorable),
+        lambda group: (0, 1),
+    )
+
+    header = [
+        "namespace Pure.RelationalSchema.Storage.PureQL.Projection;",
+        "",
+        f"// Case data of the Unicode Character Database {version}, generated by",
+        "// tools/generate_case_data.py from UnicodeData.txt, SpecialCasing.txt (the",
+        "// mappings without a condition), CaseFolding.txt (statuses C and F) and",
+        "// DerivedCoreProperties.txt. Never edit it by hand: run the generator.",
+        "internal static class UnicodeCaseData",
+        "{",
+    ]
+    lines = header + body + ["}"]
+    assert all(len(line) <= WIDTH for line in lines), max(lines, key=len)
+    with open(output, "w", encoding="utf-8", newline="\n") as out:
+        out.write("\n".join(lines) + "\n")
+    print(f"{output}: Unicode {version}, {len(lines)} lines")
+
+
+if __name__ == "__main__":
+    main()
