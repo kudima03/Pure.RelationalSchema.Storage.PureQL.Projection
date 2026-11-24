@@ -3,7 +3,6 @@ using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
@@ -84,7 +83,7 @@ public sealed class DateMathParameterTests
 
     private static PureQLProjection Selecting(IParameter value, string type)
     {
-        object column = type switch
+        SelectItemProjection column = type switch
         {
             "date" => new SelectItemProjection("v", new ParamDate("v")),
             "time" => new SelectItemProjection("v", new ParamTime("v")),
@@ -95,15 +94,7 @@ public sealed class DateMathParameterTests
             [One],
             new MainPlainQueryWithoutPagination(
                 from: new FromEntity("t.one"),
-                select:
-                [
-                    column switch
-                    {
-                        SelectItemProjection item => item,
-                        SelectItemProjection item => item,
-                        _ => (SelectItemProjection)column,
-                    },
-                ]
+                select: [column]
             ),
             new Dictionary<string, IParameter> { ["v"] = value },
             FixedClock.At("2026-10-29T08:30:00Z")

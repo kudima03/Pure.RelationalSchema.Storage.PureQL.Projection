@@ -3,11 +3,9 @@ using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.GroupExpressions;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
@@ -408,7 +406,9 @@ public sealed class ValidationTests
                     from: new FromEntity("t.people"),
                     where: new InUuidRow(
                         new FieldUuidNullable("t.people", "boss"),
-                        new ListSubqueryColumnUuid(subquery, field, nullable)
+                        nullable
+                            ? new ListSubqueryColumnUuidNullable(subquery, field)
+                            : new ListSubqueryColumnUuid(subquery, field)
                     ),
                     select:
                     [
@@ -501,6 +501,7 @@ public sealed class ValidationTests
                             new FieldString("t.people", "name")
                         ),
                     ],
+                    orderBy: [new OrderItemProjectionColumn("name")],
                     pagination: new Pagination(skip: skip, take: take)
                 )
             )

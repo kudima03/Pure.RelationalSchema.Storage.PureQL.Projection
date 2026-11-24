@@ -5,7 +5,6 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 

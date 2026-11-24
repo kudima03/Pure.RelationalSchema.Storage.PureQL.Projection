@@ -213,8 +213,8 @@ public sealed class FilteredSchemaTests
         PureQLFilteredSchemaDataSet filtered = new(
             schema,
             [
-                KeyValuePair.Create(
-                    (ITable)new Table.Table(new String("nobody"), [], []),
+                KeyValuePair.Create<ITable, BooleanRow>(
+                    new Table.Table(new String("nobody"), [], []),
                     new ParamBoolean("allowed")
                 ),
             ]

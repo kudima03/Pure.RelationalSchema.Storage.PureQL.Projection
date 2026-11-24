@@ -9,7 +9,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 using Decimal = Pure.Primitives.Number.Decimal;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
@@ -164,6 +163,7 @@ public sealed class ParameterTests
                             new PlainQueryWithPagination(
                                 from: new FromEntity("t.names"),
                                 select: [Name()],
+                                orderBy: [new OrderItemProjectionColumn("name")],
                                 pagination: new Pagination(
                                     take: new ParamInteger("page_size")
                                 )
@@ -324,6 +324,7 @@ public sealed class ParameterTests
         return new MainPlainQueryWithPagination(
             from: new FromEntity("t.names"),
             select: [Name()],
+            orderBy: [new OrderItemProjectionColumn("name")],
             pagination: pagination
         );
     }

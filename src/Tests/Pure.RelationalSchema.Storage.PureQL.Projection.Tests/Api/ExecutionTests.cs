@@ -5,7 +5,6 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
@@ -39,7 +38,7 @@ public sealed class ExecutionTests
     ];
 
     // from t.items where id > 1 select name
-    private static readonly PureQLQuery NamesAboveOne = new(
+    private static readonly PureQLQuery NamesAboveOne =
         new MainPlainQueryWithoutPagination(
             from: new FromEntity("t.items", "i"),
             where: new GreaterThanDecimalRow(
@@ -47,8 +46,7 @@ public sealed class ExecutionTests
                 new LiteralInteger(1)
             ),
             select: [new SelectItemProjection("name", new FieldString("i", "name"))]
-        )
-    );
+        );
 
     [Fact]
     public void QueryBelowTheResultRowsGoesToTheProviderAndTheTableIsNotRead()
