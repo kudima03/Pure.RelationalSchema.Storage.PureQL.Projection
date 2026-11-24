@@ -42,10 +42,7 @@ public sealed class FilteredSchemaTests
         Assert.Equal(
             "[people].Where(people => (people[team] == \"red\"))"
                 + ".Select(p => (p[name]))",
-            TreeText.Of(
-                ((MethodCallExpression)projection.Expression)
-                    .Arguments[0]
-            )
+            TreeText.Of(((MethodCallExpression)projection.Expression).Arguments[0])
         );
     }
 
@@ -79,10 +76,7 @@ public sealed class FilteredSchemaTests
             Staff.PeopleWithOrders(JoinKind.Left)
         );
 
-        Assert.Equal(
-            ["Ann|5", "Bob|7", "Cy|", "Dee|9"],
-            Staff.Lines(projection).Order()
-        );
+        Assert.Equal(["Ann|5", "Bob|7", "Cy|", "Dee|9"], Staff.Lines(projection).Order());
     }
 
     [Fact]
@@ -181,12 +175,7 @@ public sealed class FilteredSchemaTests
     public void TotalAggregatesOverATableWithNoMatchingRowFoldNoRows()
     {
         PureQLProjection projection = new(
-            [
-                Staff.Filtered(
-                    Staff.Schema(),
-                    ("orders", new BooleanRow(new LiteralBoolean(false)))
-                ),
-            ],
+            [Staff.Filtered(Staff.Schema(), ("orders", new LiteralBoolean(false)))],
             Staff.CountAndSumOfOrders()
         );
 
@@ -228,8 +217,8 @@ public sealed class FilteredSchemaTests
             ["team is not red"] = source => Staff.Not(Staff.TeamIs("red", source)),
             ["flag"] = Staff.FlagOf,
             ["not flag"] = source => Staff.Not(Staff.FlagOf(source)),
-            ["true"] = _ => new BooleanRow(new LiteralBoolean(true)),
-            ["false"] = _ => new BooleanRow(new LiteralBoolean(false)),
+            ["true"] = _ => new LiteralBoolean(true),
+            ["false"] = _ => new LiteralBoolean(false),
         };
 
     [Theory]
@@ -411,10 +400,7 @@ public sealed class FilteredSchemaTests
         Assert.Equal(["1|Ann|red|True", "4|Dee|red|False"], Staff.Lines(people));
         Assert.Equal(
             ["1|Ann|red|True", "4|Dee|red|False"],
-            Staff.Lines(
-                people.TableSchema,
-                Untyped(people).OfType<IRow>()
-            )
+            Staff.Lines(people.TableSchema, Untyped(people).OfType<IRow>())
         );
         Assert.Equal(typeof(IRow), people.ElementType);
     }
@@ -463,10 +449,7 @@ public sealed class FilteredSchemaTests
             ("people", Staff.Flagged)
         );
 
-        Assert.Equal(
-            ["Ann"],
-            Staff.Lines(new PureQLProjection([twice], Staff.Names()))
-        );
+        Assert.Equal(["Ann"], Staff.Lines(new PureQLProjection([twice], Staff.Names())));
         Assert.Equal(
             ["1|Ann|red|True"],
             Staff.Lines(twice[Staff.Table(schema, "people")])
@@ -480,10 +463,7 @@ public sealed class FilteredSchemaTests
             [
                 Staff.Filtered(
                     Staff.Schema(),
-                    (
-                        "people",
-                        new BooleanRow(new FieldBoolean("people", "flag"))
-                    )
+                    ("people", new FieldBoolean("people", "flag"))
                 ),
             ],
             Staff.Names()

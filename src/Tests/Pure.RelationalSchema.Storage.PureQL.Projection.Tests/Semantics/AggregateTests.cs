@@ -4,12 +4,10 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.GroupExpressions;
-using PureQL.CSharp.Model.GroupKeys;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
@@ -38,132 +36,35 @@ public sealed class AggregateTests
     {
         PureQLProjection projection = new(
             [Sales],
-            new PureQLQuery(
-                new MainTotalQuery(
-                    new From(new FromEntity("t.sales")),
-                    [
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalInteger(
-                                    "count",
-                                    new IntegerTotal(
-                                        new AggregateIntegerTotal(new CountTotal())
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalInteger(
-                                    "units",
-                                    new IntegerTotal(
-                                        new AggregateIntegerTotal(
-                                            new SumIntegerTotal(
-                                                new IntegerNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("t.sales", "amount")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalDecimal(
-                                    "revenue",
-                                    new ExactDecimalTotal(
-                                        new SumDecimalTotal(
-                                            new DecimalNullableRow(
-                                                new ExactDecimalNullableRow(
-                                                    new FieldDecimalNullable(
-                                                        "t.sales",
-                                                        "price"
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalStringNullable(
-                                    "first",
-                                    new ExactStringNullableTotal(
-                                        new AggregateStringNullableTotal(
-                                            new MinStringNullableTotal(
-                                                new StringNullableRow(
-                                                    new ExactStringNullableRow(
-                                                        new FieldStringNullable(
-                                                            "t.sales",
-                                                            "region"
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalDecimalNullable(
-                                    "mean",
-                                    new ExactDecimalNullableTotal(
-                                        new AggregateDecimalNullableTotal(
-                                            new AverageDecimalNullableTotal(
-                                                new DecimalNullableRow(
-                                                    new ExactDecimalNullableRow(
-                                                        new FieldDecimalNullable(
-                                                            "t.sales",
-                                                            "price"
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalBoolean(
-                                    "any",
-                                    new BooleanTotal(
-                                        new AggregateBooleanTotal(
-                                            new AnyTotal(
-                                                new BooleanRow(new LiteralBoolean(true))
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalBoolean(
-                                    "all",
-                                    new BooleanTotal(
-                                        new AggregateBooleanTotal(
-                                            new AllTotal(
-                                                new BooleanRow(new LiteralBoolean(false))
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(new LiteralBoolean(false))
-                )
+            new MainTotalQuery(
+                from: new FromEntity("t.sales"),
+                where: new LiteralBoolean(false),
+                aggregate:
+                [
+                    new SelectItemTotal("count", new CountTotal()),
+                    new SelectItemTotal(
+                        "units",
+                        new SumIntegerTotal(new FieldInteger("t.sales", "amount"))
+                    ),
+                    new SelectItemTotal(
+                        "revenue",
+                        new SumDecimalTotal(new FieldDecimalNullable("t.sales", "price"))
+                    ),
+                    new SelectItemTotal(
+                        "first",
+                        new MinStringNullableTotal(
+                            new FieldStringNullable("t.sales", "region")
+                        )
+                    ),
+                    new SelectItemTotal(
+                        "mean",
+                        new AverageDecimalNullableTotal(
+                            new FieldDecimalNullable("t.sales", "price")
+                        )
+                    ),
+                    new SelectItemTotal("any", new AnyTotal(new LiteralBoolean(true))),
+                    new SelectItemTotal("all", new AllTotal(new LiteralBoolean(false))),
+                ]
             )
         );
 
@@ -181,47 +82,20 @@ public sealed class AggregateTests
     {
         PureQLProjection projection = new(
             [Sales],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.sales")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "count",
-                                    new IntegerProjection(
-                                        new AggregateIntegerProjection(
-                                            new CountProjection()
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "smallest",
-                                    new IntegerProjection(
-                                        new AggregateIntegerProjection(
-                                            new MinIntegerProjection(
-                                                new IntegerRow(
-                                                    new FieldInteger("t.sales", "amount")
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.sales"),
+                select:
+                [
+                    new SelectItemProjection("count", new CountProjection()),
+                    new SelectItemProjection(
+                        "smallest",
+                        new MinIntegerProjection(new FieldInteger("t.sales", "amount"))
+                    ),
+                ]
             )
         );
 
-        Assert.Equal(
-            ["5", "5", "5", "5", "5"],
-            ResultColumn.Texts(projection, "count")
-        );
+        Assert.Equal(["5", "5", "5", "5", "5"], ResultColumn.Texts(projection, "count"));
         Assert.Equal(
             ["1", "1", "1", "1", "1"],
             ResultColumn.Texts(projection, "smallest")
@@ -233,71 +107,33 @@ public sealed class AggregateTests
     {
         PureQLProjection projection = new(
             [Sales],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.sales")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "amount",
-                                    new IntegerProjection(
-                                        new FieldInteger("t.sales", "amount")
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "sales",
-                                    new IntegerProjection(
-                                        new FieldInteger("totals", "sales")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "totals",
-                            new Query(
-                                new TotalQuery(
-                                    new From(new FromEntity("t.sales")),
-                                    [
-                                        new SelectItemTotal(
-                                            new SelectItemTotalNonNullable(
-                                                new SelectItemTotalInteger(
-                                                    "sales",
-                                                    new IntegerTotal(
-                                                        new AggregateIntegerTotal(
-                                                            new CountTotal()
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ]
-                                )
-                            )
-                        ),
-                    ],
-                    joins:
-                    [
-                        new Join(
-                            new JoinSubquery(
-                                JoinKind.Inner,
-                                "totals",
-                                new BooleanRow(new LiteralBoolean(true))
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "totals",
+                        new TotalQuery(
+                            from: new FromEntity("t.sales"),
+                            aggregate: [new SelectItemTotal("sales", new CountTotal())]
+                        )
+                    ),
+                ],
+                from: new FromEntity("t.sales"),
+                joins:
+                [
+                    new JoinSubquery(JoinKind.Inner, "totals", new LiteralBoolean(true)),
+                ],
+                select:
+                [
+                    new SelectItemProjection(
+                        "amount",
+                        new FieldInteger("t.sales", "amount")
+                    ),
+                    new SelectItemProjection(
+                        "sales",
+                        new FieldInteger("totals", "sales")
+                    ),
+                ]
             )
         );
 
@@ -305,10 +141,7 @@ public sealed class AggregateTests
             ["5", "2", "3", "9223372036854775807", "1"],
             ResultColumn.Texts(projection, "amount")
         );
-        Assert.Equal(
-            ["5", "5", "5", "5", "5"],
-            ResultColumn.Texts(projection, "sales")
-        );
+        Assert.Equal(["5", "5", "5", "5", "5"], ResultColumn.Texts(projection, "sales"));
     }
 
     [Fact]
@@ -316,30 +149,15 @@ public sealed class AggregateTests
     {
         PureQLProjection projection = new(
             [Sales],
-            new PureQLQuery(
-                new MainTotalQuery(
-                    new From(new FromEntity("t.sales")),
-                    [
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalInteger(
-                                    "units",
-                                    new IntegerTotal(
-                                        new AggregateIntegerTotal(
-                                            new SumIntegerTotal(
-                                                new IntegerNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("t.sales", "amount")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainTotalQuery(
+                from: new FromEntity("t.sales"),
+                aggregate:
+                [
+                    new SelectItemTotal(
+                        "units",
+                        new SumIntegerTotal(new FieldInteger("t.sales", "amount"))
+                    ),
+                ]
             )
         );
 
@@ -351,144 +169,53 @@ public sealed class AggregateTests
     {
         PureQLProjection projection = new(
             [Sales],
-            new PureQLQuery(
-                new MainGroupedQuery(
-                    new From(new FromEntity("t.sales")),
-                    [
-                        new GroupKey(
-                            new GroupKeyNullable(
-                                new GroupKeyStringNullable(
-                                    "region",
-                                    new ExactStringNullableRow(
-                                        new FieldStringNullable("t.sales", "region")
-                                    )
-                                )
+            new MainGroupedQueryWithoutPagination(
+                from: new FromEntity("t.sales"),
+                groupBy:
+                [
+                    new GroupKey("region", new FieldStringNullable("t.sales", "region")),
+                ],
+                select:
+                [
+                    new SelectItemGroup("region", new KeyStringNullable("region")),
+                    new SelectItemGroup(
+                        "smallest",
+                        new MinIntegerGroup(new FieldInteger("t.sales", "amount"))
+                    ),
+                    new SelectItemGroup(
+                        "largest_overall",
+                        new CountGroup(
+                            new LessThanDecimalRow(
+                                new FieldInteger("t.sales", "amount"),
+                                new LiteralInteger(4)
+                            ),
+                            AggregateOver.All
+                        )
+                    ),
+                    new SelectItemGroup(
+                        "all_priced",
+                        new AllGroup(
+                            new NotEqualDecimalRow(
+                                new FieldDecimalNullable("t.sales", "price"),
+                                new LiteralDecimalNullable()
                             )
-                        ),
-                    ],
-                    [
-                        new SelectItemGroup(
-                            new SelectItemGroupNullable(
-                                new SelectItemGroupStringNullable(
-                                    "region",
-                                    new ExactStringNullableGroup(
-                                        new KeyStringNullable("region")
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupInteger(
-                                    "smallest",
-                                    new IntegerGroup(
-                                        new AggregateIntegerGroup(
-                                            new MinIntegerGroup(
-                                                new IntegerRow(
-                                                    new FieldInteger("t.sales", "amount")
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupInteger(
-                                    "largest_overall",
-                                    new IntegerGroup(
-                                        new AggregateIntegerGroup(
-                                            new CountGroup(
-                                                new BooleanRow(
-                                                    new ComparisonRow(
-                                                        new LessThanRow(
-                                                            new LessThanDecimalRow(
-                                                                new DecimalNullableRow(
-                                                                    new IntegerRow(
-                                                                        new FieldInteger(
-                                                                            "t.sales",
-                                                                            "amount"
-                                                                        )
-                                                                    )
-                                                                ),
-                                                                new DecimalNullableRow(
-                                                                    new IntegerRow(
-                                                                        new LiteralInteger(4)
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                ),
-                                                AggregateOver.All
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupBoolean(
-                                    "all_priced",
-                                    new BooleanGroup(
-                                        new AggregateBooleanGroup(
-                                            new AllGroup(
-                                                new BooleanRow(
-                                                    new ComparisonRow(
-                                                        new NotEqualRow(
-                                                            new NotEqualDecimalRow(
-                                                                new DecimalNullableRow(
-                                                                    new ExactDecimalNullableRow(
-                                                                        new FieldDecimalNullable(
-                                                                            "t.sales",
-                                                                            "price"
-                                                                        )
-                                                                    )
-                                                                ),
-                                                                new DecimalNullableRow(
-                                                                    new ExactDecimalNullableRow(
-                                                                        new LiteralDecimalNullable()
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    having: null,
-                    orderBy:
-                    [
-                        new OrderItemGroup(
-                            new ExprGroup(
-                                new StringNullableGroup(
-                                    new ExactStringNullableGroup(
-                                        new KeyStringNullable("region")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    pagination: null,
-                    distinctBy: null
-                )
+                        )
+                    ),
+                ],
+                orderBy: [new OrderItemGroupExpression(new KeyStringNullable("region"))]
             )
         );
 
         Assert.Equal(["", "north", "south"], ResultColumn.Texts(projection, "region"));
-        Assert.Equal(["1", "3", "9223372036854775807"], ResultColumn.Texts(projection, "smallest"));
+        Assert.Equal(
+            ["1", "3", "9223372036854775807"],
+            ResultColumn.Texts(projection, "smallest")
+        );
         Assert.Equal(["3", "3", "3"], ResultColumn.Texts(projection, "largest_overall"));
-        Assert.Equal(["True", "False", "True"], ResultColumn.Texts(projection, "all_priced"));
+        Assert.Equal(
+            ["True", "False", "True"],
+            ResultColumn.Texts(projection, "all_priced")
+        );
     }
 
     [Fact]
@@ -496,41 +223,14 @@ public sealed class AggregateTests
     {
         PureQLProjection projection = new(
             [Sales],
-            new PureQLQuery(
-                new MainGroupedQuery(
-                    new From(new FromEntity("t.sales")),
-                    [
-                        new GroupKey(
-                            new GroupKeyNullable(
-                                new GroupKeyStringNullable(
-                                    "region",
-                                    new ExactStringNullableRow(
-                                        new FieldStringNullable("t.sales", "region")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    [
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupInteger(
-                                    "count",
-                                    new IntegerGroup(
-                                        new AggregateIntegerGroup(new CountGroup())
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(new LiteralBoolean(false)),
-                    having: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainGroupedQueryWithoutPagination(
+                from: new FromEntity("t.sales"),
+                where: new LiteralBoolean(false),
+                groupBy:
+                [
+                    new GroupKey("region", new FieldStringNullable("t.sales", "region")),
+                ],
+                select: [new SelectItemGroup("count", new CountGroup())]
             )
         );
 

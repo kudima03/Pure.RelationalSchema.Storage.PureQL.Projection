@@ -65,9 +65,8 @@ public sealed class PostgreSqlDatabase : IDisposable
                 .GetAwaiter()
                 .GetResult()
                 .Stderr.Split('\n');
-            int start = Array.FindLastIndex(
-                lines,
-                line => line.EndsWith("plan:", StringComparison.Ordinal)
+            int start = Array.FindLastIndex(lines, line =>
+                line.EndsWith("plan:", StringComparison.Ordinal)
             );
 
             if (start >= 0)
@@ -104,7 +103,11 @@ public sealed class PostgreSqlDatabase : IDisposable
         _connection.Open();
         Execute("SET enable_nestloop = off;");
 
-        return [Stored(new SchemaDataSetWithForeignKeys()), Stored(new AuditSchemaDataSet())];
+        return
+        [
+            Stored(new SchemaDataSetWithForeignKeys()),
+            Stored(new AuditSchemaDataSet()),
+        ];
     }
 
     // The dataset's tables, created and filled with its rows, read back from the
@@ -150,9 +153,7 @@ public sealed class PostgreSqlDatabase : IDisposable
             + ") VALUES ("
             + string.Join(
                 ", ",
-                columns.Select(
-                    (column, index) => $"CAST(@p{index} AS {SqlType(column)})"
-                )
+                columns.Select((column, index) => $"CAST(@p{index} AS {SqlType(column)})")
             )
             + ");";
 

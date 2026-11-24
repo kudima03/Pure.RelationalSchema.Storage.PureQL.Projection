@@ -10,8 +10,9 @@ internal static class ResultColumn
         return
         [
             .. rows.Select(row =>
-                row.Cells.Single(cell => cell.Key.Name.TextValue == column)
-                    .Value.Value.TextValue
+                row.Cells.Single(cell =>
+                    cell.Key.Name.TextValue == column
+                ).Value.Value.TextValue
             ),
         ];
     }

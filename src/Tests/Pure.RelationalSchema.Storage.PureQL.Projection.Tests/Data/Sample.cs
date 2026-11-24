@@ -35,11 +35,7 @@ public sealed class Sample
     public IStoredTableDataSet? Result => (IStoredTableDataSet?)Read("Result");
 
     public bool IsOrdered =>
-        Query.Match(
-            grouped => grouped.OrderBy is not null,
-            plain => plain.OrderBy is not null,
-            total => false
-        );
+        Query.Value?.GetType().GetProperty("OrderBy")?.GetValue(Query.Value) is not null;
 
     public static Sample Named(string name)
     {

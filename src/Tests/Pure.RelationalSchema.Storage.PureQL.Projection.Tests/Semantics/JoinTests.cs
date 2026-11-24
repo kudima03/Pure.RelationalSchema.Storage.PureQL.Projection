@@ -6,7 +6,6 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
@@ -57,13 +56,11 @@ public sealed class JoinTests
         ("id", new LongColumnType()),
         ("name", new StringColumnType()),
         ("tier", new StringColumnType())
-    ).With(
-        [
-            .. CustomerRows.Select(customer =>
-                Texts(customer.Id, customer.Name, customer.Tier)
-            ),
-        ]
-    );
+    ).With([
+        .. CustomerRows.Select(customer =>
+            Texts(customer.Id, customer.Name, customer.Tier)
+        ),
+    ]);
 
     public static TheoryData<JoinKind, string> Joins =>
         new()
@@ -105,57 +102,24 @@ public sealed class JoinTests
                 (order, customer) => order.Customer == customer.Id
             ),
             "key and condition" => Case(
-                new BooleanRow(
-                    new LogicalRow(
-                        new AndRow(
-                            [
-                                Equal(Integer("o", "customer_id"), Integer("c", "id")),
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualStringRow(
-                                                new StringNullableRow(
-                                                    new ExactStringNullableRow(
-                                                        new FieldStringNullable("c", "tier")
-                                                    )
-                                                ),
-                                                new StringNullableRow(
-                                                    new StringRow(new LiteralString("gold"))
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                            ]
-                        )
-                    )
-                ),
+                new AndRow([
+                    Equal(Integer("o", "customer_id"), Integer("c", "id")),
+                    new EqualStringRow(
+                        new FieldStringNullable("c", "tier"),
+                        new LiteralString("gold")
+                    ),
+                ]),
                 (order, customer) =>
                     order.Customer == customer.Id && customer.Tier == "gold"
             ),
             "decimal key" => Case(
-                Equal(
-                    new DecimalNullableRow(
-                        new ExactDecimalNullableRow(new FieldDecimalNullable("o", "amount"))
-                    ),
-                    Integer("c", "id")
-                ),
+                Equal(new FieldDecimalNullable("o", "amount"), Integer("c", "id")),
                 (order, customer) => order.Amount == customer.Id
             ),
             "no key" => Case(
-                new BooleanRow(
-                    new ComparisonRow(
-                        new GreaterThanOrEqualRow(
-                            new GreaterThanOrEqualDecimalRow(
-                                new DecimalNullableRow(
-                                    new ExactDecimalNullableRow(
-                                        new FieldDecimalNullable("o", "amount")
-                                    )
-                                ),
-                                Integer("c", "id")
-                            )
-                        )
-                    )
+                new GreaterThanOrEqualDecimalRow(
+                    new FieldDecimalNullable("o", "amount"),
+                    Integer("c", "id")
                 ),
                 (order, customer) => order.Amount >= customer.Id
             ),
@@ -164,17 +128,14 @@ public sealed class JoinTests
 
         PureQLProjection projection = new(
             [Orders, Customers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("s.orders", "o")),
-                    [IntegerColumn("order", "o", "id"), StringColumn("name", "c", "name")],
-                    subqueries: null,
-                    joins: [new Join(new JoinEntity(kind, "s.customers", condition, "c"))],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("s.orders", "o"),
+                joins: [new JoinEntity(kind, "s.customers", condition, "c")],
+                select:
+                [
+                    IntegerColumn("order", "o", "id"),
+                    StringColumn("name", "c", "name"),
+                ]
             )
         );
 
@@ -206,39 +167,29 @@ public sealed class JoinTests
 
         PureQLProjection projection = new(
             [regions, items, Customers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("s.items", "i")),
-                    [
-                        IntegerColumn("item", "i", "id"),
-                        StringColumn("owner", "c", "name"),
-                        StringColumn("region", "r", "name"),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Left,
-                                "s.customers",
-                                Equal(Integer("i", "owner_id"), Integer("c", "id")),
-                                "c"
-                            )
-                        ),
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Inner,
-                                "s.regions",
-                                Equal(Integer("r", "id"), Integer("i", "region_id")),
-                                "r"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("s.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Left,
+                        "s.customers",
+                        Equal(Integer("i", "owner_id"), Integer("c", "id")),
+                        "c"
+                    ),
+                    new JoinEntity(
+                        JoinKind.Inner,
+                        "s.regions",
+                        Equal(Integer("r", "id"), Integer("i", "region_id")),
+                        "r"
+                    ),
+                ],
+                select:
+                [
+                    IntegerColumn("item", "i", "id"),
+                    StringColumn("owner", "c", "name"),
+                    StringColumn("region", "r", "name"),
+                ]
             )
         );
 
@@ -253,64 +204,40 @@ public sealed class JoinTests
     {
         PureQLProjection projection = new(
             [Orders, Customers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("s.customers", "c")),
-                    [StringColumn("name", "c", "name"), IntegerColumn("order", "big", "id")],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "big_orders",
-                            new Query(
-                                new PlainQuery(
-                                    new From(new FromEntity("s.orders", "o")),
-                                    [
-                                        IntegerColumn("id", "o", "id"),
-                                        IntegerColumn("customer", "o", "customer_id"),
-                                    ],
-                                    joins: null,
-                                    where: new BooleanRow(
-                                        new ComparisonRow(
-                                            new GreaterThanRow(
-                                                new GreaterThanDecimalRow(
-                                                    new DecimalNullableRow(
-                                                        new ExactDecimalNullableRow(
-                                                            new FieldDecimalNullable(
-                                                                "o",
-                                                                "amount"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new DecimalNullableRow(
-                                                        new IntegerRow(new LiteralInteger(2))
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                    orderBy: null,
-                                    pagination: null,
-                                    distinctBy: null
-                                )
-                            )
-                        ),
-                    ],
-                    joins:
-                    [
-                        new Join(
-                            new JoinSubquery(
-                                JoinKind.Left,
-                                "big_orders",
-                                Equal(Integer("big", "customer"), Integer("c", "id")),
-                                "big"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "big_orders",
+                        new PlainQueryWithoutPaginationWithoutOrderBy(
+                            from: new FromEntity("s.orders", "o"),
+                            where: new GreaterThanDecimalRow(
+                                new FieldDecimalNullable("o", "amount"),
+                                new LiteralInteger(2)
+                            ),
+                            select:
+                            [
+                                IntegerColumn("id", "o", "id"),
+                                IntegerColumn("customer", "o", "customer_id"),
+                            ]
+                        )
+                    ),
+                ],
+                from: new FromEntity("s.customers", "c"),
+                joins:
+                [
+                    new JoinSubquery(
+                        JoinKind.Left,
+                        "big_orders",
+                        Equal(Integer("big", "customer"), Integer("c", "id")),
+                        "big"
+                    ),
+                ],
+                select:
+                [
+                    StringColumn("name", "c", "name"),
+                    IntegerColumn("order", "big", "id"),
+                ]
             )
         );
 
@@ -340,7 +267,9 @@ public sealed class JoinTests
             foreach (Customer customer in CustomerRows)
             {
                 List<Order> matches = [.. OrderRows.Where(order => on(order, customer))];
-                rows.AddRange(matches.Select(order => ((Order?)order, (Customer?)customer)));
+                rows.AddRange(
+                    matches.Select(order => ((Order?)order, (Customer?)customer))
+                );
 
                 if (matches.Count == 0)
                 {
@@ -357,7 +286,9 @@ public sealed class JoinTests
             [
                 .. CustomerRows.Where(customer => on(order, customer)),
             ];
-            rows.AddRange(matches.Select(customer => ((Order?)order, (Customer?)customer)));
+            rows.AddRange(
+                matches.Select(customer => ((Order?)order, (Customer?)customer))
+            );
 
             if (matches.Count == 0 && kind != JoinKind.Inner)
             {
@@ -409,16 +340,12 @@ public sealed class JoinTests
 
     private static DecimalNullableRow Integer(string source, string field)
     {
-        return new DecimalNullableRow(
-            new ExactIntegerNullableRow(new FieldIntegerNullable(source, field))
-        );
+        return new FieldIntegerNullable(source, field);
     }
 
     private static BooleanRow Equal(DecimalNullableRow left, DecimalNullableRow right)
     {
-        return new BooleanRow(
-            new ComparisonRow(new EqualRow(new EqualDecimalRow(left, right)))
-        );
+        return new EqualDecimalRow(left, right);
     }
 
     private static SelectItemProjection IntegerColumn(
@@ -427,16 +354,7 @@ public sealed class JoinTests
         string field
     )
     {
-        return new SelectItemProjection(
-            new SelectItemProjectionNullable(
-                new SelectItemProjectionIntegerNullable(
-                    alias,
-                    new ExactIntegerNullableProjection(
-                        new FieldIntegerNullable(source, field)
-                    )
-                )
-            )
-        );
+        return new SelectItemProjection(alias, new FieldIntegerNullable(source, field));
     }
 
     private static SelectItemProjection StringColumn(
@@ -445,15 +363,6 @@ public sealed class JoinTests
         string field
     )
     {
-        return new SelectItemProjection(
-            new SelectItemProjectionNullable(
-                new SelectItemProjectionStringNullable(
-                    alias,
-                    new ExactStringNullableProjection(
-                        new FieldStringNullable(source, field)
-                    )
-                )
-            )
-        );
+        return new SelectItemProjection(alias, new FieldStringNullable(source, field));
     }
 }

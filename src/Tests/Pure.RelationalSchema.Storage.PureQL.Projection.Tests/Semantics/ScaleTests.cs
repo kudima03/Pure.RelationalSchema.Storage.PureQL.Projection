@@ -6,12 +6,10 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.GroupExpressions;
-using PureQL.CSharp.Model.GroupKeys;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
@@ -37,82 +35,40 @@ public sealed class ScaleTests
     [Fact]
     public void ChainOfJoinsOverThousandsOfRowsIsFast()
     {
-        IStoredSchemaDataSet lines = Table(
-            "order_lines",
-            Lines,
-            i => (i % Orders).ToString(CultureInfo.InvariantCulture)
+        IStoredSchemaDataSet lines = Table("order_lines", Lines, i =>
+            (i % Orders).ToString(CultureInfo.InvariantCulture)
         );
-        IStoredSchemaDataSet orders = Table(
-            "orders",
-            Orders,
-            i => (i % Customers).ToString(CultureInfo.InvariantCulture)
+        IStoredSchemaDataSet orders = Table("orders", Orders, i =>
+            (i % Customers).ToString(CultureInfo.InvariantCulture)
         );
-        IStoredSchemaDataSet customers = Table(
-            "customers",
-            Customers,
-            i => (i % 7).ToString(CultureInfo.InvariantCulture)
+        IStoredSchemaDataSet customers = Table("customers", Customers, i =>
+            (i % 7).ToString(CultureInfo.InvariantCulture)
         );
-        IStoredSchemaDataSet tickets = Table(
-            "tickets",
-            Tickets,
-            i => (i * 3 % Customers).ToString(CultureInfo.InvariantCulture)
+        IStoredSchemaDataSet tickets = Table("tickets", Tickets, i =>
+            (i * 3 % Customers).ToString(CultureInfo.InvariantCulture)
         );
 
         PureQLProjection projection = new(
             [lines, orders, customers, tickets],
-            new PureQLQuery(
-                new MainGroupedQuery(
-                    new From(new FromEntity("s.order_lines", "l")),
-                    [
-                        new GroupKey(
-                            new GroupKeyNonNullable(
-                                new GroupKeyInteger(
-                                    "customer",
-                                    new IntegerRow(new FieldInteger("c", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    [
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupInteger(
-                                    "customer",
-                                    new IntegerGroup(new KeyInteger("customer"))
-                                )
-                            )
-                        ),
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupInteger(
-                                    "lines",
-                                    new IntegerGroup(
-                                        new AggregateIntegerGroup(new CountGroup())
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        Inner("s.orders", "o", "l", "parent", "o", "id"),
-                        Inner("s.customers", "c", "o", "parent", "c", "id"),
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Left,
-                                "s.tickets",
-                                Equal("t", "parent", true, "c", "id", false),
-                                "t"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    having: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainGroupedQueryWithoutPagination(
+                from: new FromEntity("s.order_lines", "l"),
+                joins:
+                [
+                    Inner("s.orders", "o", "l", "parent", "o", "id"),
+                    Inner("s.customers", "c", "o", "parent", "c", "id"),
+                    new JoinEntity(
+                        JoinKind.Left,
+                        "s.tickets",
+                        Equal("t", "parent", true, "c", "id", false),
+                        "t"
+                    ),
+                ],
+                groupBy: [new GroupKey("customer", new FieldInteger("c", "id"))],
+                select:
+                [
+                    new SelectItemGroup("customer", new KeyInteger("customer")),
+                    new SelectItemGroup("lines", new CountGroup()),
+                ]
             )
         );
 
@@ -137,70 +93,29 @@ public sealed class ScaleTests
 
         PureQLProjection projection = new(
             [lines, orders],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("s.order_lines", "l")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "id",
-                                    new IntegerProjection(new FieldInteger("l", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "amounts",
-                            new Query(
-                                new PlainQuery(
-                                    new From(new FromEntity("s.orders", "o")),
-                                    [
-                                        new SelectItemProjection(
-                                            new SelectItemProjectionNonNullable(
-                                                new SelectItemProjectionDecimal(
-                                                    "amount",
-                                                    new ExactDecimalProjection(
-                                                        new FieldDecimal("o", "amount")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    joins: null,
-                                    where: null,
-                                    orderBy: null,
-                                    pagination: null,
-                                    distinctBy: null
-                                )
-                            )
-                        ),
-                    ],
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new InRow(
-                                new InDecimalRow(
-                                    new DecimalNullableRow(
-                                        new ExactDecimalRow(new FieldDecimal("l", "amount"))
-                                    ),
-                                    new ListDecimal(
-                                        new ListSubqueryColumnDecimal(
-                                            "amounts",
-                                            "amount",
-                                            false
-                                        )
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "amounts",
+                        new PlainQueryWithoutPaginationWithoutOrderBy(
+                            from: new FromEntity("s.orders", "o"),
+                            select:
+                            [
+                                new SelectItemProjection(
+                                    "amount",
+                                    new FieldDecimal("o", "amount")
+                                ),
+                            ]
                         )
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                from: new FromEntity("s.order_lines", "l"),
+                where: new InDecimalRow(
+                    new FieldDecimal("l", "amount"),
+                    new ListSubqueryColumnDecimal("amounts", "amount", false)
+                ),
+                select: [new SelectItemProjection("id", new FieldInteger("l", "id"))]
             )
         );
 
@@ -223,35 +138,39 @@ public sealed class ScaleTests
             name,
             ("id", new LongColumnType()),
             ("amount", new DoubleColumnType())
-        ).With(
-            [
-                .. Enumerable
-                    .Range(0, Amounts)
-                    .Select(i => new[]
+        ).With([
+            .. Enumerable
+                .Range(0, Amounts)
+                .Select(i =>
+                    new[]
                     {
                         i.ToString(CultureInfo.InvariantCulture),
                         amount(i).ToString(CultureInfo.InvariantCulture),
-                    }),
-            ]
-        );
+                    }
+                ),
+        ]);
     }
 
     // A table of (id, parent): id counts up, parent is the key into the next
     // table.
-    private static IStoredSchemaDataSet Table(string name, int rows, Func<int, string> parent)
+    private static IStoredSchemaDataSet Table(
+        string name,
+        int rows,
+        Func<int, string> parent
+    )
     {
         return new InlineTable(
             "s",
             name,
             ("id", new LongColumnType()),
             ("parent", new LongColumnType())
-        ).With(
-            [
-                .. Enumerable
-                    .Range(0, rows)
-                    .Select(i => new[] { i.ToString(CultureInfo.InvariantCulture), parent(i) }),
-            ]
-        );
+        ).With([
+            .. Enumerable
+                .Range(0, rows)
+                .Select(i =>
+                    new[] { i.ToString(CultureInfo.InvariantCulture), parent(i) }
+                ),
+        ]);
     }
 
     private static Join Inner(
@@ -263,13 +182,11 @@ public sealed class ScaleTests
         string rightField
     )
     {
-        return new Join(
-            new JoinEntity(
-                JoinKind.Inner,
-                entity,
-                Equal(leftSource, leftField, false, rightSource, rightField, false),
-                alias
-            )
+        return new JoinEntity(
+            JoinKind.Inner,
+            entity,
+            Equal(leftSource, leftField, false, rightSource, rightField, false),
+            alias
         );
     }
 
@@ -282,24 +199,16 @@ public sealed class ScaleTests
         bool rightNullable
     )
     {
-        return new BooleanRow(
-            new ComparisonRow(
-                new EqualRow(
-                    new EqualDecimalRow(
-                        Integer(leftSource, leftField, leftNullable),
-                        Integer(rightSource, rightField, rightNullable)
-                    )
-                )
-            )
+        return new EqualDecimalRow(
+            Integer(leftSource, leftField, leftNullable),
+            Integer(rightSource, rightField, rightNullable)
         );
     }
 
     private static DecimalNullableRow Integer(string source, string field, bool nullable)
     {
         return nullable
-            ? new DecimalNullableRow(
-                new ExactIntegerNullableRow(new FieldIntegerNullable(source, field))
-            )
-            : new DecimalNullableRow(new IntegerRow(new FieldInteger(source, field)));
+            ? new FieldIntegerNullable(source, field)
+            : new FieldInteger(source, field);
     }
 }

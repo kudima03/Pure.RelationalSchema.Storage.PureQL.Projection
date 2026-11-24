@@ -4,7 +4,6 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.ProjectionExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
@@ -83,45 +82,28 @@ public sealed class DateMathParameterTests
         );
     }
 
-
     private static PureQLProjection Selecting(IParameter value, string type)
     {
         object column = type switch
         {
-            "date" => new SelectItemProjectionDate(
-                "v",
-                new DateProjection(new ParamDate("v"))
-            ),
-            "time" => new SelectItemProjectionTime(
-                "v",
-                new TimeProjection(new ParamTime("v"))
-            ),
-            _ => new SelectItemProjectionDatetime(
-                "v",
-                new DatetimeProjection(new ParamDatetime("v"))
-            ),
+            "date" => new SelectItemProjection("v", new ParamDate("v")),
+            "time" => new SelectItemProjection("v", new ParamTime("v")),
+            _ => new SelectItemProjection("v", new ParamDatetime("v")),
         };
 
         return new PureQLProjection(
             [One],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.one")),
-                    [
-                        new SelectItemProjection(
-                            column switch
-                            {
-                                SelectItemProjectionDate item =>
-                                    new SelectItemProjectionNonNullable(item),
-                                SelectItemProjectionTime item =>
-                                    new SelectItemProjectionNonNullable(item),
-                                _ => new SelectItemProjectionNonNullable(
-                                    (SelectItemProjectionDatetime)column
-                                ),
-                            }
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.one"),
+                select:
+                [
+                    column switch
+                    {
+                        SelectItemProjection item => item,
+                        SelectItemProjection item => item,
+                        _ => (SelectItemProjection)column,
+                    },
+                ]
             ),
             new Dictionary<string, IParameter> { ["v"] = value },
             FixedClock.At("2026-10-29T08:30:00Z")

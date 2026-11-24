@@ -22,9 +22,14 @@ public sealed class SampleCatalogueTests
         ["min_age"] = new DecimalParameter(new Decimal(18m)),
         ["min_total"] = new DecimalParameter(new Decimal(100m)),
         ["min_orders"] = new IntegerParameter(new Long(2)),
-        ["statuses"] = new StringListParameter([new String("paid"), new String("shipped")]),
+        ["statuses"] = new StringListParameter([
+            new String("paid"),
+            new String("shipped"),
+        ]),
         ["currency"] = new StringParameter(new String("USD")),
-        ["since"] = new DateTimeParameter(new DateTime(new Date(new DateOnly(2024, 1, 1)))),
+        ["since"] = new DateTimeParameter(
+            new DateTime(new Date(new DateOnly(2024, 1, 1)))
+        ),
     };
 
     public static TheoryData<string> SamplesWithResult =>

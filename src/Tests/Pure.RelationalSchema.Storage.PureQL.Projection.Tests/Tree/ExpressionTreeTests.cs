@@ -8,14 +8,12 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.GroupExpressions;
-using PureQL.CSharp.Model.GroupKeys;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
@@ -53,20 +51,9 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "name",
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select: [new SelectItemProjection("name", new FieldString("i", "name"))]
             )
         );
 
@@ -75,10 +62,7 @@ public sealed class ExpressionTreeTests
                 + ".Select(row => new ResultRow([name], new[] { (object)row.Item1 }))",
             TreeText.Of(projection.Expression)
         );
-        Assert.Same(
-            Items.Values.Single(),
-            Roots(projection.Expression).Single()
-        );
+        Assert.Same(Items.Values.Single(), Roots(projection.Expression).Single());
     }
 
     [Fact]
@@ -86,22 +70,12 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionIntegerNullable(
-                                    "id",
-                                    new ExactIntegerNullableProjection(
-                                        new FieldIntegerNullable("i", "id")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection("id", new FieldIntegerNullable("i", "id")),
+                ]
             )
         );
 
@@ -126,28 +100,13 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "id",
-                                    new IntegerProjection(new FieldInteger("i", "id"))
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "name",
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection("id", new FieldInteger("i", "id")),
+                    new SelectItemProjection("name", new FieldString("i", "name")),
+                ]
             )
         );
 
@@ -175,41 +134,13 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "id",
-                                    new IntegerProjection(new FieldInteger("i", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new GreaterThanRow(
-                                new GreaterThanDecimalRow(
-                                    new DecimalNullableRow(
-                                        new ExactIntegerNullableRow(
-                                            new FieldIntegerNullable("i", "id")
-                                        )
-                                    ),
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new LiteralInteger(1))
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                where: new GreaterThanDecimalRow(
+                    new FieldIntegerNullable("i", "id"),
+                    new LiteralInteger(1)
+                ),
+                select: [new SelectItemProjection("id", new FieldInteger("i", "id"))]
             )
         );
 
@@ -229,65 +160,28 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "tag",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("g", "tag")
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Left,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldInteger("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionIntegerNullable(
-                                    "item",
-                                    new ExactIntegerNullableProjection(
-                                        new FieldIntegerNullable("g", "item_id")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Left,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select:
+                [
+                    new SelectItemProjection("tag", new FieldStringNullable("g", "tag")),
+                    new SelectItemProjection(
+                        "item",
+                        new FieldIntegerNullable("g", "item_id")
+                    ),
+                ]
             )
         );
 
@@ -311,53 +205,21 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Inner,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldInteger("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Inner,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
         );
 
@@ -380,70 +242,25 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "label",
-                                    new StringProjection(
-                                        new ConcatStringProjection(
-                                            [
-                                                new StringProjection(new LiteralString("a")),
-                                                new StringProjection(new LiteralString("b")),
-                                            ]
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new LogicalRow(
-                            new AndRow(
-                                [
-                                    new BooleanRow(new LiteralBoolean(true)),
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new GreaterThanRow(
-                                                new GreaterThanDecimalRow(
-                                                    new DecimalNullableRow(
-                                                        new IntegerRow(
-                                                            new FieldInteger("i", "id")
-                                                        )
-                                                    ),
-                                                    new DecimalNullableRow(
-                                                        new IntegerRow(
-                                                            new ArithmeticIntegerRow(
-                                                                new AddIntegerRow(
-                                                                    [
-                                                                        new IntegerRow(
-                                                                            new LiteralInteger(1)
-                                                                        ),
-                                                                        new IntegerRow(
-                                                                            new LiteralInteger(1)
-                                                                        ),
-                                                                    ]
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                ]
-                            )
-                        )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                where: new AndRow([
+                    new LiteralBoolean(true),
+                    new GreaterThanDecimalRow(
+                        new FieldInteger("i", "id"),
+                        new AddIntegerRow([new LiteralInteger(1), new LiteralInteger(1)])
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ]),
+                select:
+                [
+                    new SelectItemProjection(
+                        "label",
+                        new ConcatStringProjection([
+                            new LiteralString("a"),
+                            new LiteralString("b"),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -461,37 +278,18 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "ratio",
-                                    new ExactDecimalProjection(
-                                        new ArithmeticDecimalProjection(
-                                            new DivideDecimalProjection(
-                                                [
-                                                    new DecimalProjection(
-                                                        new ExactDecimalProjection(
-                                                            new LiteralDecimal(1)
-                                                        )
-                                                    ),
-                                                    new DecimalProjection(
-                                                        new ExactDecimalProjection(
-                                                            new LiteralDecimal(0)
-                                                        )
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "ratio",
+                        new DivideDecimalProjection([
+                            new LiteralDecimal(1),
+                            new LiteralDecimal(0),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -509,97 +307,32 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "name",
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Inner,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldInteger("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Inner,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: new BooleanRow(
-                        new LogicalRow(
-                            new AndRow(
-                                [
-                                    new BooleanRow(new FieldBoolean("i", "active")),
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new EqualRow(
-                                                new EqualStringRow(
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new FieldString("g", "tag")
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new FieldString("i", "name")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new NotEqualRow(
-                                                new NotEqualStringRow(
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new FieldString("g", "tag")
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new LiteralString("spare")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                ]
-                            )
-                        )
+                        "g"
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                where: new AndRow([
+                    new FieldBoolean("i", "active"),
+                    new EqualStringRow(
+                        new FieldString("g", "tag"),
+                        new FieldString("i", "name")
+                    ),
+                    new NotEqualStringRow(
+                        new FieldString("g", "tag"),
+                        new LiteralString("spare")
+                    ),
+                ]),
+                select: [new SelectItemProjection("name", new FieldString("i", "name"))]
             )
         );
 
@@ -622,85 +355,28 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "name",
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Left,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldIntegerNullable("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Left,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new ExactIntegerNullableRow(
-                                                        new FieldIntegerNullable(
-                                                            "g",
-                                                            "item_id"
-                                                        )
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: new BooleanRow(
-                        new LogicalRow(
-                            new AndRow(
-                                [
-                                    new BooleanRow(new FieldBoolean("i", "active")),
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new EqualRow(
-                                                new EqualStringRow(
-                                                    new StringNullableRow(
-                                                        new ExactStringNullableRow(
-                                                            new FieldStringNullable(
-                                                                "g",
-                                                                "tag"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new ExactStringNullableRow(
-                                                            new LiteralStringNullable()
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                ]
-                            )
-                        )
+                        "g"
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                where: new AndRow([
+                    new FieldBoolean("i", "active"),
+                    new EqualStringRow(
+                        new FieldStringNullable("g", "tag"),
+                        new LiteralStringNullable()
+                    ),
+                ]),
+                select: [new SelectItemProjection("name", new FieldString("i", "name"))]
             )
         );
 
@@ -725,63 +401,28 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Right,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldInteger("g", "item_id"),
+                            new FieldIntegerNullable("i", "id")
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "name",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("i", "name")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Right,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new ExactIntegerNullableRow(
-                                                        new FieldIntegerNullable("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select:
+                [
+                    new SelectItemProjection("tag", new FieldString("g", "tag")),
+                    new SelectItemProjection(
+                        "name",
+                        new FieldStringNullable("i", "name")
+                    ),
+                ]
             )
         );
 
@@ -805,68 +446,28 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "name",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("i", "name")
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Full,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldIntegerNullable("g", "item_id"),
+                            new FieldIntegerNullable("i", "id")
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "tag",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("g", "tag")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Full,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new ExactIntegerNullableRow(
-                                                        new FieldIntegerNullable(
-                                                            "g",
-                                                            "item_id"
-                                                        )
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new ExactIntegerNullableRow(
-                                                        new FieldIntegerNullable("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select:
+                [
+                    new SelectItemProjection(
+                        "name",
+                        new FieldStringNullable("i", "name")
+                    ),
+                    new SelectItemProjection("tag", new FieldStringNullable("g", "tag")),
+                ]
             )
         );
 
@@ -899,58 +500,24 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "tag",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("g", "tag")
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Left,
+                        "s.tags",
+                        new GreaterThanDecimalRow(
+                            new FieldIntegerNullable("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Left,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new GreaterThanRow(
-                                            new GreaterThanDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new ExactIntegerNullableRow(
-                                                        new FieldIntegerNullable(
-                                                            "g",
-                                                            "item_id"
-                                                        )
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select:
+                [
+                    new SelectItemProjection("tag", new FieldStringNullable("g", "tag")),
+                ]
             )
         );
 
@@ -974,89 +541,32 @@ public sealed class ExpressionTreeTests
     {
         Join join(JoinKind kind)
         {
-            return new Join(
-                new JoinEntity(
-                    kind,
-                    "s.tags",
-                    new BooleanRow(
-                        new LogicalRow(
-                            new AndRow(
-                                [
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new EqualRow(
-                                                new EqualDecimalRow(
-                                                    new DecimalNullableRow(
-                                                        new ExactIntegerNullableRow(
-                                                            new FieldIntegerNullable(
-                                                                "g",
-                                                                "item_id"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new DecimalNullableRow(
-                                                        new IntegerRow(
-                                                            new FieldInteger("i", "id")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new NotEqualRow(
-                                                new NotEqualStringRow(
-                                                    new StringNullableRow(
-                                                        new ExactStringNullableRow(
-                                                            new FieldStringNullable(
-                                                                "g",
-                                                                "tag"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new FieldString("i", "name")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                ]
-                            )
-                        )
+            return new JoinEntity(
+                kind,
+                "s.tags",
+                new AndRow([
+                    new EqualDecimalRow(
+                        new FieldIntegerNullable("g", "item_id"),
+                        new FieldInteger("i", "id")
                     ),
-                    "g"
-                )
+                    new NotEqualStringRow(
+                        new FieldStringNullable("g", "tag"),
+                        new FieldString("i", "name")
+                    ),
+                ]),
+                "g"
             );
         }
 
         PureQLQuery query(JoinKind kind)
         {
-            return new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "tag",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("g", "tag")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: [join(kind)],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            return new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins: [join(kind)],
+                select:
+                [
+                    new SelectItemProjection("tag", new FieldStringNullable("g", "tag")),
+                ]
             );
         }
 
@@ -1093,56 +603,21 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Inner,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldDecimalNullable("i", "price"),
+                            new FieldInteger("g", "item_id")
                         ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Inner,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new ExactDecimalNullableRow(
-                                                        new FieldDecimalNullable(
-                                                            "i",
-                                                            "price"
-                                                        )
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
         );
 
@@ -1163,43 +638,19 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "above",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new GreaterThanProjection(
-                                                new GreaterThanStringProjection(
-                                                    new StringNullableProjection(
-                                                        new StringProjection(
-                                                            new LiteralString("\U0001F600")
-                                                        )
-                                                    ),
-                                                    new StringNullableProjection(
-                                                        new StringProjection(
-                                                            new LiteralString("\uE000")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy: null,
-                    pagination: new Pagination(0, 1),
-                    distinctBy: null
-                )
+            new MainPlainQueryWithPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "above",
+                        new GreaterThanStringProjection(
+                            new LiteralString("\U0001F600"),
+                            new LiteralString("\uE000")
+                        )
+                    ),
+                ],
+                pagination: new Pagination(take: 1)
             )
         );
 
@@ -1217,78 +668,34 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromSubquery("active_items", "a")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "active_items",
+                        new PlainQueryWithoutPaginationWithoutOrderBy(
+                            from: new FromEntity("t.items", "i"),
+                            where: new FieldBoolean("i", "active"),
+                            select:
+                            [
+                                new SelectItemProjection(
+                                    "id",
+                                    new FieldInteger("i", "id")
+                                ),
+                                new SelectItemProjection(
                                     "name",
-                                    new StringProjection(new FieldString("a", "name"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "active_items",
-                            new Query(
-                                new PlainQuery(
-                                    new From(new FromEntity("t.items", "i")),
-                                    [
-                                        new SelectItemProjection(
-                                            new SelectItemProjectionNonNullable(
-                                                new SelectItemProjectionInteger(
-                                                    "id",
-                                                    new IntegerProjection(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                        new SelectItemProjection(
-                                            new SelectItemProjectionNonNullable(
-                                                new SelectItemProjectionString(
-                                                    "name",
-                                                    new StringProjection(
-                                                        new FieldString("i", "name")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    joins: null,
-                                    where: new BooleanRow(
-                                        new FieldBoolean("i", "active")
-                                    ),
-                                    orderBy: null,
-                                    pagination: null,
-                                    distinctBy: null
-                                )
-                            )
-                        ),
-                    ],
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new GreaterThanRow(
-                                new GreaterThanDecimalRow(
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new FieldInteger("a", "id"))
-                                    ),
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new LiteralInteger(1))
-                                    )
-                                )
-                            )
+                                    new FieldString("i", "name")
+                                ),
+                            ]
                         )
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                from: new FromSubquery("active_items", "a"),
+                where: new GreaterThanDecimalRow(
+                    new FieldInteger("a", "id"),
+                    new LiteralInteger(1)
+                ),
+                select: [new SelectItemProjection("name", new FieldString("a", "name"))]
             )
         );
 
@@ -1307,85 +714,34 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromSubquery("states", "s")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "active",
-                                    new BooleanProjection(new FieldBoolean("s", "active"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "states",
-                            new Query(
-                                new GroupedQuery(
-                                    new From(new FromEntity("t.items", "i")),
-                                    [
-                                        new GroupKey(
-                                            new GroupKeyNonNullable(
-                                                new GroupKeyBoolean(
-                                                    "active",
-                                                    new BooleanRow(
-                                                        new FieldBoolean("i", "active")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    [
-                                        new SelectItemGroup(
-                                            new SelectItemGroupNonNullable(
-                                                new SelectItemGroupBoolean(
-                                                    "active",
-                                                    new BooleanGroup(
-                                                        new KeyBoolean("active")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                        new SelectItemGroup(
-                                            new SelectItemGroupNonNullable(
-                                                new SelectItemGroupInteger(
-                                                    "items",
-                                                    new IntegerGroup(
-                                                        new AggregateIntegerGroup(
-                                                            new CountGroup()
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ]
-                                )
-                            )
-                        ),
-                    ],
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new GreaterThanRow(
-                                new GreaterThanDecimalRow(
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new FieldInteger("s", "items"))
-                                    ),
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new LiteralInteger(1))
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "states",
+                        new GroupedQueryWithoutPaginationWithoutOrderBy(
+                            from: new FromEntity("t.items", "i"),
+                            groupBy:
+                            [
+                                new GroupKey("active", new FieldBoolean("i", "active")),
+                            ],
+                            select:
+                            [
+                                new SelectItemGroup("active", new KeyBoolean("active")),
+                                new SelectItemGroup("items", new CountGroup()),
+                            ]
                         )
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                from: new FromSubquery("states", "s"),
+                where: new GreaterThanDecimalRow(
+                    new FieldInteger("s", "items"),
+                    new LiteralInteger(1)
+                ),
+                select:
+                [
+                    new SelectItemProjection("active", new FieldBoolean("s", "active")),
+                ]
             )
         );
 
@@ -1404,67 +760,23 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "id",
-                                    new IntegerProjection(new FieldInteger("i", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy:
-                    [
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new StringNullableProjection(
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
-                        ),
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new DecimalNullableProjection(
-                                    new IntegerProjection(new LiteralInteger(7))
-                                )
-                            )
-                        ),
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new DecimalNullableProjection(
-                                    new IntegerProjection(
-                                        new AggregateIntegerProjection(new CountProjection())
-                                    )
-                                )
-                            )
-                        ),
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new StringNullableProjection(
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            ),
-                            SortDirection.Desc
-                        ),
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new DecimalNullableProjection(
-                                    new IntegerProjection(new FieldInteger("i", "id"))
-                                )
-                            ),
-                            SortDirection.Desc
-                        ),
-                    ],
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select: [new SelectItemProjection("id", new FieldInteger("i", "id"))],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(new FieldString("i", "name")),
+                    new OrderItemProjectionExpression(new LiteralInteger(7)),
+                    new OrderItemProjectionExpression(new CountProjection()),
+                    new OrderItemProjectionExpression(
+                        new FieldString("i", "name"),
+                        SortDirection.Desc
+                    ),
+                    new OrderItemProjectionExpression(
+                        new FieldInteger("i", "id"),
+                        SortDirection.Desc
+                    ),
+                ]
             )
         );
 
@@ -1483,77 +795,36 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("s.tags", "g")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "names",
-                            new Query(
-                                new PlainQuery(
-                                    new From(new FromEntity("t.items", "i")),
-                                    [
-                                        new SelectItemProjection(
-                                            new SelectItemProjectionNonNullable(
-                                                new SelectItemProjectionString(
-                                                    "name",
-                                                    new StringProjection(
-                                                        new FieldString("i", "name")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    joins: null,
-                                    where: null,
-                                    orderBy:
-                                    [
-                                        new OrderItemProjection(
-                                            new ExprProjection(
-                                                new DecimalNullableProjection(
-                                                    new ExactDecimalProjection(
-                                                        new FieldDecimal("i", "price")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    pagination: null,
-                                    distinctBy: ["name"]
-                                )
-                            )
-                        ),
-                    ],
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new InRow(
-                                new InStringRow(
-                                    new StringNullableRow(
-                                        new StringRow(new FieldString("g", "tag"))
-                                    ),
-                                    new ListString(
-                                        new ListSubqueryColumnString("names", "name", false)
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "names",
+                        new PlainQueryWithoutPaginationWithOrderBy(
+                            from: new FromEntity("t.items", "i"),
+                            select:
+                            [
+                                new SelectItemProjection(
+                                    "name",
+                                    new FieldString("i", "name")
+                                ),
+                            ],
+                            distinctBy: ["name"],
+                            orderBy:
+                            [
+                                new OrderItemProjectionExpression(
+                                    new FieldDecimal("i", "price")
+                                ),
+                            ]
                         )
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                from: new FromEntity("s.tags", "g"),
+                where: new InStringRow(
+                    new FieldString("g", "tag"),
+                    new ListSubqueryColumnString("names", "name", false)
+                ),
+                select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
         );
 
@@ -1573,81 +844,36 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items, Tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("s.tags", "g")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "first_name",
-                            new Query(
-                                new PlainQuery(
-                                    new From(new FromEntity("t.items", "i")),
-                                    [
-                                        new SelectItemProjection(
-                                            new SelectItemProjectionNonNullable(
-                                                new SelectItemProjectionString(
-                                                    "name",
-                                                    new StringProjection(
-                                                        new FieldString("i", "name")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    joins: null,
-                                    where: null,
-                                    orderBy:
-                                    [
-                                        new OrderItemProjection(
-                                            new ExprProjection(
-                                                new DecimalNullableProjection(
-                                                    new IntegerProjection(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    pagination: new Pagination(0, 1),
-                                    distinctBy: null
-                                )
-                            )
-                        ),
-                    ],
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new InRow(
-                                new InStringRow(
-                                    new StringNullableRow(
-                                        new StringRow(new FieldString("g", "tag"))
-                                    ),
-                                    new ListString(
-                                        new ListSubqueryColumnString(
-                                            "first_name",
-                                            "name",
-                                            false
-                                        )
-                                    )
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "first_name",
+                        new PlainQueryWithPagination(
+                            from: new FromEntity("t.items", "i"),
+                            select:
+                            [
+                                new SelectItemProjection(
+                                    "name",
+                                    new FieldString("i", "name")
+                                ),
+                            ],
+                            orderBy:
+                            [
+                                new OrderItemProjectionExpression(
+                                    new FieldInteger("i", "id")
+                                ),
+                            ],
+                            pagination: new Pagination(take: 1)
                         )
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ],
+                from: new FromEntity("s.tags", "g"),
+                where: new InStringRow(
+                    new FieldString("g", "tag"),
+                    new ListSubqueryColumnString("first_name", "name", false)
+                ),
+                select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
         );
 
@@ -1667,46 +893,13 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainGroupedQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new GroupKey(
-                            new GroupKeyNonNullable(
-                                new GroupKeyBoolean(
-                                    "active",
-                                    new BooleanRow(new FieldBoolean("i", "active"))
-                                )
-                            )
-                        ),
-                    ],
-                    [
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupBoolean(
-                                    "active",
-                                    new BooleanGroup(new KeyBoolean("active"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    having: null,
-                    orderBy:
-                    [
-                        new OrderItemGroup(
-                            new ExprGroup(
-                                new BooleanNullableGroup(
-                                    new BooleanGroup(new KeyBoolean("active"))
-                                )
-                            )
-                        ),
-                    ],
-                    pagination: new Pagination(0, 5),
-                    distinctBy: ["active", "active"]
-                )
+            new MainGroupedQueryWithPagination(
+                from: new FromEntity("t.items", "i"),
+                groupBy: [new GroupKey("active", new FieldBoolean("i", "active"))],
+                select: [new SelectItemGroup("active", new KeyBoolean("active"))],
+                distinctBy: ["active", "active"],
+                orderBy: [new OrderItemGroupExpression(new KeyBoolean("active"))],
+                pagination: new Pagination(take: 5)
             )
         );
 
@@ -1725,34 +918,15 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "name",
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "active",
-                                    new BooleanProjection(new FieldBoolean("i", "active"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy: null,
-                    pagination: new Pagination(1, 5),
-                    distinctBy: ["active"]
-                )
+            new MainPlainQueryWithPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection("name", new FieldString("i", "name")),
+                    new SelectItemProjection("active", new FieldBoolean("i", "active")),
+                ],
+                distinctBy: ["active"],
+                pagination: new Pagination(skip: 1, take: 5)
             )
         );
 
@@ -1771,39 +945,13 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "id",
-                                    new IntegerProjection(new FieldInteger("i", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new GreaterThanRow(
-                                new GreaterThanDecimalRow(
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new FieldInteger("i", "id"))
-                                    ),
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new ParamInteger("min_id"))
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                where: new GreaterThanDecimalRow(
+                    new FieldInteger("i", "id"),
+                    new ParamInteger("min_id")
+                ),
+                select: [new SelectItemProjection("id", new FieldInteger("i", "id"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -1828,41 +976,17 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainTotalQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalInteger(
-                                    "items",
-                                    new IntegerTotal(
-                                        new AggregateIntegerTotal(new CountTotal())
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalDecimal(
-                                    "total",
-                                    new ExactDecimalTotal(
-                                        new SumDecimalTotal(
-                                            new DecimalNullableRow(
-                                                new ExactDecimalNullableRow(
-                                                    new FieldDecimalNullable("i", "price")
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(new FieldBoolean("i", "active"))
-                )
+            new MainTotalQuery(
+                from: new FromEntity("t.items", "i"),
+                where: new FieldBoolean("i", "active"),
+                aggregate:
+                [
+                    new SelectItemTotal("items", new CountTotal()),
+                    new SelectItemTotal(
+                        "total",
+                        new SumDecimalTotal(new FieldDecimalNullable("i", "price"))
+                    ),
+                ]
             )
         );
 
@@ -1889,65 +1013,20 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainGroupedQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new GroupKey(
-                            new GroupKeyNonNullable(
-                                new GroupKeyBoolean(
-                                    "active",
-                                    new BooleanRow(new FieldBoolean("i", "active"))
-                                )
-                            )
-                        ),
-                    ],
-                    [
-                        new SelectItemGroup(
-                            new SelectItemGroupNonNullable(
-                                new SelectItemGroupInteger(
-                                    "next",
-                                    new IntegerGroup(
-                                        new ArithmeticIntegerGroup(
-                                            new AddIntegerGroup(
-                                                [
-                                                    new IntegerGroup(
-                                                        new AggregateIntegerGroup(
-                                                            new CountGroup()
-                                                        )
-                                                    ),
-                                                    new IntegerGroup(new LiteralInteger(1)),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    having: new BooleanGroup(
-                        new ComparisonGroup(
-                            new GreaterThanOrEqualGroup(
-                                new GreaterThanOrEqualDecimalGroup(
-                                    new DecimalNullableGroup(
-                                        new IntegerGroup(
-                                            new AggregateIntegerGroup(new CountGroup())
-                                        )
-                                    ),
-                                    new DecimalNullableGroup(
-                                        new IntegerGroup(new LiteralInteger(2))
-                                    )
-                                )
-                            )
-                        )
+            new MainGroupedQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                groupBy: [new GroupKey("active", new FieldBoolean("i", "active"))],
+                having: new GreaterThanOrEqualDecimalGroup(
+                    new CountGroup(),
+                    new LiteralInteger(2)
+                ),
+                select:
+                [
+                    new SelectItemGroup(
+                        "next",
+                        new AddIntegerGroup([new CountGroup(), new LiteralInteger(1)])
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ]
             )
         );
 
@@ -1966,40 +1045,18 @@ public sealed class ExpressionTreeTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionDecimalNullable(
-                                    "nothing",
-                                    new ExactDecimalNullableProjection(
-                                        new ArithmeticDecimalNullableProjection(
-                                            new SubtractDecimalNullableProjection(
-                                                [
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalNullableProjection(
-                                                            new FieldDecimalNullable(
-                                                                "i",
-                                                                "price"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalNullableProjection(
-                                                            new LiteralDecimalNullable()
-                                                        )
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "nothing",
+                        new SubtractDecimalNullableProjection([
+                            new FieldDecimalNullable("i", "price"),
+                            new LiteralDecimalNullable(),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -2038,63 +1095,25 @@ public sealed class ExpressionTreeTests
                     }
                 ),
             ],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Inner,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldInteger("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "pairs",
-                                    new IntegerProjection(
-                                        new AggregateIntegerProjection(new CountProjection())
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Inner,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("i", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select:
+                [
+                    new SelectItemProjection("tag", new FieldString("g", "tag")),
+                    new SelectItemProjection("pairs", new CountProjection()),
+                ]
             )
         );
 

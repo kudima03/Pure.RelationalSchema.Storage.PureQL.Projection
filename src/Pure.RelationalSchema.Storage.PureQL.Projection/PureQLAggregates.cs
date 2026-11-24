@@ -15,7 +15,7 @@ public static class PureQLAggregates
 
     public static decimal? Average(IEnumerable<decimal?> values)
     {
-        throw new NotImplementedException();
+        return values.Average();
     }
 
     public static DateOnly? Average(IEnumerable<DateOnly?> values)

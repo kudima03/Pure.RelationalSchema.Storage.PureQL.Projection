@@ -19,18 +19,18 @@ internal sealed class InlineTable(
     string schema,
     string table,
     params (string Name, IColumnType Type)[] columns
-    )
+)
 {
     private readonly string _schema = schema;
 
     private readonly string _table = table;
 
     private readonly IReadOnlyList<IColumn> _columns =
-        [
-            .. columns.Select(column =>
-                (IColumn)new Column.Column(new String(column.Name), column.Type)
-            ),
-        ];
+    [
+        .. columns.Select(column =>
+            (IColumn)new Column.Column(new String(column.Name), column.Type)
+        ),
+    ];
 
     public IStoredSchemaDataSet With(params string[][] rows)
     {

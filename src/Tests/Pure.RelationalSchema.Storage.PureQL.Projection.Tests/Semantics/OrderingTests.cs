@@ -6,7 +6,6 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
@@ -37,39 +36,21 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "word",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("t.words", "word")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy:
-                    [
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new StringNullableProjection(
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("t.words", "word")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.words"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "word",
+                        new FieldStringNullable("t.words", "word")
+                    ),
+                ],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(
+                        new FieldStringNullable("t.words", "word")
+                    ),
+                ]
             )
         );
 
@@ -84,36 +65,16 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionUuid(
-                                    "id",
-                                    new UuidProjection(new FieldUuid("t.words", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy:
-                    [
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new UuidNullableProjection(
-                                    new UuidProjection(new FieldUuid("t.words", "id"))
-                                )
-                            ),
-                            SortDirection.Desc
-                        ),
-                    ],
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.words"),
+                select: [new SelectItemProjection("id", new FieldUuid("t.words", "id"))],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(
+                        new FieldUuid("t.words", "id"),
+                        SortDirection.Desc
+                    ),
+                ]
             )
         );
 
@@ -135,49 +96,25 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "word",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("t.words", "word")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy:
-                    [
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new BooleanNullableProjection(
-                                    new ExactBooleanNullableProjection(
-                                        new FieldBooleanNullable("t.words", "flag")
-                                    )
-                                )
-                            ),
-                            SortDirection.Desc
-                        ),
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new StringNullableProjection(
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("t.words", "word")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.words"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "word",
+                        new FieldStringNullable("t.words", "word")
+                    ),
+                ],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(
+                        new FieldBooleanNullable("t.words", "flag"),
+                        SortDirection.Desc
+                    ),
+                    new OrderItemProjectionExpression(
+                        new FieldStringNullable("t.words", "word")
+                    ),
+                ]
             )
         );
 
@@ -192,39 +129,22 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionBooleanNullable(
-                                    "flag",
-                                    new ExactBooleanNullableProjection(
-                                        new FieldBooleanNullable("t.words", "flag")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy:
-                    [
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new BooleanNullableProjection(
-                                    new ExactBooleanNullableProjection(
-                                        new FieldBooleanNullable("t.words", "flag")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    pagination: null,
-                    distinctBy: ["flag"]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.words"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "flag",
+                        new FieldBooleanNullable("t.words", "flag")
+                    ),
+                ],
+                distinctBy: ["flag"],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(
+                        new FieldBooleanNullable("t.words", "flag")
+                    ),
+                ]
             )
         );
 
@@ -236,49 +156,27 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "word",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("t.words", "word")
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionBooleanNullable(
-                                    "flag",
-                                    new ExactBooleanNullableProjection(
-                                        new FieldBooleanNullable("t.words", "flag")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy:
-                    [
-                        new OrderItemProjection(
-                            new ExprProjection(
-                                new StringNullableProjection(
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("t.words", "word")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    pagination: new Pagination(1, 2),
-                    distinctBy: ["flag"]
-                )
+            new MainPlainQueryWithPagination(
+                from: new FromEntity("t.words"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "word",
+                        new FieldStringNullable("t.words", "word")
+                    ),
+                    new SelectItemProjection(
+                        "flag",
+                        new FieldBooleanNullable("t.words", "flag")
+                    ),
+                ],
+                distinctBy: ["flag"],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(
+                        new FieldStringNullable("t.words", "word")
+                    ),
+                ],
+                pagination: new Pagination(skip: 1, take: 2)
             )
         );
 
@@ -291,123 +189,41 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainTotalQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalUuidNullable(
-                                    "last",
-                                    new ExactUuidNullableTotal(
-                                        new AggregateUuidNullableTotal(
-                                            new MaxUuidNullableTotal(
-                                                new UuidNullableRow(
-                                                    new UuidRow(
-                                                        new FieldUuid("t.words", "id")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
+            new MainTotalQuery(
+                from: new FromEntity("t.words"),
+                aggregate:
+                [
+                    new SelectItemTotal(
+                        "last",
+                        new MaxUuidNullableTotal(new FieldUuid("t.words", "id"))
+                    ),
+                    new SelectItemTotal(
+                        "least",
+                        new MinBooleanNullableTotal(
+                            new FieldBooleanNullable("t.words", "flag")
+                        )
+                    ),
+                    new SelectItemTotal(
+                        "above",
+                        new CountTotal(
+                            new GreaterThanUuidRow(
+                                new FieldUuid("t.words", "id"),
+                                new LiteralUuid(
+                                    Guid.Parse("00000000-0000-0000-0000-000000000003")
                                 )
                             )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalBooleanNullable(
-                                    "least",
-                                    new ExactBooleanNullableTotal(
-                                        new AggregateBooleanNullableTotal(
-                                            new MinBooleanNullableTotal(
-                                                new BooleanNullableRow(
-                                                    new ExactBooleanNullableRow(
-                                                        new FieldBooleanNullable(
-                                                            "t.words",
-                                                            "flag"
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
+                        )
+                    ),
+                    new SelectItemTotal(
+                        "truths",
+                        new CountTotal(
+                            new GreaterThanBooleanRow(
+                                new FieldBooleanNullable("t.words", "flag"),
+                                new LiteralBoolean(false)
                             )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalInteger(
-                                    "above",
-                                    new IntegerTotal(
-                                        new AggregateIntegerTotal(
-                                            new CountTotal(
-                                                new BooleanRow(
-                                                    new ComparisonRow(
-                                                        new GreaterThanRow(
-                                                            new GreaterThanUuidRow(
-                                                                new UuidNullableRow(
-                                                                    new UuidRow(
-                                                                        new FieldUuid(
-                                                                            "t.words",
-                                                                            "id"
-                                                                        )
-                                                                    )
-                                                                ),
-                                                                new UuidNullableRow(
-                                                                    new UuidRow(
-                                                                        new LiteralUuid(
-                                                                            Guid.Parse(
-                                                                                "00000000-0000-0000-0000-000000000003"
-                                                                            )
-                                                                        )
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNonNullable(
-                                new SelectItemTotalInteger(
-                                    "truths",
-                                    new IntegerTotal(
-                                        new AggregateIntegerTotal(
-                                            new CountTotal(
-                                                new BooleanRow(
-                                                    new ComparisonRow(
-                                                        new GreaterThanRow(
-                                                            new GreaterThanBooleanRow(
-                                                                new BooleanNullableRow(
-                                                                    new ExactBooleanNullableRow(
-                                                                        new FieldBooleanNullable(
-                                                                            "t.words",
-                                                                            "flag"
-                                                                        )
-                                                                    )
-                                                                ),
-                                                                new BooleanNullableRow(
-                                                                    new BooleanRow(
-                                                                        new LiteralBoolean(false)
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+                        )
+                    ),
+                ]
             )
         );
 
@@ -425,68 +241,25 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "below",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new LessThanProjection(
-                                                new LessThanStringProjection(
-                                                    new StringNullableProjection(
-                                                        new ExactStringNullableProjection(
-                                                            new FieldStringNullable(
-                                                                "t.words",
-                                                                "word"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new StringNullableProjection(
-                                                        new StringProjection(
-                                                            new LiteralString("b")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "missing",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new EqualProjection(
-                                                new EqualBooleanProjection(
-                                                    new BooleanNullableProjection(
-                                                        new ExactBooleanNullableProjection(
-                                                            new FieldBooleanNullable(
-                                                                "t.words",
-                                                                "flag"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new BooleanNullableProjection(
-                                                        new ExactBooleanNullableProjection(
-                                                            new LiteralBooleanNullable()
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.words"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "below",
+                        new LessThanStringProjection(
+                            new FieldStringNullable("t.words", "word"),
+                            new LiteralString("b")
+                        )
+                    ),
+                    new SelectItemProjection(
+                        "missing",
+                        new EqualBooleanProjection(
+                            new FieldBooleanNullable("t.words", "flag"),
+                            new LiteralBooleanNullable()
+                        )
+                    ),
+                ]
             )
         );
 
@@ -505,80 +278,27 @@ public sealed class OrderingTests
     {
         PureQLProjection projection = new(
             [Words],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.words")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionUuid(
-                                    "id",
-                                    new UuidProjection(new FieldUuid("t.words", "id"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new LogicalRow(
-                            new AndRow(
-                                [
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new GreaterThanOrEqualRow(
-                                                new GreaterThanOrEqualStringRow(
-                                                    new StringNullableRow(
-                                                        new ExactStringNullableRow(
-                                                            new FieldStringNullable(
-                                                                "t.words",
-                                                                "word"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new LiteralString("a")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new LessThanOrEqualRow(
-                                                new LessThanOrEqualStringRow(
-                                                    new StringNullableRow(
-                                                        new ExactStringNullableRow(
-                                                            new FieldStringNullable(
-                                                                "t.words",
-                                                                "word"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new LiteralString("ab")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                ]
-                            )
-                        )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.words"),
+                where: new AndRow([
+                    new GreaterThanOrEqualStringRow(
+                        new FieldStringNullable("t.words", "word"),
+                        new LiteralString("a")
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                    new LessThanOrEqualStringRow(
+                        new FieldStringNullable("t.words", "word"),
+                        new LiteralString("ab")
+                    ),
+                ]),
+                select: [new SelectItemProjection("id", new FieldUuid("t.words", "id"))]
             )
         );
 
         Assert.Equal(
-            ["00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-00000000000a"],
+            [
+                "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-00000000000a",
+            ],
             ResultColumn.Texts(projection, "id")
         );
     }

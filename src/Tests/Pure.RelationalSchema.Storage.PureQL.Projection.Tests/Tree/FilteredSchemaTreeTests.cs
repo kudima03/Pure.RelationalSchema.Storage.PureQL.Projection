@@ -140,7 +140,7 @@ public sealed class FilteredSchemaTreeTests
     {
         Assert.Equal(
             "[people].Select(p => (p[name]))",
-            Query(Staff.Names(), ("people", new BooleanRow(new LiteralBoolean(true))))
+            Query(Staff.Names(), ("people", new LiteralBoolean(true)))
         );
     }
 
@@ -149,7 +149,7 @@ public sealed class FilteredSchemaTreeTests
     {
         Assert.Equal(
             "[people].Where(people => false).Select(p => (p[name]))",
-            Query(Staff.Names(), ("people", new BooleanRow(new LiteralBoolean(false))))
+            Query(Staff.Names(), ("people", new LiteralBoolean(false)))
         );
     }
 
@@ -201,9 +201,8 @@ public sealed class FilteredSchemaTreeTests
             QueriesByName[name]
         );
 
-        Assert.All(
-            Roots.In(projection.Expression),
-            table => Assert.Contains(table, schema.Values)
+        Assert.All(Roots.In(projection.Expression), table =>
+            Assert.Contains(table, schema.Values)
         );
         Assert.NotEmpty(Roots.In(projection.Expression));
     }

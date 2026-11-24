@@ -37,7 +37,7 @@ public static class PureQLMath
 
     public static long Modulo(long left, long right)
     {
-        throw new NotImplementedException();
+        return right == -1 ? 0 : left % right;
     }
 
     public static decimal Round(decimal value, long digits, MidpointRounding mode)
@@ -62,12 +62,12 @@ public static class PureQLMath
 
     public static decimal RoundQuotient(decimal dividend, decimal divisor, MidpointRounding mode)
     {
-        throw new NotImplementedException();
+        return Math.Round(dividend / divisor, mode);
     }
 
     public static decimal PowerOfTen(long exponent)
     {
-        throw new NotImplementedException();
+        return Exact.Decimal(Exact.PowerOfTen((int)exponent), 0, false);
     }
 
     public static decimal Power(decimal operand, decimal exponent)

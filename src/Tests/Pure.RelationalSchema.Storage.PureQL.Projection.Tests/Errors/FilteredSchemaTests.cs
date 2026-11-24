@@ -26,48 +26,37 @@ public sealed class FilteredSchemaTests
         new Dictionary<string, (BooleanRow Condition, string Message)>
         {
             ["a field that names no column"] = (
-                new BooleanRow(new FieldBoolean("people", "retired")),
+                new FieldBoolean("people", "retired"),
                 "The condition of table 'people' reads field 'retired', which the "
                     + "table does not have."
             ),
             ["a field declared with another type"] = (
-                new BooleanRow(new FieldBoolean("people", "team")),
+                new FieldBoolean("people", "team"),
                 "Field 'team' of the condition of table 'people' is declared "
                     + "boolean but holds string."
             ),
             ["a field of a column of no PureQL type"] = (
-                new BooleanRow(new FieldBoolean("people", "hash")),
+                new FieldBoolean("people", "hash"),
                 "Field 'hash' of the condition of table 'people' is declared "
                     + "boolean but holds a type PureQL does not have."
             ),
             ["a parameter"] = (
-                new BooleanRow(new ParamBoolean("allowed")),
+                new ParamBoolean("allowed"),
                 "The condition of table 'people' reads parameter 'allowed', and a "
                     + "table's condition reads only the table's fields."
             ),
             ["a parameter below an operator"] = (
-                Staff.Not(
-                    new BooleanRow(
-                        new LogicalRow(
-                            new AndRow(
-                                [
-                                    Staff.RedTeam,
-                                    new BooleanRow(new ParamBoolean("allowed")),
-                                ]
-                            )
-                        )
-                    )
-                ),
+                Staff.Not(new AndRow([Staff.RedTeam, new ParamBoolean("allowed")])),
                 "The condition of table 'people' reads parameter 'allowed', and a "
                     + "table's condition reads only the table's fields."
             ),
             ["a list parameter"] = (
-                TeamIn(new ListString(new ListParamString("teams"))),
+                TeamIn(new ListParamString("teams")),
                 "The condition of table 'people' reads parameter 'teams', and a "
                     + "table's condition reads only the table's fields."
             ),
             ["a subquery column"] = (
-                TeamIn(new ListString(new ListSubqueryColumnString("staff", "team"))),
+                TeamIn(new ListSubqueryColumnString("staff", "team")),
                 "The condition of table 'people' reads column 'team' of subquery "
                     + "'staff', and a table's condition reads only the table's fields."
             ),
@@ -207,9 +196,7 @@ public sealed class FilteredSchemaTests
         Assert.Equal(
             message,
             Assert
-                .Throws<ArgumentException>(() =>
-                    filtered[Staff.Table(schema, "orders")]
-                )
+                .Throws<ArgumentException>(() => filtered[Staff.Table(schema, "orders")])
                 .Message
         );
         Assert.Equal(
@@ -228,7 +215,7 @@ public sealed class FilteredSchemaTests
             [
                 KeyValuePair.Create(
                     (ITable)new Table.Table(new String("nobody"), [], []),
-                    new BooleanRow(new ParamBoolean("allowed"))
+                    new ParamBoolean("allowed")
                 ),
             ]
         );
@@ -252,19 +239,6 @@ public sealed class FilteredSchemaTests
 
     private static BooleanRow TeamIn(ListString teams)
     {
-        return new BooleanRow(
-            new ComparisonRow(
-                new InRow(
-                    new InStringRow(
-                        new StringNullableRow(
-                            new ExactStringNullableRow(
-                                new FieldStringNullable("people", "team")
-                            )
-                        ),
-                        teams
-                    )
-                )
-            )
-        );
+        return new InStringRow(new FieldStringNullable("people", "team"), teams);
     }
 }

@@ -5,13 +5,10 @@ using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.GroupExpressions;
-using PureQL.CSharp.Model.GroupKeys;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 using String = Pure.Primitives.String.String;
 
@@ -56,15 +53,9 @@ internal static class Staff
     // The orders above 4: 10, 11 and 12.
     public static BooleanRow BigOrders =>
         new(
-            new ComparisonRow(
-                new GreaterThanRow(
-                    new GreaterThanDecimalRow(
-                        new DecimalNullableRow(
-                            new IntegerRow(new FieldInteger("orders", "total"))
-                        ),
-                        new DecimalNullableRow(new IntegerRow(new LiteralInteger(4)))
-                    )
-                )
+            new GreaterThanDecimalRow(
+                new FieldInteger("orders", "total"),
+                new LiteralInteger(4)
             )
         );
 
@@ -73,42 +64,20 @@ internal static class Staff
 
     public static BooleanRow FlagOf(string source)
     {
-        return new BooleanRow(
-            new ConditionalBooleanRow(
-                new CoalesceBooleanRow(
-                    [
-                        new BooleanNullableRow(
-                            new ExactBooleanNullableRow(
-                                new FieldBooleanNullable(source, "flag")
-                            )
-                        ),
-                    ]
-                )
-            )
-        );
+        return new CoalesceBooleanRow([new FieldBooleanNullable(source, "flag")]);
     }
 
     public static BooleanRow TeamIs(string team, string source)
     {
-        return new BooleanRow(
-            new ComparisonRow(
-                new EqualRow(
-                    new EqualStringRow(
-                        new StringNullableRow(
-                            new ExactStringNullableRow(
-                                new FieldStringNullable(source, "team")
-                            )
-                        ),
-                        new StringNullableRow(new StringRow(new LiteralString(team)))
-                    )
-                )
-            )
+        return new EqualStringRow(
+            new FieldStringNullable(source, "team"),
+            new LiteralString(team)
         );
     }
 
     public static BooleanRow Not(BooleanRow condition)
     {
-        return new BooleanRow(new LogicalRow(new NotRow(condition)));
+        return new NotRow(condition);
     }
 
     // Both tables, held in memory, in one schema dataset.
@@ -187,9 +156,8 @@ internal static class Staff
                     '|',
                     table.Columns.Select(column =>
                         row.Cells.Single(cell =>
-                                cell.Key.Name.TextValue == column.Name.TextValue
-                            )
-                            .Value.Value.TextValue
+                            cell.Key.Name.TextValue == column.Name.TextValue
+                        ).Value.Value.TextValue
                     )
                 )
             ),
@@ -205,17 +173,10 @@ internal static class Staff
     // from t.people p where <condition> select p.name
     public static PureQLQuery Names(BooleanRow? where)
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.people", "p")),
-                [Name("p")],
-                subqueries: null,
-                joins: null,
-                where: where,
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.people", "p"),
+            where: where,
+            select: [Name("p")]
         );
     }
 
@@ -223,27 +184,18 @@ internal static class Staff
     // select p.name, o.total
     public static PureQLQuery PeopleWithOrders(JoinKind kind)
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.people", "p")),
-                [Name("p"), Total("o")],
-                subqueries: null,
-                joins:
-                [
-                    new Join(
-                        new JoinEntity(
-                            kind,
-                            "t.orders",
-                            Equal(Integer("o", "person"), Integer("p", "id")),
-                            "o"
-                        )
-                    ),
-                ],
-                where: null,
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.people", "p"),
+            joins:
+            [
+                new JoinEntity(
+                    kind,
+                    "t.orders",
+                    Equal(Integer("o", "person"), Integer("p", "id")),
+                    "o"
+                ),
+            ],
+            select: [Name("p"), Total("o")]
         );
     }
 
@@ -251,33 +203,18 @@ internal static class Staff
     // select p.name, q.name as other
     public static PureQLQuery Teammates()
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.people", "p")),
-                [Name("p"), Name("q", "other")],
-                subqueries: null,
-                joins:
-                [
-                    new Join(
-                        new JoinEntity(
-                            JoinKind.Inner,
-                            "t.people",
-                            new BooleanRow(
-                                new ComparisonRow(
-                                    new EqualRow(
-                                        new EqualStringRow(Team("q"), Team("p"))
-                                    )
-                                )
-                            ),
-                            "q"
-                        )
-                    ),
-                ],
-                where: null,
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.people", "p"),
+            joins:
+            [
+                new JoinEntity(
+                    JoinKind.Inner,
+                    "t.people",
+                    new EqualStringRow(Team("q"), Team("p")),
+                    "q"
+                ),
+            ],
+            select: [Name("p"), Name("q", "other")]
         );
     }
 
@@ -285,28 +222,19 @@ internal static class Staff
     // from staff s select s.name
     public static PureQLQuery NamesThroughASubquery()
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromSubquery("staff", "s")),
-                [Name("s")],
-                subqueries:
-                [
-                    new Subquery(
-                        "staff",
-                        new Query(
-                            new PlainQuery(
-                                new From(new FromEntity("t.people")),
-                                [Name("t.people")]
-                            )
-                        )
-                    ),
-                ],
-                joins: null,
-                where: null,
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            subqueries:
+            [
+                new SubqueryQuery(
+                    "staff",
+                    new PlainQueryWithoutPaginationWithoutOrderBy(
+                        from: new FromEntity("t.people"),
+                        select: [Name("t.people")]
+                    )
+                ),
+            ],
+            from: new FromSubquery("staff", "s"),
+            select: [Name("s")]
         );
     }
 
@@ -314,184 +242,87 @@ internal static class Staff
     // from t.orders o where o.person in staff.id select o.total
     public static PureQLQuery TotalsOfTheOrdersOfListedPeople()
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.orders", "o")),
-                [Total("o")],
-                subqueries:
-                [
-                    new Subquery(
-                        "staff",
-                        new Query(
-                            new PlainQuery(
-                                new From(new FromEntity("t.people")),
-                                [
-                                    new SelectItemProjection(
-                                        new SelectItemProjectionNullable(
-                                            new SelectItemProjectionIntegerNullable(
-                                                "id",
-                                                new ExactIntegerNullableProjection(
-                                                    new FieldIntegerNullable(
-                                                        "t.people",
-                                                        "id"
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                ]
-                            )
-                        )
-                    ),
-                ],
-                joins: null,
-                where: new BooleanRow(
-                    new ComparisonRow(
-                        new InRow(
-                            new InDecimalRow(
-                                Integer("o", "person"),
-                                new ListDecimal(
-                                    new ListInteger(
-                                        new ListSubqueryColumnInteger("staff", "id", true)
-                                    )
-                                )
-                            )
-                        )
+        return new MainPlainQueryWithoutPagination(
+            subqueries:
+            [
+                new SubqueryQuery(
+                    "staff",
+                    new PlainQueryWithoutPaginationWithoutOrderBy(
+                        from: new FromEntity("t.people"),
+                        select:
+                        [
+                            new SelectItemProjection(
+                                "id",
+                                new FieldIntegerNullable("t.people", "id")
+                            ),
+                        ]
                     )
                 ),
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+            ],
+            from: new FromEntity("t.orders", "o"),
+            where: new InDecimalRow(
+                Integer("o", "person"),
+                new ListSubqueryColumnIntegerNullable("staff", "id")
+            ),
+            select: [Total("o")]
         );
     }
 
     // from t.orders o aggregate count() as count, sum(o.total) as sum
     public static PureQLQuery CountAndSumOfOrders()
     {
-        return new PureQLQuery(
-            new MainTotalQuery(
-                new From(new FromEntity("t.orders", "o")),
-                [
-                    new SelectItemTotal(
-                        new SelectItemTotalNonNullable(
-                            new SelectItemTotalInteger(
-                                "count",
-                                new IntegerTotal(
-                                    new AggregateIntegerTotal(new CountTotal())
-                                )
-                            )
-                        )
-                    ),
-                    new SelectItemTotal(
-                        new SelectItemTotalNonNullable(
-                            new SelectItemTotalInteger(
-                                "sum",
-                                new IntegerTotal(
-                                    new AggregateIntegerTotal(
-                                        new SumIntegerTotal(
-                                            new IntegerNullableRow(
-                                                new IntegerRow(
-                                                    new FieldInteger("o", "total")
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                ]
-            )
+        return new MainTotalQuery(
+            from: new FromEntity("t.orders", "o"),
+            aggregate:
+            [
+                new SelectItemTotal("count", new CountTotal()),
+                new SelectItemTotal(
+                    "sum",
+                    new SumIntegerTotal(new FieldInteger("o", "total"))
+                ),
+            ]
         );
     }
 
     // from t.orders o group by o.person select person, count()
     public static PureQLQuery OrdersPerPerson()
     {
-        return new PureQLQuery(
-            new MainGroupedQuery(
-                new From(new FromEntity("t.orders", "o")),
-                [
-                    new GroupKey(
-                        new GroupKeyNonNullable(
-                            new GroupKeyInteger(
-                                "person",
-                                new IntegerRow(new FieldInteger("o", "person"))
-                            )
-                        )
-                    ),
-                ],
-                [
-                    new SelectItemGroup(
-                        new SelectItemGroupNonNullable(
-                            new SelectItemGroupInteger(
-                                "person",
-                                new IntegerGroup(new KeyInteger("person"))
-                            )
-                        )
-                    ),
-                    new SelectItemGroup(
-                        new SelectItemGroupNonNullable(
-                            new SelectItemGroupInteger(
-                                "count",
-                                new IntegerGroup(
-                                    new AggregateIntegerGroup(new CountGroup())
-                                )
-                            )
-                        )
-                    ),
-                ]
-            )
+        return new MainGroupedQueryWithoutPagination(
+            from: new FromEntity("t.orders", "o"),
+            groupBy: [new GroupKey("person", new FieldInteger("o", "person"))],
+            select:
+            [
+                new SelectItemGroup("person", new KeyInteger("person")),
+                new SelectItemGroup("count", new CountGroup()),
+            ]
         );
     }
 
     private static SelectItemProjection Name(string source, string alias = "name")
     {
-        return new SelectItemProjection(
-            new SelectItemProjectionNullable(
-                new SelectItemProjectionStringNullable(
-                    alias,
-                    new ExactStringNullableProjection(
-                        new FieldStringNullable(source, "name")
-                    )
-                )
-            )
-        );
+        return new SelectItemProjection(alias, new FieldStringNullable(source, "name"));
     }
 
     private static SelectItemProjection Total(string source)
     {
         return new SelectItemProjection(
-            new SelectItemProjectionNullable(
-                new SelectItemProjectionIntegerNullable(
-                    "total",
-                    new ExactIntegerNullableProjection(
-                        new FieldIntegerNullable(source, "total")
-                    )
-                )
-            )
+            "total",
+            new FieldIntegerNullable(source, "total")
         );
     }
 
     private static StringNullableRow Team(string source)
     {
-        return new StringNullableRow(
-            new ExactStringNullableRow(new FieldStringNullable(source, "team"))
-        );
+        return new FieldStringNullable(source, "team");
     }
 
     private static DecimalNullableRow Integer(string source, string field)
     {
-        return new DecimalNullableRow(
-            new ExactIntegerNullableRow(new FieldIntegerNullable(source, field))
-        );
+        return new FieldIntegerNullable(source, field);
     }
 
     private static BooleanRow Equal(DecimalNullableRow left, DecimalNullableRow right)
     {
-        return new BooleanRow(
-            new ComparisonRow(new EqualRow(new EqualDecimalRow(left, right)))
-        );
+        return new EqualDecimalRow(left, right);
     }
 }

@@ -20,8 +20,10 @@ public enum Refusal
 // provider answers it from a database; or refuses it, as a translating
 // provider refuses a query it cannot translate; or fails it with any other
 // exception, as a database error does.
-internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Exception? failure = null)
-    : IQueryProvider
+internal sealed class RecordingProvider(
+    Refusal refusal = Refusal.Never,
+    Exception? failure = null
+) : IQueryProvider
 {
     private readonly Refusal _refusal = refusal;
 
@@ -75,7 +77,10 @@ internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Excepti
             throw _failure;
         }
 
-        object? result = Expression.Lambda(new InMemory().Visit(expression)).Compile().DynamicInvoke();
+        object? result = Expression
+            .Lambda(new InMemory().Visit(expression))
+            .Compile()
+            .DynamicInvoke();
 
         return _refusal == Refusal.OnFirstValue && result is IEnumerable values
             ? Refused(values)
@@ -87,7 +92,9 @@ internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Excepti
     {
         foreach (object? value in values)
         {
-            throw new NotSupportedException($"The query is refused {Refusal.OnFirstValue}.");
+            throw new NotSupportedException(
+                $"The query is refused {Refusal.OnFirstValue}."
+            );
         }
 
         yield break;

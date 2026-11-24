@@ -6,7 +6,6 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
@@ -30,22 +29,12 @@ public sealed class NullabilityTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionIntegerNullable(
-                                    "id",
-                                    new ExactIntegerNullableProjection(
-                                        new FieldIntegerNullable("i", "id")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select:
+                [
+                    new SelectItemProjection("id", new FieldIntegerNullable("i", "id")),
+                ]
             )
         );
 
@@ -57,20 +46,9 @@ public sealed class NullabilityTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "id",
-                                    new IntegerProjection(new FieldInteger("i", "id"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                select: [new SelectItemProjection("id", new FieldInteger("i", "id"))]
             )
         );
 
@@ -82,39 +60,13 @@ public sealed class NullabilityTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "name",
-                                    new StringProjection(new FieldString("i", "name"))
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new EqualRow(
-                                new EqualStringRow(
-                                    new StringNullableRow(
-                                        new StringRow(new FieldString("i", "name"))
-                                    ),
-                                    new StringNullableRow(
-                                        new StringRow(new LiteralString(""))
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                where: new EqualStringRow(
+                    new FieldString("i", "name"),
+                    new LiteralString("")
+                ),
+                select: [new SelectItemProjection("name", new FieldString("i", "name"))]
             )
         );
 
@@ -126,43 +78,19 @@ public sealed class NullabilityTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "name",
-                                    new ExactStringNullableProjection(
-                                        new FieldStringNullable("i", "name")
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new EqualRow(
-                                new EqualStringRow(
-                                    new StringNullableRow(
-                                        new ExactStringNullableRow(
-                                            new FieldStringNullable("i", "name")
-                                        )
-                                    ),
-                                    new StringNullableRow(
-                                        new StringRow(new LiteralString(""))
-                                    )
-                                )
-                            )
-                        )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                where: new EqualStringRow(
+                    new FieldStringNullable("i", "name"),
+                    new LiteralString("")
+                ),
+                select:
+                [
+                    new SelectItemProjection(
+                        "name",
+                        new FieldStringNullable("i", "name")
                     ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                ]
             )
         );
 

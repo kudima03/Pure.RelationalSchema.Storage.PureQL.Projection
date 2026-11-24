@@ -7,7 +7,6 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
@@ -32,37 +31,22 @@ public sealed class ExecutionTests
         ("tag", new StringColumnType())
     );
 
-    private static readonly string[][] ItemRows = [["1", "pen"], ["2", "ink"], ["3", "pad"]];
+    private static readonly string[][] ItemRows =
+    [
+        ["1", "pen"],
+        ["2", "ink"],
+        ["3", "pad"],
+    ];
 
     // from t.items where id > 1 select name
     private static readonly PureQLQuery NamesAboveOne = new(
-        new MainPlainQuery(
-            new From(new FromEntity("t.items", "i")),
-            [
-                new SelectItemProjection(
-                    new SelectItemProjectionNonNullable(
-                        new SelectItemProjectionString(
-                            "name",
-                            new StringProjection(new FieldString("i", "name"))
-                        )
-                    )
-                ),
-            ],
-            subqueries: null,
-            joins: null,
-            where: new BooleanRow(
-                new ComparisonRow(
-                    new GreaterThanRow(
-                        new GreaterThanDecimalRow(
-                            new DecimalNullableRow(new IntegerRow(new FieldInteger("i", "id"))),
-                            new DecimalNullableRow(new IntegerRow(new LiteralInteger(1)))
-                        )
-                    )
-                )
+        new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.items", "i"),
+            where: new GreaterThanDecimalRow(
+                new FieldInteger("i", "id"),
+                new LiteralInteger(1)
             ),
-            orderBy: null,
-            pagination: null,
-            distinctBy: null
+            select: [new SelectItemProjection("name", new FieldString("i", "name"))]
         )
     );
 
@@ -70,7 +54,10 @@ public sealed class ExecutionTests
     public void QueryBelowTheResultRowsGoesToTheProviderAndTheTableIsNotRead()
     {
         RecordingProvider provider = new();
-        IStoredSchemaDataSet schema = ProvidedTable.Schema(Items.With(ItemRows), provider);
+        IStoredSchemaDataSet schema = ProvidedTable.Schema(
+            Items.With(ItemRows),
+            provider
+        );
         ProvidedTable table = (ProvidedTable)schema.Values.Single();
         PureQLProjection projection = new([schema], NamesAboveOne);
 
@@ -111,7 +98,10 @@ public sealed class ExecutionTests
     public void QueryTheProviderRefusesRunsInMemory(Refusal refusal)
     {
         RecordingProvider provider = new(refusal);
-        IStoredSchemaDataSet schema = ProvidedTable.Schema(Items.With(ItemRows), provider);
+        IStoredSchemaDataSet schema = ProvidedTable.Schema(
+            Items.With(ItemRows),
+            provider
+        );
         ProvidedTable table = (ProvidedTable)schema.Values.Single();
         PureQLProjection projection = new([schema], NamesAboveOne);
 
@@ -130,7 +120,10 @@ public sealed class ExecutionTests
     public void ProviderFailureThatIsNotARefusalFailsTheQuery()
     {
         RecordingProvider provider = new(failure: new InvalidOperationException("down"));
-        IStoredSchemaDataSet schema = ProvidedTable.Schema(Items.With(ItemRows), provider);
+        IStoredSchemaDataSet schema = ProvidedTable.Schema(
+            Items.With(ItemRows),
+            provider
+        );
         ProvidedTable table = (ProvidedTable)schema.Values.Single();
         PureQLProjection projection = new([schema], NamesAboveOne);
 
@@ -157,10 +150,18 @@ public sealed class ExecutionTests
     public void LastEnumerationTellsWhereItRan()
     {
         RecordingProvider provider = new();
-        IStoredSchemaDataSet provided = ProvidedTable.Schema(Items.With(ItemRows), provider);
+        IStoredSchemaDataSet provided = ProvidedTable.Schema(
+            Items.With(ItemRows),
+            provider
+        );
         PureQLProjection translated = new([provided], NamesAboveOne);
         PureQLProjection refused = new(
-            [ProvidedTable.Schema(Items.With(ItemRows), new RecordingProvider(Refusal.OnCreation))],
+            [
+                ProvidedTable.Schema(
+                    Items.With(ItemRows),
+                    new RecordingProvider(Refusal.OnCreation)
+                ),
+            ],
             NamesAboveOne
         );
 
@@ -176,7 +177,10 @@ public sealed class ExecutionTests
     public void QueryComposedOverTheProjectionRunsInMemoryOverTheProviderRows()
     {
         RecordingProvider provider = new();
-        IStoredSchemaDataSet schema = ProvidedTable.Schema(Items.With(ItemRows), provider);
+        IStoredSchemaDataSet schema = ProvidedTable.Schema(
+            Items.With(ItemRows),
+            provider
+        );
         ProvidedTable table = (ProvidedTable)schema.Values.Single();
         PureQLProjection projection = new([schema], NamesAboveOne);
 
@@ -194,9 +198,8 @@ public sealed class ExecutionTests
         );
 
         Assert.Equal(2, provider.Queries.Count);
-        Assert.All(
-            provider.Queries,
-            query => Assert.Same(((MethodCallExpression)projection.Expression).Arguments[0], query)
+        Assert.All(provider.Queries, query =>
+            Assert.Same(((MethodCallExpression)projection.Expression).Arguments[0], query)
         );
         Assert.Equal(QueryExecution.Translated, projection.Execution);
         Assert.Equal(0, table.Reads);
@@ -206,7 +209,10 @@ public sealed class ExecutionTests
     public async Task AsyncEnumerationGoesThroughTheProvider()
     {
         RecordingProvider provider = new();
-        IStoredSchemaDataSet schema = ProvidedTable.Schema(Items.With(ItemRows), provider);
+        IStoredSchemaDataSet schema = ProvidedTable.Schema(
+            Items.With(ItemRows),
+            provider
+        );
         ProvidedTable table = (ProvidedTable)schema.Values.Single();
         PureQLProjection projection = new([schema], NamesAboveOne);
         List<IRow> rows = [];
@@ -233,51 +239,21 @@ public sealed class ExecutionTests
         );
         PureQLProjection projection = new(
             [items, tags],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items", "i")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "tag",
-                                    new StringProjection(new FieldString("g", "tag"))
-                                )
-                            )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items", "i"),
+                joins:
+                [
+                    new JoinEntity(
+                        JoinKind.Inner,
+                        "s.tags",
+                        new EqualDecimalRow(
+                            new FieldInteger("g", "item_id"),
+                            new FieldInteger("i", "id")
                         ),
-                    ],
-                    subqueries: null,
-                    joins:
-                    [
-                        new Join(
-                            new JoinEntity(
-                                JoinKind.Inner,
-                                "s.tags",
-                                new BooleanRow(
-                                    new ComparisonRow(
-                                        new EqualRow(
-                                            new EqualDecimalRow(
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(
-                                                        new FieldInteger("g", "item_id")
-                                                    )
-                                                ),
-                                                new DecimalNullableRow(
-                                                    new IntegerRow(new FieldInteger("i", "id"))
-                                                )
-                                            )
-                                        )
-                                    )
-                                ),
-                                "g"
-                            )
-                        ),
-                    ],
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+                        "g"
+                    ),
+                ],
+                select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
         );
 
@@ -289,9 +265,8 @@ public sealed class ExecutionTests
             "[items].Select(i => (i[id]!)).Join([tags]",
             TreeText.Of(query)
         );
-        Assert.All(
-            items.Values.Concat(tags.Values).Cast<ProvidedTable>(),
-            table => Assert.Equal(0, table.Reads)
+        Assert.All(items.Values.Concat(tags.Values).Cast<ProvidedTable>(), table =>
+            Assert.Equal(0, table.Reads)
         );
     }
 }

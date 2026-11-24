@@ -11,7 +11,6 @@ using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using Decimal = Pure.Primitives.Number.Decimal;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 using String = Pure.Primitives.String.String;
@@ -57,7 +56,7 @@ public sealed class ParameterTests
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                Paged(new Pagination(0, new ParamInteger("page_size")))
+                Paged(new Pagination(take: new ParamInteger("page_size")))
             )
         );
         Assert.Contains("'page_size'", error.Message, StringComparison.Ordinal);
@@ -69,7 +68,7 @@ public sealed class ParameterTests
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                Paged(new Pagination(0, new ParamInteger("page_size"))),
+                Paged(new Pagination(take: new ParamInteger("page_size"))),
                 new Dictionary<string, IParameter>
                 {
                     ["page"] = new IntegerParameter(new Long(1)),
@@ -99,7 +98,7 @@ public sealed class ParameterTests
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                Paged(new Pagination(0, new ParamInteger("page_size"))),
+                Paged(new Pagination(take: new ParamInteger("page_size"))),
                 new Dictionary<string, IParameter>
                 {
                     ["page_size"] = OfAnotherType[parameter],
@@ -118,7 +117,7 @@ public sealed class ParameterTests
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                Paged(new Pagination(0, new ParamInteger("page_size"))),
+                Paged(new Pagination(take: new ParamInteger("page_size"))),
                 new Dictionary<string, IParameter>
                 {
                     ["page_size"] = new NullableIntegerParameter(),
@@ -157,36 +156,22 @@ public sealed class ParameterTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.names")),
-                        [Name()],
-                        subqueries:
-                        [
-                            new Subquery(
-                                "unread",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromEntity("t.names")),
-                                        [Name()],
-                                        joins: null,
-                                        where: null,
-                                        orderBy: null,
-                                        pagination: new Pagination(
-                                            0,
-                                            new ParamInteger("page_size")
-                                        ),
-                                        distinctBy: null
-                                    )
+                new MainPlainQueryWithoutPagination(
+                    subqueries:
+                    [
+                        new SubqueryQuery(
+                            "unread",
+                            new PlainQueryWithPagination(
+                                from: new FromEntity("t.names"),
+                                select: [Name()],
+                                pagination: new Pagination(
+                                    take: new ParamInteger("page_size")
                                 )
-                            ),
-                        ],
-                        joins: null,
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                            )
+                        ),
+                    ],
+                    from: new FromEntity("t.names"),
+                    select: [Name()]
                 ),
                 new Dictionary<string, IParameter>
                 {
@@ -204,7 +189,12 @@ public sealed class ParameterTests
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
-                Paged(new Pagination(new ParamInteger("skip"), new ParamInteger("take"))),
+                Paged(
+                    new Pagination(
+                        skip: new ParamInteger("skip"),
+                        take: new ParamInteger("take")
+                    )
+                ),
                 new Dictionary<string, IParameter>
                 {
                     ["skip"] = new IntegerParameter(new Long(skip)),
@@ -229,13 +219,20 @@ public sealed class ParameterTests
     [InlineData("time", "25:00", "'25:00', which is not a time.")]
     [InlineData("datetime", "noon", "'noon', which is not a datetime.")]
     [InlineData("uuid", "8c5e1a2b", "'8c5e1a2b', which is not a uuid.")]
-    public void ValueThatIsNotOfItsTypeIsRejected(string type, string text, string message)
+    public void ValueThatIsNotOfItsTypeIsRejected(
+        string type,
+        string text,
+        string message
+    )
     {
         ArgumentException error = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [Names],
                 Reading(type),
-                new Dictionary<string, IParameter> { ["p"] = new TextParameter(type, text) }
+                new Dictionary<string, IParameter>
+                {
+                    ["p"] = new TextParameter(type, text),
+                }
             )
         );
         Assert.Equal($"Parameter 'p' is bound to {message}", error.Message);
@@ -319,83 +316,33 @@ public sealed class ParameterTests
 
     private static SelectItemProjection Name()
     {
-        return new SelectItemProjection(
-            new SelectItemProjectionNonNullable(
-                new SelectItemProjectionString(
-                    "name",
-                    new StringProjection(new FieldString("t.names", "name"))
-                )
-            )
-        );
+        return new SelectItemProjection("name", new FieldString("t.names", "name"));
     }
 
     private static PureQLQuery Paged(Pagination pagination)
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.names")),
-                [Name()],
-                subqueries: null,
-                joins: null,
-                where: null,
-                orderBy: null,
-                pagination: pagination,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithPagination(
+            from: new FromEntity("t.names"),
+            select: [Name()],
+            pagination: pagination
         );
     }
 
     private static PureQLQuery NamedAs(ParamString name)
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.names")),
-                [Name()],
-                subqueries: null,
-                joins: null,
-                where: new BooleanRow(
-                    new ComparisonRow(
-                        new EqualRow(
-                            new EqualStringRow(
-                                new StringNullableRow(
-                                    new StringRow(new FieldString("t.names", "name"))
-                                ),
-                                new StringNullableRow(new StringRow(name))
-                            )
-                        )
-                    )
-                ),
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.names"),
+            where: new EqualStringRow(new FieldString("t.names", "name"), name),
+            select: [Name()]
         );
     }
 
     private static PureQLQuery InList(ListParamString list)
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.names")),
-                [Name()],
-                subqueries: null,
-                joins: null,
-                where: new BooleanRow(
-                    new ComparisonRow(
-                        new InRow(
-                            new InStringRow(
-                                new StringNullableRow(
-                                    new StringRow(new FieldString("t.names", "name"))
-                                ),
-                                new ListString(list)
-                            )
-                        )
-                    )
-                ),
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.names"),
+            where: new InStringRow(new FieldString("t.names", "name"), list),
+            select: [Name()]
         );
     }
 
@@ -404,70 +351,27 @@ public sealed class ParameterTests
     {
         SelectItemProjection column = type switch
         {
-            "integer" => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionInteger("p", new IntegerProjection(new ParamInteger("p")))
-                )
-            ),
-            "decimal" => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionDecimal("p", new ExactDecimalProjection(new ParamDecimal("p")))
-                )
-            ),
-            "boolean" => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionBoolean("p", new BooleanProjection(new ParamBoolean("p")))
-                )
-            ),
-            "date" => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionDate("p", new DateProjection(new ParamDate("p")))
-                )
-            ),
-            "time" => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionTime("p", new TimeProjection(new ParamTime("p")))
-                )
-            ),
-            "datetime" => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionDatetime("p", new DatetimeProjection(new ParamDatetime("p")))
-                )
-            ),
-            _ => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionUuid("p", new UuidProjection(new ParamUuid("p")))
-                )
-            ),
+            "integer" => new SelectItemProjection("p", new ParamInteger("p")),
+            "decimal" => new SelectItemProjection("p", new ParamDecimal("p")),
+            "boolean" => new SelectItemProjection("p", new ParamBoolean("p")),
+            "date" => new SelectItemProjection("p", new ParamDate("p")),
+            "time" => new SelectItemProjection("p", new ParamTime("p")),
+            "datetime" => new SelectItemProjection("p", new ParamDatetime("p")),
+            _ => new SelectItemProjection("p", new ParamUuid("p")),
         };
 
-        return new PureQLQuery(
-            new MainPlainQuery(new From(new FromEntity("t.names")), [column])
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.names"),
+            select: [column]
         );
     }
 
     private static PureQLQuery InDecimalList(ListParamDecimal list)
     {
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity("t.names")),
-                [Name()],
-                subqueries: null,
-                joins: null,
-                where: new BooleanRow(
-                    new ComparisonRow(
-                        new InRow(
-                            new InDecimalRow(
-                                new DecimalNullableRow(new ExactDecimalRow(new ParamDecimal("d"))),
-                                new ListDecimal(list)
-                            )
-                        )
-                    )
-                ),
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity("t.names"),
+            where: new InDecimalRow(new ParamDecimal("d"), list),
+            select: [Name()]
         );
     }
 }

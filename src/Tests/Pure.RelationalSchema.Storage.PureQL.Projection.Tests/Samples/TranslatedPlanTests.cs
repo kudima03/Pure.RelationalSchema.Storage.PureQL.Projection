@@ -3,7 +3,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
@@ -34,9 +33,8 @@ public sealed class TranslatedPlanTests(PostgreSqlDatabase database)
         string plan = _database.LastPlan();
 
         Assert.Equal(QueryExecution.Translated, projection.Execution);
-        _ = Assert.Single(
-            plan.Split('\n'),
-            line => line.Contains("Scan on \"", StringComparison.Ordinal)
+        _ = Assert.Single(plan.Split('\n'), line =>
+            line.Contains("Scan on \"", StringComparison.Ordinal)
         );
     }
 
@@ -75,83 +73,32 @@ public sealed class TranslatedPlanTests(PostgreSqlDatabase database)
     // the next: the six orders are placed on six consecutive days, so 6 + 5.
     private static PureQLQuery DateRangeJoin()
     {
-        return new PureQLQuery(
-            new MainTotalQuery(
-                new From(new FromEntity(Orders, "o")),
-                [
-                    new SelectItemTotal(
-                        new SelectItemTotalNonNullable(
-                            new SelectItemTotalInteger(
-                                "n",
-                                new IntegerTotal(
-                                    new AggregateIntegerTotal(new CountTotal())
-                                )
+        return new MainTotalQuery(
+            from: new FromEntity(Orders, "o"),
+            joins:
+            [
+                new JoinEntity(
+                    JoinKind.Inner,
+                    Orders,
+                    new AndRow([
+                        new GreaterThanOrEqualDateRow(PlacedOn("p"), PlacedOn("o")),
+                        new LessThanDateRow(
+                            PlacedOn("p"),
+                            new DateAddDaysDateRow(
+                                new FieldDate("o", "placed_on"),
+                                new LiteralInteger(2)
                             )
-                        )
-                    ),
-                ],
-                subqueries: null,
-                joins:
-                [
-                    new Join(
-                        new JoinEntity(
-                            JoinKind.Inner,
-                            Orders,
-                            new BooleanRow(
-                                new LogicalRow(
-                                    new AndRow(
-                                        [
-                                            new BooleanRow(
-                                                new ComparisonRow(
-                                                    new GreaterThanOrEqualRow(
-                                                        new GreaterThanOrEqualDateRow(
-                                                            PlacedOn("p"),
-                                                            PlacedOn("o")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                            new BooleanRow(
-                                                new ComparisonRow(
-                                                    new LessThanRow(
-                                                        new LessThanDateRow(
-                                                            PlacedOn("p"),
-                                                            new DateNullableRow(
-                                                                new DateRow(
-                                                                    new DateAddDaysDateRow(
-                                                                        new DateRow(
-                                                                            new FieldDate(
-                                                                                "o",
-                                                                                "placed_on"
-                                                                            )
-                                                                        ),
-                                                                        new IntegerRow(
-                                                                            new LiteralInteger(
-                                                                                2
-                                                                            )
-                                                                        )
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                            "p"
-                        )
-                    ),
-                ],
-                where: null
-            )
+                        ),
+                    ]),
+                    "p"
+                ),
+            ],
+            aggregate: [new SelectItemTotal("n", new CountTotal())]
         );
     }
 
     private static DateNullableRow PlacedOn(string source)
     {
-        return new DateNullableRow(new DateRow(new FieldDate(source, "placed_on")));
+        return new FieldDate(source, "placed_on");
     }
 }

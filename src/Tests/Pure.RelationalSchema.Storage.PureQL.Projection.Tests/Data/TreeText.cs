@@ -61,10 +61,10 @@ internal static class TreeText
             null => "",
             ConditionalExpression read when !_full && StoredRead(read) is string cell =>
                 cell,
-            UnaryExpression read when !_full && RequiredRead(read) is string cell =>
-                cell + "!",
-            MemberExpression read when !_full && CellText(read) is string cell =>
-                cell + "!",
+            UnaryExpression read when !_full && RequiredRead(read) is string cell => cell
+                + "!",
+            MemberExpression read when !_full && CellText(read) is string cell => cell
+                + "!",
             ConstantExpression constant => Constant(constant.Value),
             ParameterExpression parameter => parameter.Name ?? "_",
             LambdaExpression lambda => Lambda(lambda),
@@ -86,11 +86,13 @@ internal static class TreeText
     // IsNullOrEmpty(row.Cells[column].Value.TextValue) ? null : parse(...)
     private static string? StoredRead(ConditionalExpression conditional)
     {
-        return conditional.Test is MethodCallExpression
-        {
-            Method.Name: nameof(string.IsNullOrEmpty),
-            Arguments: [Expression text],
-        }
+        return
+            conditional.Test
+                is MethodCallExpression
+            {
+                Method.Name: nameof(string.IsNullOrEmpty),
+                Arguments: [Expression text],
+            }
             ? CellText(text)
             : null;
     }
@@ -99,8 +101,10 @@ internal static class TreeText
     // Parse method converted to the nullable type; a string is the text itself.
     private static string? RequiredRead(UnaryExpression conversion)
     {
-        return conversion.NodeType == ExpressionType.Convert
-            && conversion.Operand is MethodCallExpression
+        return
+            conversion.NodeType == ExpressionType.Convert
+            && conversion.Operand
+                is MethodCallExpression
             {
                 Method.Name: "Parse",
                 Object: null,
@@ -113,19 +117,20 @@ internal static class TreeText
     // row[column] for row.Cells[column].Value.TextValue.
     private static string? CellText(Expression text)
     {
-        return text
-            is MemberExpression
-        {
-            Expression: MemberExpression
+        return
+            text
+                is MemberExpression
             {
-                Expression: MethodCallExpression
+                Expression: MemberExpression
                 {
-                    Method.Name: "get_Item",
-                    Object: MemberExpression { Expression: Expression row },
-                    Arguments: [ConstantExpression { Value: IColumn column }],
+                    Expression: MethodCallExpression
+                    {
+                        Method.Name: "get_Item",
+                        Object: MemberExpression { Expression: Expression row },
+                        Arguments: [ConstantExpression { Value: IColumn column }],
+                    },
                 },
-            },
-        }
+            }
             ? $"{Text(row)}[{column.Name.TextValue}]"
             : null;
     }
@@ -158,9 +163,10 @@ internal static class TreeText
 
     private static string Lambda(LambdaExpression lambda)
     {
-        string parameters = lambda.Parameters.Count == 1
-            ? Text(lambda.Parameters[0])
-            : $"({string.Join(", ", lambda.Parameters.Select(Text))})";
+        string parameters =
+            lambda.Parameters.Count == 1
+                ? Text(lambda.Parameters[0])
+                : $"({string.Join(", ", lambda.Parameters.Select(Text))})";
 
         return $"{parameters} => {Text(lambda.Body)}";
     }

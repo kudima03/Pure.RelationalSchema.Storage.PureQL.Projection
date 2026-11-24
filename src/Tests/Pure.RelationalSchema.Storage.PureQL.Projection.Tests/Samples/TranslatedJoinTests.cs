@@ -5,7 +5,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
@@ -100,61 +99,24 @@ public sealed class TranslatedJoinTests(PostgreSqlDatabase database)
     // a has one.
     private static PureQLQuery GuardedInWhere()
     {
-        return new PureQLQuery(
-            new MainTotalQuery(
-                new From(new FromEntity(Employees, "a")),
-                [
-                    new SelectItemTotal(
-                        new SelectItemTotalNonNullable(
-                            new SelectItemTotalInteger(
-                                "n",
-                                new IntegerTotal(
-                                    new AggregateIntegerTotal(new CountTotal())
-                                )
-                            )
-                        )
-                    ),
-                ],
-                subqueries: null,
-                joins:
-                [
-                    new Join(
-                        new JoinEntity(
-                            JoinKind.Inner,
-                            Employees,
-                            new BooleanRow(
-                                new ComparisonRow(
-                                    new EqualRow(
-                                        new EqualUuidRow(ManagerId("a"), ManagerId("b"))
-                                    )
-                                )
-                            ),
-                            "b"
-                        )
-                    ),
-                ],
-                where: new BooleanRow(
-                    new ComparisonRow(
-                        new NotEqualRow(
-                            new NotEqualUuidRow(
-                                ManagerId("a"),
-                                new UuidNullableRow(
-                                    new ExactUuidNullableRow(new LiteralUuidNullable())
-                                )
-                            )
-                        )
-                    )
-                )
-            )
+        return new MainTotalQuery(
+            from: new FromEntity(Employees, "a"),
+            joins:
+            [
+                new JoinEntity(
+                    JoinKind.Inner,
+                    Employees,
+                    new EqualUuidRow(ManagerId("a"), ManagerId("b")),
+                    "b"
+                ),
+            ],
+            where: new NotEqualUuidRow(ManagerId("a"), new LiteralUuidNullable()),
+            aggregate: [new SelectItemTotal("n", new CountTotal())]
         );
     }
 
     private static UuidNullableRow ManagerId(string source)
     {
-        return new UuidNullableRow(
-            new ExactUuidNullableRow(
-                new FieldUuidNullable(source, "employee_manager_id")
-            )
-        );
+        return new FieldUuidNullable(source, "employee_manager_id");
     }
 }
