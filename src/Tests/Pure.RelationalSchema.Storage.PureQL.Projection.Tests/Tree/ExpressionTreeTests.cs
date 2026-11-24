@@ -650,6 +650,7 @@ public sealed class ExpressionTreeTests
                         )
                     ),
                 ],
+                orderBy: [new OrderItemProjectionExpression(new LiteralInteger(7))],
                 pagination: new Pagination(take: 1)
             )
         );
@@ -822,7 +823,7 @@ public sealed class ExpressionTreeTests
                 from: new FromEntity("s.tags", "g"),
                 where: new InStringRow(
                     new FieldString("g", "tag"),
-                    new ListSubqueryColumnString("names", "name", false)
+                    new ListSubqueryColumnString("names", "name")
                 ),
                 select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
@@ -871,7 +872,7 @@ public sealed class ExpressionTreeTests
                 from: new FromEntity("s.tags", "g"),
                 where: new InStringRow(
                     new FieldString("g", "tag"),
-                    new ListSubqueryColumnString("first_name", "name", false)
+                    new ListSubqueryColumnString("first_name", "name")
                 ),
                 select: [new SelectItemProjection("tag", new FieldString("g", "tag"))]
             )
@@ -926,6 +927,7 @@ public sealed class ExpressionTreeTests
                     new SelectItemProjection("active", new FieldBoolean("i", "active")),
                 ],
                 distinctBy: ["active"],
+                orderBy: [new OrderItemProjectionExpression(new LiteralInteger(7))],
                 pagination: new Pagination(skip: 1, take: 5)
             )
         );
