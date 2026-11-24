@@ -9,9 +9,9 @@ Compiles PureQL queries over relational schema datasets into one LINQ expression
 
 ## Overview
 
-`Pure.RelationalSchema.Storage.PureQL.Projection` is an interpreter for the [PureQL specification](https://github.com/kudima03/PureQL-Specification) `0.1.0-preview.2.0.1` over the Pure relational storage model. Given a collection of `IStoredSchemaDataSet` objects and a `PureQLQuery`, it produces an `IStoredTableDataSet` whose rows are the query's result under the specification's semantics.
+`Pure.RelationalSchema.Storage.PureQL.Projection` is an interpreter for the [PureQL specification](https://github.com/kudima03/PureQL-Specification) `0.1.0-preview.3.0.0` over the Pure relational storage model. Given a collection of `IStoredSchemaDataSet` objects and a `PureQLQuery`, it produces an `IStoredTableDataSet` whose rows are the query's result under the specification's semantics.
 
-The query is compiled when the projection is built to a single `IQueryable<IRow>` expression tree made of standard query operators over one root per stored table, ending in the `Select` that builds the result rows (see [Expression tree](#expression-tree)). Enumerating the projection hands the query below the result rows to the provider of the stored tables it reads, so that a provider that translates it (to PostgreSQL) runs it as one SQL statement and the projection only maps its values to result rows (see [Running a query](#running-a-query)). The tree runs in memory, with LINQ to Objects, only over tables held in memory, or when the provider refuses the query.
+The query is compiled when the projection is built to a single `IQueryable<IRow>` expression tree made of standard query operators over one root per stored table, ending in the `Select` that builds the result rows (see [Expression tree](#expression-tree)). Enumerating the projection hands the query below the result rows to the provider of the stored tables it reads, so that a provider that translates it (to PostgreSQL) runs it as one SQL statement and the projection only maps its values to result rows (see [Running a query](#running-a-query)). The tree runs in memory, with LINQ to Objects, only over tables held in memory, or when the provider refuses the query; run in memory, every value is computed exactly as the specification's **Semantics** define it (see [How values are computed](#how-values-are-computed)).
 
 ## Public API
 
@@ -22,7 +22,7 @@ The entry point. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>` and 
 | Member | Description |
 |--------|-------------|
 | `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, PureQLQuery query)` | Validates the query against the datasets' schemas and builds the projection. |
-| `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query without subqueries (the model's subquery type). |
+| `PureQLProjection(IEnumerable<IStoredSchemaDataSet> datasets, Query query)` | The same for a query that declares no subqueries (the model's `Query`: what a subquery, a set operation's input or a recursive seed holds). |
 | `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters)` | Either of the above with parameters bound by name to Pure parameters (see [Parameters](#parameters)). |
 | `PureQLProjection(..., IReadOnlyDictionary<string, IParameter> parameters, TimeProvider clock)` | The same, with the clock that date math parameters such as `now-10d` read (see [Date math](#date-math)); the constructors without it use `TimeProvider.System`. |
 | `ITable TableSchema` | An unnamed table with one column per `select` item, named by its alias and typed by its declared type. |
@@ -35,13 +35,77 @@ The entry point. Implements `IStoredTableDataSet`, `IAsyncEnumerable<IRow>` and 
 
 ### What is supported
 
-Every clause and operator of the specification: `from` and `joins` (`inner`, `left`, `right`, `full`, aliases and self-joins), `where`, `groupBy` over any row expression with keys referenced by alias, `having`, `select`, `aggregate` (total queries), `orderBy` over any expression, `distinctBy`, `pagination`, and subqueries read through `from`, `join` and `in`. All operators in the row, projection, group and total contexts are supported, including aggregates with `predicate` and `over`, and comparisons, `min` and `max` over every type.
+Every clause, query and operator of the specification:
 
-A plain query returns one row per row left by `where`, a total query exactly one row (even over no rows) and a grouped query one row per group. `distinctBy` runs after `orderBy` and keeps, of the rows equal on the listed columns, the first in order.
+- **Queries.** Plain, grouped and total queries with `from` and `joins` (`inner`, `left`, `right`, `full`, aliases and self-joins), `where`, `groupBy` over any row expression with keys referenced by alias, `having`, `select`, `aggregate`, `orderBy` by an expression or by a `select` column, `distinctBy` and `pagination` (`skip`, `take` or both, numbers or parameters); combined queries (`unionAll`, `union`, `intersect`, `except` over two or more queries of any kind, nested or not), as the main query, a subquery or an input.
+- **Subqueries** read through `from`, `join` and `in`: a query, inline rows (literal and parameter cells) and a recursive subquery (`seed`, a plain or grouped `next`, `maxDepth` as a number or a parameter).
+- **Operators** in the row, projection, group and total contexts: boolean and comparison operators over every type, `in`, `contains` / `startsWith` / `endsWith`, the arithmetic operators, rounding (`round` with `halfEven`, `truncate`, `floor`, `ceiling`, with and without `digits`), `abs`, `sign`, `greatest` / `least`, powers, roots, logarithms, trigonometry and `pi`, the string operators, `foldCase`, `normalize`, `removeDiacritics`, the regular expression operators, date and time arithmetic in days, seconds and months, the parts, `startOf…`, `…FromParts`, time zones, the conversions (`as…`, `tryAs…`, `asNullable`), `if`, `coalesce`, `nullIfEqual`.
+- **Aggregates** with `predicate` and `over`: `count`, `countDistinct`, `sum`, `average`, `min`, `max`, `any`, `all`, `first`, `last`, `concatAll`, `median`, the percentiles, `mode`, variances, standard deviations, covariances, `correlation` and the regression aggregates.
+- **Window functions** in the `select` and `orderBy` of a plain query: every aggregate over a partition, a frame of rows or a range of values (`integer`, `decimal`, `date` and `datetime` keys with their distances), the ranking functions and `previous` / `next`.
 
-The semantics are the specification's: `null` equals `null` and sorts first, ordering comparisons against `null` are false, lifted operators are `null` on a `null` operand, `integer` is a checked 64-bit integer, `decimal` is exact (`System.Decimal`), strings compare by code point, a `datetime` is an instant written in UTC, and seconds and `time` / `datetime` averages round half away from zero to the microsecond. Overflow, division by zero and dates outside the calendar fail the query with the corresponding .NET exception.
+A plain query returns one row per row left by `where`, a total query exactly one row (even over no rows), a grouped query one row per group and a combined query the rows of its inputs put together. `distinctBy` runs after `orderBy` and keeps, of the rows equal on the listed columns, the first in order.
 
-The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`: entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` lists only column aliases; a subquery reads only subqueries declared before it; a bound parameter's literal has the parameter's type, and a bound `pagination` is in range.
+The checks the specification leaves to the interpreter run when the projection is built, and a failing query raises `ArgumentException`:
+
+- entities, subqueries, sources and fields exist; each field declares its column's type and, after outer joins, its nullability; group key references name a key and repeat its type; source names, group key aliases, column aliases and subquery names are unique; `distinctBy` and the columns of `orderBy` are column aliases; a subquery reads only subqueries declared before it;
+- the inputs of a set operation and the rows of an inline subquery have the same column aliases, each once, and types that meet (`integer` and `decimal` give `decimal`; a column is nullable if it is in any input);
+- the `next` of a recursive subquery reads the subquery exactly once, in `from` or a join and not on the optional side of an outer join, its `seed` does not read it, and `next` has the aliases of `seed` with types the seed's columns accept;
+- a parameter is bound to a value of its type (see [Parameters](#parameters)) and has one type in the whole document; a bound `pagination`, a `fraction` (0 to 1), a frame count and a range distance (0 or more), an `offset`, `buckets` and `maxDepth` (1 or more) are in range;
+- a regular expression, literal or bound, is a pattern of the dialect (its parentheses balance, its ranges and counted quantifiers are in order, it holds no construct outside the dialect, a line feed is written `\n`) and has the `group` asked for;
+- a `zone`, literal or bound, is a name of the specification's list of time zones, or `UTC`.
+
+An execution error fails the enumeration with the .NET exception of what failed, before or while rows are read:
+
+| Error | Exception |
+|---|---|
+| an `integer` outside 64 bits, a `decimal` of magnitude 10²⁸ or more | `OverflowException` |
+| division by zero in `divide`, `integerDivide`, `modulo` | `DivideByZeroException` |
+| a value outside a function's domain (`sqrt` of a negative number, `ln` of a number that is not positive, `asin` outside −1 to 1, …); a `substring` or `position` with a `start` below 1, a negative `length` or `count`, a `splitPart` with an `index` of 0; a date or datetime outside the years 0001–9999; a part out of range in `dateFromParts` / `timeFromParts` | `ArgumentOutOfRangeException` |
+| text that is not a literal of the type, read with `as…` | `FormatException` |
+| a zone computed for a row that is not a time zone name | `TimeZoneNotFoundException` |
+| a row of a recursive subquery deeper than `maxDepth` | `InvalidOperationException` |
+| a field declared non-null whose cell is empty (in memory) | `FormatException` |
+
+### How values are computed
+
+Run in memory, the interpreter computes every value as the specification's **Semantics** define it, so the digits, the order and the text of a result do not depend on .NET's own arithmetic, culture or string order. Where the BCL computes exactly that, the tree calls the BCL; where it does not, the tree calls a function of this library (see [Functions and query operators](#functions-and-query-operators)).
+
+| Values | How they are read and computed |
+|---|---|
+| `integer` | a checked 64-bit `long`: a result outside the range is an `OverflowException`. `add`, `subtract` and `multiply` over a list go from left to right, an integer step is an integer step even next to a later decimal operand; `sum` is computed from the exact values in any order, and only the sum is checked. `modulo` of the least integer by −1 is 0. |
+| `decimal` | `System.Decimal` holding only values m × 10⁻ˢ with \|m\| < 10²⁸ and 0 ≤ s ≤ 28. A sum, difference, product and quotient are computed exactly, with big integers, and rounded once, half away from zero, to the most decimal places that fit in 28 digits; a result of magnitude 10²⁸ or more is an `OverflowException`. .NET's own decimal operators (29 digits where 96 bits hold them, half to even, up to 7.9 × 10²⁸) are never used for a result. `divide(2, 3, 2)` is `0.3333333333333333333333333334`: each step of a list is rounded. |
+| rounding | `round`, `truncate`, `floor` and `ceiling` are exact; `round` to a negative number of digits divides exactly and rounds once (`round(149.9999999999999999999999999, -2)` is `100`); `halfEven` is `MidpointRounding.ToEven`. With `digits`, an `integer` stays an `integer` and a result beyond 64 bits is an `OverflowException`. |
+| `integerDivide`, `modulo` | of decimals: the exact quotient truncated toward zero, never rounded first, and the exact remainder with the sign of `left`. |
+| `power`, `sqrt`, `exp`, `ln`, `log10`, `log`, trigonometry | computed in integer arithmetic of more digits than the result, until the 28 digits are certain, and rounded once: the exact mathematical value, correctly rounded. Results a decimal holds are returned as they are (`power(1.5, 2)` is `2.25`, `log(8, 2)` is `3`). No `double` is used anywhere, also not while a tree is built. `pi` is the constant `3.141592653589793238462643383`. |
+| `sum`, `average`, statistics | from the exact values of the rows (sums of values, squares and products as big integers), one division and, for a standard deviation or a correlation, one square root of the exact ratio; rounded once. A partial sum is never an error, and a correlation never leaves −1 to 1. |
+| strings | UTF-16 text read by code point: `length`, `substring`, `position`, `padStart` / `padEnd`, `reverse` and `splitPart` count code points; equality and `contains` / `startsWith` / `endsWith` compare ordinally; order, `min` / `max`, `greatest` / `least`, `mode` and `percentileDiscrete` order by code point, not by UTF-16 code unit. |
+| `upper`, `lower`, `foldCase` | the full mappings of the Unicode Character Database 16.0.0 (`UnicodeData.txt`, the unconditional mappings of `SpecialCasing.txt` with the final sigma rule, `CaseFolding.txt` statuses C and F), from tables generated into this library: `upper("straße")` is `STRASSE`. .NET's own case conversion (simple mappings only) and the culture are not used. |
+| `normalize`, `removeDiacritics` | `string.Normalize`, the runtime's normalization data (ICU on Linux and macOS); `removeDiacritics` is NFD, every code point of general category `Mn` (the runtime's `CharUnicodeInfo`, Unicode 16.0.0 on .NET 11) dropped, then NFC. |
+| regular expressions | a pattern is parsed as the specification's dialect and rejected outside it, then written as a `System.Text.RegularExpressions.Regex` (backtracking engine, culture-invariant, case-sensitive) that matches by code point: the dot, a class and a negated class take one whole code point, `\d`, `\w`, `\s` and `\b` are the ASCII sets, `^` and `$` the two ends of the string. `replaceRegex` puts the replacement in as literal text and moves on by one code point after an empty match. |
+| `date`, `time`, `datetime` | `DateOnly`, `TimeOnly`, and a `DateTime` that is a UTC instant. Seconds are rounded half away from zero to the microsecond. Months are added with the day clamped to the end of a shorter month, and `dateDiffMonths` / `datetimeDiffMonths` are the inverse. ISO 8601 weeks and week years. |
+| time zones | a zone is a name of the specification's list (444 names of release 2026e of the IANA database, compiled into this library) or `UTC`; any other text is refused. The offset of a zone at an instant comes from the tz database of the machine. From a local date and time to an instant there is one rule, computed from the zone's offsets and not left to .NET's handling of ambiguous and invalid times: the first instant at which the zone's clocks read that date and time or later. `startOf…` with a zone is that rule applied to the start of the local period. |
+| conversions | `asString` writes the one spelling of a literal of the type; `as…` of a string and `tryAs…` read exactly that spelling with parsers of this library (no `+`, leading zeros, exponent, other letter case, offset other than `Z`), not .NET's `Parse`. |
+| windows | per partition, the rows are sorted by the window's `orderBy`; a frame of rows is a slice of them, a range the rows whose key lies within the distances of the current row's key (found by binary search; a bound outside the type reaches the end of the partition; rows whose key is `null` are only each other's window). `percentRank` and `cumulativeDistribution` divide exactly. |
+| recursive subqueries | level by level, every row of every level kept; the level after `maxDepth` being non-empty fails the query before any row is returned. |
+| set operations | rows compare column by column as `equal` compares values: `null` equals `null`, `1` equals `1.0`, strings by code points. |
+
+Reading stored cells and binding parameters is described under [Storage mapping](#storage-mapping) and [Parameters](#parameters).
+
+### Functions and query operators
+
+The public static classes below hold what an operator of the specification is in the tree when the BCL has no member that computes exactly what the specification defines. They are part of the public API so that a provider can recognise a call by its method and translate it; each takes non-null arguments (the tree checks operands for `null` around the call) and is a pure function.
+
+| Class | Members |
+|---|---|
+| `PureQLMath` | `Add`, `Subtract`, `Multiply`, `Divide` (what a decimal `+ - * /` of the tree is computed with in memory), `IntegerDivide`, `Modulo`, `Round`, `Truncate`, `RoundQuotient`, `PowerOfTen`, `Power`, `Sqrt`, `Exp`, `Ln`, `Log10`, `Log`, `Sin`, `Cos`, `Tan`, `Asin`, `Acos`, `Atan`, `Atan2`, `Pi` |
+| `PureQLText` | `Length`, `Upper`, `Lower`, `FoldCase`, `RemoveDiacritics`, `Trim`, `TrimStart`, `TrimEnd`, `Substring`, `Replace`, `Position`, `SplitPart`, `PadStart`, `PadEnd`, `Repeat`, `Reverse`, `ConcatWith`, `MatchesRegex`, `ExtractRegex`, `ReplaceRegex`, `RegexGroups` (the number of groups of a pattern of the dialect; `FormatException` for text that is not one) |
+| `PureQLTime` | `Quarter`, `DayOfWeek`, `Week`, `WeekYear`, `Microsecond`, `StartOfYear` … `StartOfSecond` (of a `DateOnly`, a `TimeOnly`, a `DateTime` in UTC, and a `DateTime` in a zone), `LocalDate`, `LocalTime`, `DatetimeFromParts` (in a zone), `TimeFromParts`, `DiffMonths`, `AddMonths` (in a zone), `IsZone` |
+| `PureQLConversions` | `AsString` of every type, `AsInteger`, `AsDecimal`, `AsBoolean`, `AsDate`, `AsTime`, `AsDatetime`, `AsUuid` of a string, and `TryAs…` of a nullable string |
+| `PureQLAggregates` | over the values an aggregate sees, nulls skipped: `Sum`, `Average` (what `Queryable.Sum` / `Average` of the tree are computed with in memory), `Median`, `PercentileContinuous`, `PercentileDiscrete<T>`, `Mode<T>`, `VariancePopulation`, `VarianceSample`, `StandardDeviationPopulation`, `StandardDeviationSample`, and over pairs `CovariancePopulation`, `CovarianceSample`, `Correlation`, `RegressionSlope`, `RegressionIntercept`, `RegressionRSquared` |
+| `PureQLWindows` | `Over(rows, partitionBy, orderBy, peers, frame, result)`: the window operator, over an `IQueryable` (what the tree holds) and over a plain sequence (what computes it) |
+| `PureQLWindow<TRow>` | what a window function reads for a row: `Row`, `Rows` (the rows of its frame), `RowNumber`, `Rank`, `DenseRank`, `PercentRank`, `CumulativeDistribution`, `Ntile(buckets)`, `Has(offset)`, `At(offset)` |
+| `PureQLFrame`, `PureQLRangeUnit` | the frame of a window: `Partition`, `Rows(preceding, following)`, `Range(descending, preceding, unit, following, unit)`; `null` is every row on that side |
+| `PureQLRecursion` | `Recursive(seed, next, maxDepth)`: the operator of a recursive subquery, in the same two forms |
 
 ### Parameters
 
@@ -122,19 +186,11 @@ IStoredSchemaDataSet visible = new PureQLFilteredSchemaDataSet(
     new PostgreSqlStoredSchemaDataSet(schema, connection),
     [
         // orders: an ITable of the schema; only the orders of the tenant
-        KeyValuePair.Create(
+        KeyValuePair.Create<ITable, BooleanRow>(
             orders,
-            new BooleanRow(
-                new ComparisonRow(
-                    new EqualRow(
-                        new EqualUuidRow(
-                            new UuidNullableRow(
-                                new UuidRow(new FieldUuid("orders", "tenant_id"))
-                            ),
-                            new UuidNullableRow(new UuidRow(new LiteralUuid(tenant)))
-                        )
-                    )
-                )
+            new EqualUuidRow(
+                new FieldUuid("orders", "tenant_id"),
+                new LiteralUuid(tenant)
             )
         ),
     ]
@@ -154,14 +210,15 @@ IStoredTableDataSet result = new PureQLProjection([visible], query, parameters);
 
 ### Expression tree
 
-`projection.Expression` is built only from constructs a SQL provider translates: `Queryable` operators (`Enumerable` ones only over a group or a list), members and methods of the BCL's value types, strings and `Math`, value tuples, constants and captured parameters. Nothing in it is compiled, invoked or evaluated on the client except the result rows, built by the last `Select`, which only maps each row of the query, item by item, to an `IRow`. Its shape is fixed:
+`projection.Expression` is built only from constructs a SQL provider can translate: `Queryable` operators (`Enumerable` ones only over a group, a window's rows or a list), members and methods of the BCL's value types, strings and `Math`, the functions and query operators of this library, value tuples, constants and captured parameters. Nothing in it is compiled, invoked or evaluated on the client except the result rows, built by the last `Select`, which only maps each row of the query, item by item, to an `IRow`. Its shape is fixed:
 
 ```
 scan(from) [.Where] (.Join | .GroupJoin.SelectMany | .SelectMany)* [.Where(rest of where)]
-  plain:   [.OrderBy/ThenBy] .Select(columns)
+  plain:   [.Over(window function)]* [.OrderBy/ThenBy] .Select(columns)
   grouped: .GroupBy(keys) [.Where(having)] [.OrderBy/ThenBy] .Select(columns)
   total:   one-row constant .Select(aggregates over the rows)
 [.DistinctBy(columns)] [.Skip] [.Take]
+combined:  input [.Select(columns)] (.Concat | .Union | .Intersect | .Except)(input [.Select(columns)]) ...
 .Select(row => new ResultRow(columns, new object[] { row.Item1, ... }))
 ```
 
@@ -171,14 +228,52 @@ Everything above the last line is the query a provider is given (see [Running a 
 - **Rows** are value tuples: a source row holds its fields, a joined row one source row per source, a group key one value per key, a query result one value per column. Every value is nullable: `long?` (integer), `decimal?`, `string`, `bool?`, `DateOnly?`, `TimeOnly?`, `DateTime?` (UTC), `Guid?`.
 - **Joins** are hash joins on the equalities of their condition: each and-ed condition of `on` (or of `where`, when it moves into an inner join) that equates an expression over the rows so far with one over the joined source is a join key. An inner join is `Join` on the tuple of keys, the remaining conditions in a `Where` after it; an outer side is `GroupJoin` (keyed by the driving side: the rows so far for `left`, the joined source for `right`) then `SelectMany` over the matches the remaining conditions hold for, `DefaultIfEmpty`; `full` is the left join `Concat` the joined rows whose group of matches is empty (`!Any()`). A tuple of keys is never null, so `null` keys match, as `=` does. A join whose condition has no such equality is a correlated `SelectMany` over the joined rows the condition holds for (`DefaultIfEmpty` for an outer side; `full` adds the joined rows `!Any(...)` row matches). An unmatched side is the default tuple: all nulls.
 - **Aggregates** are LINQ's over the group or, over all rows, over the query's rows, which are one shared subtree. A total query reads a one-row constant source, as SQL's `SELECT` without `FROM`.
-- **Semantics** are C#'s, which match the specification: `null == null`, an ordering comparison with null is false, lifted operators. Strings compare with `string.CompareOrdinal` and order with `StringComparer.Ordinal` (SQL's `"C"` collation, code point order); ascending order puts null first. Parameters are captured variables, the `Value` of a constant holding the parameter, as C# closures are.
+- **Semantics** are C#'s where they match the specification: `null == null`, an ordering comparison with one null is false, lifted operators. Strings compare with `string.CompareOrdinal` and order with `StringComparer.Ordinal` (SQL's `"C"` collation, code point order); ascending order puts null first. Parameters are captured variables, the `Value` of a constant holding the parameter, as C# closures are.
 
 Built in, before any provider sees it:
 
-- constants fold (an operation that fails, like `1 / 0`, is kept and fails the query; two constant strings compare by code point), `true`/`false` fold out of conditions, lifting is dropped where a value cannot be null and an operation over a `null` literal is `null`;
-- `where` is split into its and-ed conditions, each moved to the scan of the source it reads (above the scan's `Select`; only the condition of a filtered table stands below it), or into the join that first sees every source it reads, unless an outer join may leave one of them without a row; a condition on a subquery source moves into the subquery (onto its `having` when it reads an aggregate);
+- constants fold (an operation that fails, like `1 / 0`, is kept and fails the query; two constant strings compare by code point; decimals fold exactly, as they are computed in memory; no `double` is computed), `true`/`false` fold out of conditions, lifting is dropped where a value cannot be null and an operation over a `null` literal is `null`;
+- `where` is split into its and-ed conditions, each moved to the scan of the source it reads (above the scan's `Select`; only the condition of a filtered table stands below it), or into the join that first sees every source it reads, unless an outer join may leave one of them without a row; a condition on a subquery source moves into the subquery (onto its `having` when it reads an aggregate), but never below a window function, a set operation or a recursion;
 - adjacent `Where`s merge, `Where(true)` and identity `Select`s are dropped, consecutive `Select`s are one, and pagination ends the query (only the result rows' `Select` follows it);
 - a repeated order key or one that is the same for every row is dropped, a `distinctBy` over every group key is dropped, and a subquery read only by `in` (without pagination) is neither ordered nor `distinctBy`-filtered.
+
+#### Shapes of specification 3.0.0
+
+Everything a tree of specification `0.1.0-preview.2.0.1` held has the shape it had, with two exceptions the specification changed: `a >= b` and `a <= b` of two nullable operands are `a >= b || (a == null && b == null)` (two nulls are at least and at most each other), and an `add` / `subtract` / `multiply` over a list that mixes integers and decimals keeps its integer steps (`(decimal?)(a + b) + c`, the integer step checked). The new constructs are:
+
+| Construct | Shape |
+|---|---|
+| `orderBy` by `{ column }` | the `OrderBy` / `ThenBy` key is the expression of that `select` column |
+| `pagination` | `.Skip(n)` only with `skip`, `.Take(n)` only with `take` |
+| `unionAll`, `union`, `intersect`, `except` | `Queryable.Concat` / `Union` / `Intersect` / `Except` over the inputs' rows, left to right; an input whose columns are in another order or of a narrower type is first `.Select(row => (column, ...))` into the operation's columns |
+| inline rows | `oneRow.SelectMany(one => new[] { (cell, ...), ... }, (one, row) => row)`: the one-row constant of a total query and an array of tuples, a cell a constant or a captured parameter |
+| recursive subquery | `PureQLRecursion.Recursive(seed, level => next, maxDepth)`: `next` is the tree of the `next` query with the `IQueryable` parameter `level` where it reads the subquery; `maxDepth` a constant or a captured parameter |
+| window function | one `PureQLWindows.Over(rows, row => (partition keys), partition => partition.OrderBy(...)..., row => (sort keys), frame, window => (window.Row, value))` per function, each over the rows of the one before, so after n functions a row is `(...((row, value1), value2)..., valuen)` and the `select` reads the values there. `frame` is `PureQLFrame.Partition`, `PureQLFrame.Rows(preceding, following)` or `PureQLFrame.Range(descending, preceding, unit, following, unit)`, its counts constants or captured parameters. `value` is an aggregate over `window.Rows` (the `Enumerable` aggregates of a group), `window.RowNumber`, `window.Rank`, `window.DenseRank`, `window.PercentRank`, `window.CumulativeDistribution`, `window.Ntile(buckets)`, or for `previous` / `next` `window.Has(±offset) ? operand over window.At(±offset) : default over window.Row` |
+| `countDistinct` | `rows.Select(selector).Where(value => value != null).Distinct().LongCount()` |
+| `first`, `last` | `rows.OrderBy(...).Select(selector).FirstOrDefault()`, the order reversed for `last` |
+| `concatAll` | `string.Join(separator, rows.OrderBy(...).Select(selector).Where(value => value != null)[.Distinct()])` |
+| statistics | `PureQLAggregates.Median(rows.Select(selector))`, `PercentileContinuous(values, fraction)`, `PercentileDiscrete<T>`, `Mode<T>`, `VariancePopulation`, …; two columns as `rows.Select(row => (left, right))` |
+| `integerDivide`, `modulo` of decimals | `PureQLMath.IntegerDivide(left, right)`, `PureQLMath.Modulo(left, right)`; of two integers still `/` and `%` |
+| `round` | without `digits` `(long)Math.Round(value, mode)`; a decimal with literal digits `Math.Round(value, digits, mode)` or, for negative digits, `Math.Round(value / 100m, mode) * 100m`; with computed digits the three-way conditional of both with `(decimal)Math.Pow(10, -digits)`; an integer with digits `PureQLMath.Round(value, digits, mode)`. `mode` is `MidpointRounding.AwayFromZero` or `ToEven` |
+| `truncate` | without `digits` `(long)Math.Truncate(value)`, with digits `PureQLMath.Truncate(value, digits)` |
+| `abs`, `sign` | `Math.Abs(value)`, `(long)Math.Sign(value)` |
+| `greatest`, `least` | numbers `Math.Max` / `Math.Min` folded; other types `new[] { a, b, ... }.Max()` / `.Min()`, strings with `StringComparer.Ordinal` |
+| `power` … `atan2` | `PureQLMath.Power(operand, exponent)`, …; `pi` is the decimal constant |
+| `nullIfEqual` | `left == right ? null : left` |
+| `concat`, `concatWith` | `string.Concat` folded; `PureQLText.ConcatWith(separator, new[] { a, b, ... })` |
+| `contains`, `startsWith`, `endsWith` | `operand != null && pattern != null && operand.Contains(pattern)`, `.StartsWith(pattern, StringComparison.Ordinal)`, `.EndsWith(pattern, StringComparison.Ordinal)` |
+| `normalize` | `operand.Normalize(NormalizationForm.FormC)` (`FormD`, `FormKC`, `FormKD`) |
+| other string operators | `PureQLText.Length(operand)`, `Upper`, `Lower`, `FoldCase`, `RemoveDiacritics`, `Trim(operand, new[] { removable, ... })`, `Substring(operand, start[, length])`, `Replace`, `Position`, `SplitPart`, `PadStart`, `PadEnd`, `Repeat`, `Reverse` |
+| regular expressions | `operand != null && PureQLText.MatchesRegex(operand, pattern)`, `operand == null ? null : PureQLText.ExtractRegex(operand, pattern[, group])`, `PureQLText.ReplaceRegex(operand, pattern, replacement)`; `pattern` and `group` constants or captured parameters |
+| `dateAddMonths`, `datetimeAddMonths` | `date.AddMonths((int)months)`, `instant.AddMonths((int)months)`; with a zone `PureQLTime.AddMonths(instant, months, zone)` |
+| `dateDiffMonths`, `datetimeDiffMonths` | `PureQLTime.DiffMonths(left, right[, zone])` |
+| `dateFromParts`, `timeFromParts`, `datetimeFromParts` | `new DateOnly((int)year, (int)month, (int)day)`, `PureQLTime.TimeFromParts(hour, minute, second)`, `date.ToDateTime(time, DateTimeKind.Utc)` or `PureQLTime.DatetimeFromParts(date, time, zone)` |
+| parts | of a date `(long)date.Year`, `.Month`, `.Day`, `.DayOfYear`, `PureQLTime.Quarter(date)`, `DayOfWeek`, `Week`, `WeekYear`; of a time `(long)time.Hour`, `.Minute`, `.Second`, `PureQLTime.Microsecond(time)`; of a datetime the same over `DateOnly.FromDateTime(instant)` / `TimeOnly.FromDateTime(instant)`, or over `PureQLTime.LocalDate(instant, zone)` / `PureQLTime.LocalTime(instant, zone)` |
+| `startOf…` | `PureQLTime.StartOfMonth(value)`, …, with the zone as a second argument |
+| `asDate`, `asTime`, `asDatetime` | `DateOnly.FromDateTime(instant)`, `TimeOnly.FromDateTime(instant)`, `date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)`; with a zone `PureQLTime.LocalDate`, `LocalTime`, `DatetimeFromParts(date, TimeOnly.MinValue, zone)`; of a string `PureQLConversions.AsDate(text)`, … |
+| other conversions | `PureQLConversions.AsString(value)`, `AsInteger(text)`, …, `TryAsInteger(text)`, …; `asDecimal` of an integer is `(decimal?)value`; `asNullable` is the value |
+
+Every lifted operator checks its operands for `null` around these (`operand == null || zone == null ? null : ...`), also the operands named by their role and a zone.
 
 ### Running a query
 
@@ -187,6 +282,11 @@ Enumerating the projection hands the query below the result rows (`projection.Ex
 The tree runs in memory, with LINQ to Objects, when the tables are held in memory, or when the provider refuses the query with `NotSupportedException` (when the query is created, enumerated, or before its first value): a construct the provider cannot translate, tables of more than one database, or a source that is not a stored table (a total query's one-row constant). Any other exception the provider raises fails the enumeration. After an enumeration, `Execution` says which happened (`Translated` or `InMemory`) and `FallbackReason` holds the provider's exception when the query fell back to memory, so that a host can log it.
 
 Run in memory, the tree is compiled once per enumeration as `Enumerable` calls: each stored table is read once, a query nested in a lambda that reads nothing of it (a joined source, an `in` list, an aggregate over all rows) is computed once and answers `in` from a hash set, hash joins cost the rows of both sides rather than their product, and strings order by code point. LINQ composed over the projection (`projection.Take(10)`, `projection.Count()`) runs in memory over the projection's rows, which are read as above.
+
+Run in memory, the tree is also computed exactly, on a rewritten copy: a decimal `+`, `-`, `*` and `/` is `PureQLMath.Add`, `Subtract`, `Multiply` and `Divide`; `Math.Round` of a quotient is rounded once from the exact quotient (`PureQLMath.RoundQuotient`); `(decimal)Math.Pow(10, n)` is `PureQLMath.PowerOfTen(n)`, with no `double`; `Sum` and `Average` of integers and decimals are `PureQLAggregates.Sum` and `Average`; an integer `%` is `PureQLMath.Modulo`. A provider that translates the tree answers for the arithmetic of its store instead: PostgreSQL's `numeric` is exact, but rounds a quotient to its own number of digits.
+
+A construct a provider does not translate does not fail a query: the provider refuses the tree with `NotSupportedException` and the whole query runs in memory, with every stored table it reads read in full. With `Pure.RelationalSchema.Storage.PostgreSQL.Querying` 0.1.0-preview.0.10.0 that is every query that holds a function or a query operator of this library ([Functions and query operators](#functions-and-query-operators)), until the provider learns it.
+
 
 ### Storage mapping
 
@@ -200,23 +300,26 @@ Empty cell text is `NULL`. The query says whether a field holds it: a field decl
 
 ### Not supported
 
-- Stored times and datetimes are read to the .NET tick (100 ns); the specification's values have microsecond precision, so finer stored digits are kept as read.
+- Stored times and datetimes are read to the .NET tick (100 ns); the specification's values have microsecond precision, so finer stored digits are kept as read. A stored `decimal` cell is read as `System.Decimal` reads it: text of more than 28 significant digits, which is not a value of the specification's `decimal`, is not refused.
+- Parameter values are the cell texts of Pure parameters, read as cells are (see [Parameters](#parameters)), not JSON literals: text in another spelling than a literal's (`1.50`, a datetime with an offset) is accepted where .NET parses it. A `decimal` beyond 28 digits is refused.
+- The longest string is .NET's: `repeat`, `padStart`, `padEnd` and `concatAll` fail with the runtime's exception beyond it. A regular expression runs on .NET's backtracking engine without a time limit.
+- What the specification leaves unspecified is taken from the machine: the Unicode data behind `normalize` (the runtime's normalization, ICU on Linux and macOS; with `InvariantGlobalization` .NET does not normalize, and `normalize` and `removeDiacritics` return their operand unchanged), and the release of the tz database behind the rules of a zone. A zone outside the specification's list is refused, also an older link the machine's database has. A range window over a `datetime` key with a distance in months counts months in UTC.
+- A row of a model built in code that the specification's schema would reject (an `offset` of 1, `"skip": 0`, an empty list literal, an operator declared with another type than its operands give) is not checked against the schema: the interpreter checks only what the schema leaves to it.
 
 ## Dependencies
 
-- [`Pure.Primitives`](https://github.com/kudima03/Pure.Primitives/tree/3.6.2) — core primitive value types (`String`, `Date`, `DateTime`, `Time`, `Guid`, `Number`)
-- [`Pure.RelationalSchema`](https://github.com/kudima03/Pure.RelationalSchema/tree/2.0.0) — relational schema abstractions (`ISchema`, `ITable`, `IColumn`, column type hierarchy)
-- [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.3.0) — structural hash codes for relational schema types
-- [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.7.0.0) — in-memory relational data model (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`, `ICell`)
-- [`PureQL.CSharp.Model`](https://github.com/kudima03/PureQL.CSharp.Model/tree/0.1.0-preview.13.0.0) — PureQL query model (`PureQLQuery`, `Query`, expressions per context) — tracks PureQL specification `0.1.0-preview.2.0.0`
-- [`Pure.Collections.Generic`](https://github.com/kudima03/Pure.Collections.Generic/tree/0.1.0-preview.3.0.0) — generic collection utilities used in row projection
+- [`Pure.Primitives`](https://github.com/kudima03/Pure.Primitives/tree/3.8.0) — core primitive value types (`String`, `Date`, `DateTime`, `Time`, `Guid`, `Number`)
+- [`Pure.RelationalSchema`](https://github.com/kudima03/Pure.RelationalSchema/tree/2.2.0) — relational schema abstractions (`ISchema`, `ITable`, `IColumn`, column type hierarchy)
+- [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.4.0) — structural hash codes for relational schema types
+- [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.8.1.0) — in-memory relational data model (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`, `ICell`)
+- [`PureQL.CSharp.Model`](https://github.com/kudima03/PureQL.CSharp.Model/tree/0.1.0-preview.15.0.0) — PureQL query model (`PureQLQuery`, `Query`, expressions per context), generated from PureQL specification `0.1.0-preview.3.0.0`
+- [`Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions/tree/0.1.0-preview.0.3.0) — the parameters a query's parameters are bound to (`IParameter`, `IListParameter`)
+- [`Pure.Collections.Generic`](https://github.com/kudima03/Pure.Collections.Generic/tree/0.1.0-preview.3.1.0) — generic collection utilities used in row projection
+- `System.Linq.Async` — async enumeration of the result rows
 
 ## Target Frameworks
 
-- .NET 8
-- .NET 9
-- .NET 10
-- .NET 11
+- .NET 11 (`PureQL.CSharp.Model` is built with C# 15 unions, which need it)
 
 ## Installation
 
@@ -244,23 +347,39 @@ await foreach (IRow row in result)
 }
 ```
 
-A query selecting one field:
+A query selecting one field. A model record converts to every union it may stand in, so a query is written with records only:
 
 ```csharp
-PureQLQuery query = new PureQLQuery(
-    new MainPlainQuery(
-        new From(new FromEntity("mySchema.myTable")),
-        [
-            new SelectItemProjection(
-                new SelectItemProjectionNonNullable(
-                    new SelectItemProjectionString(
-                        "name",
-                        new StringProjection(new FieldString("mySchema.myTable", "name"))
-                    )
+PureQLQuery query = new MainPlainQueryWithoutPagination(
+    from: new FromEntity("mySchema.myTable"),
+    select: [new SelectItemProjection("name", new FieldString("mySchema.myTable", "name"))]
+);
+```
+
+Each row with its rank among the rows of its group, a window function:
+
+```csharp
+PureQLQuery ranked = new MainPlainQueryWithoutPagination(
+    from: new FromEntity("shop.orders"),
+    select:
+    [
+        new SelectItemProjection("id", new FieldUuid("shop.orders", "id")),
+        new SelectItemProjection(
+            "rank",
+            new RankProjection(
+                new OrderedWindow(
+                    orderBy:
+                    [
+                        new OrderItemRow(
+                            new FieldDecimal("shop.orders", "total"),
+                            SortDirection.Desc
+                        ),
+                    ],
+                    partitionBy: [new FieldUuid("shop.orders", "user_id")]
                 )
-            ),
-        ]
-    )
+            )
+        ),
+    ]
 );
 ```
 
