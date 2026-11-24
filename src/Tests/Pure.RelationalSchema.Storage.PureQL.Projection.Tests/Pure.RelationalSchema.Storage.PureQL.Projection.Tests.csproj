@@ -45,6 +45,9 @@
     <ProjectReference Include="..\..\Pure.RelationalSchema.Storage.PureQL.Projection\Pure.RelationalSchema.Storage.PureQL.Projection.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Functions\TimeZoneVectors.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
   <Import Project="Exclude.props" Condition="Exists('Exclude.props')" />

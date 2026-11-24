@@ -319,14 +319,43 @@ internal static class Arithmetic
 
     // A decimal rounded to a number of decimal places. A negative digits
     // rounds to tens, hundreds and so on; a decimal holds 28 digits on either
-    // side of the point, so further digits change nothing. Constant digits,
-    // the usual case, fold to one of the three branches.
+    // side of the point, so further digits change nothing. Digits written
+    // as a literal, the usual case, give one of the three branches, with the
+    // power of ten a constant; computed digits give all three, and the power
+    // of ten as Math.Pow names it, which is computed without a double when
+    // the tree runs in memory (ExactArithmetic).
     private static Expression RoundedToDigits(
         Expression value,
         Expression digits,
         MidpointRounding mode
     )
     {
+        if (
+            digits is MemberExpression { Expression: ConstantExpression { Value: long places } }
+        )
+        {
+            Expression power = Expression.Constant(
+                Exact.Decimal(
+                    Exact.PowerOfTen((int)Math.Clamp(-places, 0, MaxDigits)),
+                    0,
+                    false
+                )
+            );
+
+            return places >= 0
+                    ? Expression.Call(
+                        RoundToDigitsMethod,
+                        value,
+                        Expression.Constant((int)Math.Min(places, MaxDigits)),
+                        Expression.Constant(mode)
+                    )
+                : places < -MaxDigits ? Expression.Constant(0m)
+                : Expression.Multiply(
+                    Rounded(Expression.Divide(value, power), mode),
+                    power
+                );
+        }
+
         Expression scale = Expression.Convert(
             Expression.Call(
                 PowerMethod,

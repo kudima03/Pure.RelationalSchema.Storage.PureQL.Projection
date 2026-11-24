@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Numerics;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.ListParameter;
 using PureQL.CSharp.Model.Types;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
@@ -222,6 +223,14 @@ internal sealed class ParameterValues(
         }
     }
 
+    // A decimal is m x 10^-s with |m| < 10^28: System.Decimal holds more.
+    private static decimal InRange(decimal value)
+    {
+        return BigInteger.Abs(Exact.Parts(value).Mantissa) < Exact.PowerOfTen(Exact.Digits)
+            ? value
+            : throw new OverflowException("A decimal of more than 28 digits.");
+    }
+
     private static object Parse(string type, string text)
     {
         CultureInfo invariant = CultureInfo.InvariantCulture;
@@ -229,7 +238,7 @@ internal sealed class ParameterValues(
         return type switch
         {
             "integer" => long.Parse(text, NumberStyles.Integer, invariant),
-            "decimal" => decimal.Parse(text, NumberStyles.Float, invariant),
+            "decimal" => InRange(decimal.Parse(text, NumberStyles.Float, invariant)),
             "boolean" => bool.Parse(text),
             "date" => DateOnly.Parse(text, invariant),
             "time" => TimeOnly.Parse(text, invariant),
