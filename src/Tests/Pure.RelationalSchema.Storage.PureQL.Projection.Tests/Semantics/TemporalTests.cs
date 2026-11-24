@@ -6,7 +6,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
-using PureQL.CSharp.Model.RowExpressions;
 using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;

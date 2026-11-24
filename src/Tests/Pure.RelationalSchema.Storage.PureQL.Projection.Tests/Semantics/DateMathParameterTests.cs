@@ -4,7 +4,6 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
@@ -262,7 +261,7 @@ public sealed class DateMathParameterTests
             [One],
             new MainPlainQueryWithoutPagination(
                 from: new FromEntity("t.one"),
-                select: [Item(new SelectItemProjection("v", new ParamDate("v")))]
+                select: [new SelectItemProjection("v", new ParamDate("v"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -278,7 +277,7 @@ public sealed class DateMathParameterTests
     private static PureQLProjection Selecting(
         TimeProvider clock,
         IParameter value,
-        object column
+        SelectItemProjection column
     )
     {
         return Selecting(
@@ -291,14 +290,14 @@ public sealed class DateMathParameterTests
     private static PureQLProjection Selecting(
         TimeProvider clock,
         IReadOnlyDictionary<string, IParameter> values,
-        params object[] columns
+        params SelectItemProjection[] columns
     )
     {
         return new PureQLProjection(
             [One],
             new MainPlainQueryWithoutPagination(
                 from: new FromEntity("t.one"),
-                select: [.. columns.Select(Item)]
+                select: columns
             ),
             values,
             clock
@@ -319,10 +318,7 @@ public sealed class DateMathParameterTests
                     new FieldDate("o", "placed_on"),
                     new ParamDate("since")
                 ),
-                select:
-                [
-                    Item(new SelectItemProjection("id", new FieldInteger("o", "id"))),
-                ]
+                select: [new SelectItemProjection("id", new FieldInteger("o", "id"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -330,19 +326,5 @@ public sealed class DateMathParameterTests
             },
             clock
         );
-    }
-
-    private static SelectItemProjection Item(object column)
-    {
-        return column switch
-        {
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            _ => throw new ArgumentException($"{column} is not a select item."),
-        };
     }
 }

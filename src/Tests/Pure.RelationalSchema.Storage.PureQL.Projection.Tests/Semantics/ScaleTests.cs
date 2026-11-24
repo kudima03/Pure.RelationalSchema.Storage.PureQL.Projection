@@ -8,7 +8,6 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.GroupExpressions;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
@@ -113,7 +112,7 @@ public sealed class ScaleTests
                 from: new FromEntity("s.order_lines", "l"),
                 where: new InDecimalRow(
                     new FieldDecimal("l", "amount"),
-                    new ListSubqueryColumnDecimal("amounts", "amount", false)
+                    new ListSubqueryColumnDecimal("amounts", "amount")
                 ),
                 select: [new SelectItemProjection("id", new FieldInteger("l", "id"))]
             )

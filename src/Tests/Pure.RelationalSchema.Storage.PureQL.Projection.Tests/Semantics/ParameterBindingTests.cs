@@ -333,6 +333,10 @@ public sealed class ParameterBindingTests
             new MainPlainQueryWithPagination(
                 from: new FromEntity("t.names"),
                 select: [Column("name", new FieldString("t.names", "name"))],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(new FieldInteger("t.names", "id")),
+                ],
                 pagination: new Pagination(
                     skip: new ParamInteger("skip"),
                     take: new ParamInteger("take")
@@ -382,52 +386,28 @@ public sealed class ParameterBindingTests
     }
 
     // A boolean column that is whether its in holds.
-    private static SelectItemProjection In(string alias, BooleanProjection condition)
+    private static SelectItemProjection In(string alias, ExprProjection condition)
     {
         return new SelectItemProjection(alias, condition);
     }
 
-    private static SelectItemProjection Column(string alias, StringProjection expression)
+    private static SelectItemProjection Column(string alias, ExprProjection expression)
     {
         return new SelectItemProjection(alias, expression);
     }
 
     private static PureQLProjection Selecting(
         IReadOnlyDictionary<string, IParameter> values,
-        params object[] columns
+        params SelectItemProjection[] columns
     )
     {
         return new PureQLProjection(
             [Names],
             new MainPlainQueryWithoutPagination(
                 from: new FromEntity("t.names"),
-                select: [.. columns.Select(Item)]
+                select: columns
             ),
             values
         );
-    }
-
-    private static SelectItemProjection Item(object column)
-    {
-        return column switch
-        {
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            SelectItemProjection item => item,
-            _ => throw new ArgumentException($"{column.GetType().Name} is not a column."),
-        };
     }
 }

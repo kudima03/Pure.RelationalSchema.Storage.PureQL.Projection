@@ -108,7 +108,7 @@ public sealed class MembershipTests
                         "in_codes",
                         new InStringProjection(
                             new FieldStringNullable("t.items", "code"),
-                            new ListSubqueryColumnString("codes", "code", true)
+                            new ListSubqueryColumnStringNullable("codes", "code")
                         )
                     ),
                     new SelectItemProjection(
