@@ -5,8 +5,6 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Api;
 
@@ -28,32 +26,19 @@ public sealed class ProjectionApiTests
     {
         PureQLProjection projection = new(
             [Counters],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.counters")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "small",
-                                    new IntegerProjection(
-                                        new FieldInteger("t.counters", "small")
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "ratio",
-                                    new ExactDecimalProjection(
-                                        new FieldDecimal("t.counters", "ratio")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.counters"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "small",
+                        new FieldInteger("t.counters", "small")
+                    ),
+                    new SelectItemProjection(
+                        "ratio",
+                        new FieldDecimal("t.counters", "ratio")
+                    ),
+                ]
             )
         );
 
@@ -72,42 +57,20 @@ public sealed class ProjectionApiTests
     {
         PureQLProjection projection = new(
             [Counters],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.counters")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "large",
-                                    new IntegerProjection(
-                                        new FieldInteger("t.counters", "large")
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "ratio",
-                                    new ExactDecimalProjection(
-                                        new FieldDecimal("t.counters", "ratio")
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "on",
-                                    new BooleanProjection(
-                                        new FieldBoolean("t.counters", "on")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.counters"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "large",
+                        new FieldInteger("t.counters", "large")
+                    ),
+                    new SelectItemProjection(
+                        "ratio",
+                        new FieldDecimal("t.counters", "ratio")
+                    ),
+                    new SelectItemProjection("on", new FieldBoolean("t.counters", "on")),
+                ]
             )
         );
 
@@ -120,25 +83,10 @@ public sealed class ProjectionApiTests
     public void MalformedCellFailsTheQuery()
     {
         PureQLProjection projection = new(
-            [
-                new InlineTable("t", "broken", ("n", new LongColumnType())).With(
-                    ["seven"]
-                ),
-            ],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.broken")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "n",
-                                    new IntegerProjection(new FieldInteger("t.broken", "n"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            [new InlineTable("t", "broken", ("n", new LongColumnType())).With(["seven"])],
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.broken"),
+                select: [new SelectItemProjection("n", new FieldInteger("t.broken", "n"))]
             )
         );
 
@@ -150,20 +98,12 @@ public sealed class ProjectionApiTests
     {
         PureQLProjection projection = new(
             [Counters],
-            new Query(
-                new PlainQuery(
-                    new From(new FromEntity("t.counters", "c")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "small",
-                                    new IntegerProjection(new FieldInteger("c", "small"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new PlainQueryWithoutPaginationWithoutOrderBy(
+                from: new FromEntity("t.counters", "c"),
+                select:
+                [
+                    new SelectItemProjection("small", new FieldInteger("c", "small")),
+                ]
             )
         );
 
@@ -175,22 +115,15 @@ public sealed class ProjectionApiTests
     {
         PureQLProjection projection = new(
             [Counters],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.counters")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "small",
-                                    new IntegerProjection(
-                                        new FieldInteger("t.counters", "small")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.counters"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "small",
+                        new FieldInteger("t.counters", "small")
+                    ),
+                ]
             )
         );
 
@@ -209,32 +142,24 @@ public sealed class ProjectionApiTests
     {
         PureQLProjection projection = new(
             [Counters],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.counters")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionString(
-                                    "label",
-                                    new StringProjection(new LiteralString("x"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.counters"),
+                select: [new SelectItemProjection("label", new LiteralString("x"))]
             )
         );
 
         Assert.Equal(typeof(IRow), projection.ElementType);
-        Assert.Equal(2, projection.Provider.Execute<int>(
-            System.Linq.Expressions.Expression.Call(
-                typeof(Queryable),
-                nameof(Queryable.Count),
-                [typeof(IRow)],
-                projection.Expression
+        Assert.Equal(
+            2,
+            projection.Provider.Execute<int>(
+                System.Linq.Expressions.Expression.Call(
+                    typeof(Queryable),
+                    nameof(Queryable.Count),
+                    [typeof(IRow)],
+                    projection.Expression
+                )
             )
-        ));
+        );
 
         IEnumerator untyped = ((IEnumerable)projection).GetEnumerator();
         Assert.True(untyped.MoveNext());
@@ -247,22 +172,15 @@ public sealed class ProjectionApiTests
     {
         PureQLProjection projection = new(
             [Counters],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.counters")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "small",
-                                    new IntegerProjection(
-                                        new FieldInteger("t.counters", "small")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.counters"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "small",
+                        new FieldInteger("t.counters", "small")
+                    ),
+                ]
             )
         );
 

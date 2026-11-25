@@ -14,7 +14,6 @@ using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using DateTime = Pure.Primitives.DateTime.DateTime;
 using Decimal = Pure.Primitives.Number.Decimal;
 using Guid = Pure.Primitives.Guid.Guid;
@@ -60,29 +59,14 @@ public sealed class ParameterBindingTests
                     new Guid(new System.Guid("8C5E1A2B-0000-4000-8000-000000000001"))
                 ),
             },
-            new SelectItemProjectionInteger(
-                "integer",
-                new IntegerProjection(new ParamInteger("integer"))
-            ),
-            new SelectItemProjectionDecimal(
-                "decimal",
-                new ExactDecimalProjection(new ParamDecimal("decimal"))
-            ),
-            new SelectItemProjectionString(
-                "string",
-                new StringProjection(new ParamString("string"))
-            ),
-            new SelectItemProjectionBoolean(
-                "boolean",
-                new BooleanProjection(new ParamBoolean("boolean"))
-            ),
-            new SelectItemProjectionDate("date", new DateProjection(new ParamDate("date"))),
-            new SelectItemProjectionTime("time", new TimeProjection(new ParamTime("time"))),
-            new SelectItemProjectionDatetime(
-                "datetime",
-                new DatetimeProjection(new ParamDatetime("datetime"))
-            ),
-            new SelectItemProjectionUuid("uuid", new UuidProjection(new ParamUuid("uuid")))
+            new SelectItemProjection("integer", new ParamInteger("integer")),
+            new SelectItemProjection("decimal", new ParamDecimal("decimal")),
+            new SelectItemProjection("string", new ParamString("string")),
+            new SelectItemProjection("boolean", new ParamBoolean("boolean")),
+            new SelectItemProjection("date", new ParamDate("date")),
+            new SelectItemProjection("time", new ParamTime("time")),
+            new SelectItemProjection("datetime", new ParamDatetime("datetime")),
+            new SelectItemProjection("uuid", new ParamUuid("uuid"))
         );
 
         IRow[] row = [projection.First()];
@@ -114,38 +98,14 @@ public sealed class ParameterBindingTests
                 ["datetime"] = new NullableDateTimeParameter(),
                 ["uuid"] = new NullableUuidParameter(),
             },
-            new SelectItemProjectionIntegerNullable(
-                "integer",
-                new ExactIntegerNullableProjection(new ParamIntegerNullable("integer"))
-            ),
-            new SelectItemProjectionDecimalNullable(
-                "decimal",
-                new ExactDecimalNullableProjection(new ParamDecimalNullable("decimal"))
-            ),
-            new SelectItemProjectionStringNullable(
-                "string",
-                new ExactStringNullableProjection(new ParamStringNullable("string"))
-            ),
-            new SelectItemProjectionBooleanNullable(
-                "boolean",
-                new ExactBooleanNullableProjection(new ParamBooleanNullable("boolean"))
-            ),
-            new SelectItemProjectionDateNullable(
-                "date",
-                new ExactDateNullableProjection(new ParamDateNullable("date"))
-            ),
-            new SelectItemProjectionTimeNullable(
-                "time",
-                new ExactTimeNullableProjection(new ParamTimeNullable("time"))
-            ),
-            new SelectItemProjectionDatetimeNullable(
-                "datetime",
-                new ExactDatetimeNullableProjection(new ParamDatetimeNullable("datetime"))
-            ),
-            new SelectItemProjectionUuidNullable(
-                "uuid",
-                new ExactUuidNullableProjection(new ParamUuidNullable("uuid"))
-            )
+            new SelectItemProjection("integer", new ParamIntegerNullable("integer")),
+            new SelectItemProjection("decimal", new ParamDecimalNullable("decimal")),
+            new SelectItemProjection("string", new ParamStringNullable("string")),
+            new SelectItemProjection("boolean", new ParamBooleanNullable("boolean")),
+            new SelectItemProjection("date", new ParamDateNullable("date")),
+            new SelectItemProjection("time", new ParamTimeNullable("time")),
+            new SelectItemProjection("datetime", new ParamDatetimeNullable("datetime")),
+            new SelectItemProjection("uuid", new ParamUuidNullable("uuid"))
         );
 
         IRow[] row = [projection.First()];
@@ -160,10 +120,7 @@ public sealed class ParameterBindingTests
             "datetime",
             "uuid",
         ];
-        Assert.All(
-            names,
-            name => Assert.Equal([""], ResultColumn.Texts(row, name))
-        );
+        Assert.All(names, name => Assert.Equal([""], ResultColumn.Texts(row, name)));
     }
 
     [Fact]
@@ -174,10 +131,7 @@ public sealed class ParameterBindingTests
             {
                 ["decimal"] = new IntegerParameter(new Long(3)),
             },
-            new SelectItemProjectionDecimal(
-                "decimal",
-                new ExactDecimalProjection(new ParamDecimal("decimal"))
-            )
+            new SelectItemProjection("decimal", new ParamDecimal("decimal"))
         );
 
         Assert.Equal(["3", "3", "3"], ResultColumn.Texts(projection, "decimal"));
@@ -194,17 +148,15 @@ public sealed class ParameterBindingTests
                 ["booleans"] = new BooleanListParameter([new False()]),
                 ["dates"] = new DateListParameter([new Date(new DateOnly(2024, 2, 29))]),
                 ["times"] = new TimeListParameter([new Time(new TimeOnly(13, 5))]),
-                ["datetimes"] = new DateTimeListParameter(
-                    [
-                        new DateTime(
-                            new Date(new DateOnly(2024, 1, 1)),
-                            new Time(new TimeOnly(10, 0))
-                        ),
-                    ]
-                ),
-                ["uuids"] = new UuidListParameter(
-                    [new Guid(new System.Guid("8C5E1A2B-0000-4000-8000-000000000001"))]
-                ),
+                ["datetimes"] = new DateTimeListParameter([
+                    new DateTime(
+                        new Date(new DateOnly(2024, 1, 1)),
+                        new Time(new TimeOnly(10, 0))
+                    ),
+                ]),
+                ["uuids"] = new UuidListParameter([
+                    new Guid(new System.Guid("8C5E1A2B-0000-4000-8000-000000000001")),
+                ]),
                 ["empty"] = new StringListParameter([]),
                 ["integer"] = new IntegerParameter(new Long(-2)),
                 ["decimal"] = new DecimalParameter(new Decimal(2.5m)),
@@ -224,90 +176,64 @@ public sealed class ParameterBindingTests
             },
             In(
                 "integer",
-                new InProjection(
-                    new InDecimalProjection(
-                        new DecimalNullableProjection(
-                            new IntegerProjection(new ParamInteger("integer"))
-                        ),
-                        new ListDecimal(new ListInteger(new ListParamInteger("integers")))
-                    )
+                new InDecimalProjection(
+                    new ParamInteger("integer"),
+                    new ListParamInteger("integers")
                 )
             ),
             In(
                 "decimal",
-                new InProjection(
-                    new InDecimalProjection(
-                        new DecimalNullableProjection(
-                            new ExactDecimalProjection(new ParamDecimal("decimal"))
-                        ),
-                        new ListDecimal(new ListParamDecimal("decimals"))
-                    )
+                new InDecimalProjection(
+                    new ParamDecimal("decimal"),
+                    new ListParamDecimal("decimals")
                 )
             ),
             In(
                 "boolean",
-                new InProjection(
-                    new InBooleanProjection(
-                        new BooleanNullableProjection(
-                            new BooleanProjection(new ParamBoolean("boolean"))
-                        ),
-                        new ListBoolean(new ListParamBoolean("booleans"))
-                    )
+                new InBooleanProjection(
+                    new ParamBoolean("boolean"),
+                    new ListParamBoolean("booleans")
                 )
             ),
             In(
                 "date",
-                new InProjection(
-                    new InDateProjection(
-                        new DateNullableProjection(new DateProjection(new ParamDate("date"))),
-                        new ListDate(new ListParamDate("dates"))
-                    )
-                )
+                new InDateProjection(new ParamDate("date"), new ListParamDate("dates"))
             ),
             In(
                 "time",
-                new InProjection(
-                    new InTimeProjection(
-                        new TimeNullableProjection(new TimeProjection(new ParamTime("time"))),
-                        new ListTime(new ListParamTime("times"))
-                    )
-                )
+                new InTimeProjection(new ParamTime("time"), new ListParamTime("times"))
             ),
             In(
                 "datetime",
-                new InProjection(
-                    new InDatetimeProjection(
-                        new DatetimeNullableProjection(
-                            new DatetimeProjection(new ParamDatetime("datetime"))
-                        ),
-                        new ListDatetime(new ListParamDatetime("datetimes"))
-                    )
+                new InDatetimeProjection(
+                    new ParamDatetime("datetime"),
+                    new ListParamDatetime("datetimes")
                 )
             ),
             In(
                 "uuid",
-                new InProjection(
-                    new InUuidProjection(
-                        new UuidNullableProjection(new UuidProjection(new ParamUuid("uuid"))),
-                        new ListUuid(new ListParamUuid("uuids"))
-                    )
-                )
+                new InUuidProjection(new ParamUuid("uuid"), new ListParamUuid("uuids"))
             ),
             In(
                 "empty",
-                new InProjection(
-                    new InStringProjection(
-                        new StringNullableProjection(
-                            new StringProjection(new ParamString("string"))
-                        ),
-                        new ListString(new ListParamString("empty"))
-                    )
+                new InStringProjection(
+                    new ParamString("string"),
+                    new ListParamString("empty")
                 )
             )
         );
 
         IRow[] row = [projection.First()];
-        string[] found = ["integer", "decimal", "boolean", "date", "time", "datetime", "uuid"];
+        string[] found =
+        [
+            "integer",
+            "decimal",
+            "boolean",
+            "date",
+            "time",
+            "datetime",
+            "uuid",
+        ];
         Assert.All(found, name => Assert.Equal(["True"], ResultColumn.Texts(row, name)));
         Assert.Equal(["False"], ResultColumn.Texts(row, "empty"));
     }
@@ -323,13 +249,9 @@ public sealed class ParameterBindingTests
             },
             In(
                 "found",
-                new InProjection(
-                    new InDecimalProjection(
-                        new DecimalNullableProjection(
-                            new ExactDecimalProjection(new ParamDecimal("decimal"))
-                        ),
-                        new ListDecimal(new ListParamDecimal("integers"))
-                    )
+                new InDecimalProjection(
+                    new ParamDecimal("decimal"),
+                    new ListParamDecimal("integers")
                 )
             )
         );
@@ -345,10 +267,7 @@ public sealed class ParameterBindingTests
             {
                 ["at"] = new TextParameter("datetime", "2024-01-01T03:00:00+03:00"),
             },
-            new SelectItemProjectionDatetime(
-                "at",
-                new DatetimeProjection(new ParamDatetime("at"))
-            )
+            new SelectItemProjection("at", new ParamDatetime("at"))
         );
 
         Assert.Equal("2024-01-01T00:00:00Z", ResultColumn.Texts(projection, "at")[0]);
@@ -359,30 +278,13 @@ public sealed class ParameterBindingTests
     {
         PureQLProjection projection = new(
             [Names],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.names", "n")),
-                    [Column("name", new StringProjection(new FieldString("n", "name")))],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new GreaterThanRow(
-                                new GreaterThanDecimalRow(
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new FieldInteger("n", "id"))
-                                    ),
-                                    new DecimalNullableRow(
-                                        new IntegerRow(new ParamInteger("min_id"))
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.names", "n"),
+                where: new GreaterThanDecimalRow(
+                    new FieldInteger("n", "id"),
+                    new ParamInteger("min_id")
+                ),
+                select: [Column("name", new FieldString("n", "name"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -390,7 +292,11 @@ public sealed class ParameterBindingTests
             }
         );
 
-        Assert.Contains("@min_id", TreeText.Of(projection.Expression), StringComparison.Ordinal);
+        Assert.Contains(
+            "@min_id",
+            TreeText.Of(projection.Expression),
+            StringComparison.Ordinal
+        );
         Assert.Equal(["Bob", "Cid"], ResultColumn.Texts(projection, "name"));
     }
 
@@ -400,35 +306,13 @@ public sealed class ParameterBindingTests
         List<IString> wanted = [new String("Ann"), new String("Cid")];
         PureQLProjection projection = new(
             [Names],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.names")),
-                    [
-                        Column(
-                            "name",
-                            new StringProjection(new FieldString("t.names", "name"))
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new InRow(
-                                new InStringRow(
-                                    new StringNullableRow(
-                                        new StringRow(
-                                            new FieldString("t.names", "name")
-                                        )
-                                    ),
-                                    new ListString(new ListParamString("wanted"))
-                                )
-                            )
-                        )
-                    ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.names"),
+                where: new InStringRow(
+                    new FieldString("t.names", "name"),
+                    new ListParamString("wanted")
+                ),
+                select: [Column("name", new FieldString("t.names", "name"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -446,24 +330,16 @@ public sealed class ParameterBindingTests
     {
         PureQLProjection projection = new(
             [Names],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.names")),
-                    [
-                        Column(
-                            "name",
-                            new StringProjection(new FieldString("t.names", "name"))
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: null,
-                    orderBy: null,
-                    pagination: new Pagination(
-                        new ParamInteger("skip"),
-                        new ParamInteger("take")
-                    ),
-                    distinctBy: null
+            new MainPlainQueryWithPagination(
+                from: new FromEntity("t.names"),
+                select: [Column("name", new FieldString("t.names", "name"))],
+                orderBy:
+                [
+                    new OrderItemProjectionExpression(new FieldInteger("t.names", "id")),
+                ],
+                pagination: new Pagination(
+                    skip: new ParamInteger("skip"),
+                    take: new ParamInteger("take")
                 )
             ),
             new Dictionary<string, IParameter>
@@ -481,20 +357,9 @@ public sealed class ParameterBindingTests
     {
         PureQLProjection projection = new(
             [Names],
-            new Query(
-                new PlainQuery(
-                    new From(new FromEntity("t.names")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "integer",
-                                    new IntegerProjection(new ParamInteger("integer"))
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new PlainQueryWithoutPaginationWithoutOrderBy(
+                from: new FromEntity("t.names"),
+                select: [new SelectItemProjection("integer", new ParamInteger("integer"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -514,103 +379,35 @@ public sealed class ParameterBindingTests
                 ["integer"] = new IntegerParameter(new Long(1)),
                 ["unused"] = new TextParameter("no such type", "anything"),
             },
-            new SelectItemProjectionInteger(
-                "integer",
-                new IntegerProjection(new ParamInteger("integer"))
-            )
+            new SelectItemProjection("integer", new ParamInteger("integer"))
         );
 
         Assert.Equal(["1", "1", "1"], ResultColumn.Texts(projection, "integer"));
     }
 
     // A boolean column that is whether its in holds.
-    private static SelectItemProjectionBoolean In(string alias, InProjection condition)
+    private static SelectItemProjection In(string alias, ExprProjection condition)
     {
-        return new SelectItemProjectionBoolean(
-            alias,
-            new BooleanProjection(new ComparisonProjection(condition))
-        );
+        return new SelectItemProjection(alias, condition);
     }
 
-    private static SelectItemProjection Column(string alias, StringProjection expression)
+    private static SelectItemProjection Column(string alias, ExprProjection expression)
     {
-        return new SelectItemProjection(
-            new SelectItemProjectionNonNullable(
-                new SelectItemProjectionString(alias, expression)
-            )
-        );
+        return new SelectItemProjection(alias, expression);
     }
 
     private static PureQLProjection Selecting(
         IReadOnlyDictionary<string, IParameter> values,
-        params object[] columns
+        params SelectItemProjection[] columns
     )
     {
         return new PureQLProjection(
             [Names],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.names")),
-                    [.. columns.Select(Item)]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.names"),
+                select: columns
             ),
             values
         );
-    }
-
-    private static SelectItemProjection Item(object column)
-    {
-        return column switch
-        {
-            SelectItemProjectionInteger item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionDecimal item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionString item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionBoolean item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionDate item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionTime item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionDatetime item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionUuid item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionIntegerNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionDecimalNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionStringNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionBooleanNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionDateNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionTimeNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionDatetimeNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            SelectItemProjectionUuidNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            _ => throw new ArgumentException($"{column.GetType().Name} is not a column."),
-        };
     }
 }

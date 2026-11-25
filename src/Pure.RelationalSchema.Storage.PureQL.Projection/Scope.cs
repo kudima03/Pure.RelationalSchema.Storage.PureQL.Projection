@@ -11,13 +11,18 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // fields are members of a tuple parameter; in projection context a row
 // (absent in a total query) and every row left by where, which aggregates
 // fold; in group context a group parameter, whose key holds the group key
-// values and whose elements are the group's rows. The condition of a
+// values and whose elements are the group's rows. A window function of a
+// plain query is computed before its select (see Windows): its value is then
+// one of the Computed expressions, and while it is computed the rows an
+// aggregate folds are those of its window (Rows). The condition of a
 // filtered table (FilteredTable) compiles against a stored row alone, with no
 // query: it reads nothing of one.
 internal sealed class Scope(
     QueryTree? query,
     Func<IField, Expression>? field,
-    ParameterExpression? group
+    ParameterExpression? group,
+    RowSet? rows = null,
+    IReadOnlyDictionary<object, Expression>? computed = null
     )
 {
     private readonly QueryTree? _query = query;
@@ -26,24 +31,30 @@ internal sealed class Scope(
 
     private readonly ParameterExpression? _group = group;
 
+    private readonly RowSet? _rows = rows;
+
+    private readonly IReadOnlyDictionary<object, Expression>? _computed = computed;
+
     public Expression Compile(object node)
     {
         object leaf = ModelNode.Unwrap(node);
 
-        return leaf switch
-        {
-            IField reference => Field(reference),
-            IKey key => Query().Key(
-                _group
-                    ?? throw new InvalidOperationException(
-                        $"Group key '{key.Key}' is read where there is no group."
-                    ),
-                key.Key
-            ),
-            IParameter parameter => Parameter(parameter),
-            ILiteral literal => Literals.Value(literal),
-            _ => Operator.Of(leaf.GetType()).Compile(leaf, this),
-        };
+        return _computed is not null && _computed.TryGetValue(leaf, out Expression? value)
+                ? value
+            : leaf switch
+            {
+                IField reference => Field(reference),
+                IKey key => Query().Key(
+                    _group
+                        ?? throw new InvalidOperationException(
+                            $"Group key '{key.Key}' is read where there is no group."
+                        ),
+                    key.Key
+                ),
+                IParameter parameter => Parameter(parameter),
+                ILiteral literal => Literals.Value(literal),
+                _ => Operator.Of(leaf.GetType()).Compile(leaf, this),
+            };
     }
 
     public Expression Test(object condition)
@@ -51,23 +62,33 @@ internal sealed class Scope(
         return Typed.Test(Compile(condition));
     }
 
-    // A group's own rows, or every row of the query.
+    // The rows an aggregate folds: those of its window, a group's own rows,
+    // or every row of the query.
     public Expression Rows(AggregateOver over)
     {
-        return over == AggregateOver.Group && _group is not null
-            ? _group
+        return _rows is not null ? _rows.Rows
+            : over == AggregateOver.Group && _group is not null ? _group
             : Query().AllRows;
     }
 
     public ParameterExpression RowParameter()
     {
-        return Expression.Parameter(Query().RowType, "row");
+        return Expression.Parameter(_rows?.Element ?? Query().RowType, "row");
     }
 
     // A row of the same query in row context, as aggregate bodies see it.
-    public Scope Row(ParameterExpression row)
+    public Scope Row(Expression row)
     {
-        return Query().RowScope(row);
+        return _rows is not null ? _rows.Row(row) : Query().RowScope(row);
+    }
+
+    // The window of the row a window function is computed for.
+    public Expression Window()
+    {
+        return _rows?.Window
+            ?? throw new InvalidOperationException(
+                "A window function is read where there is no window."
+            );
     }
 
     public Expression SubqueryColumn(string subquery, string field, Type item)

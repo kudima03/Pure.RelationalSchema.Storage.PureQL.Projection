@@ -2,12 +2,9 @@ using System.Linq.Expressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// The tree of a query: an IQueryable of value tuples, one item per select
-// column, in column order.
-internal sealed record CompiledQuery(
-    Expression Rows,
-    IReadOnlyList<TypedExpression> Columns
-)
+// The tree of a query: an IQueryable of value tuples, one item per column,
+// in column order.
+internal sealed record CompiledQuery(Expression Rows, IReadOnlyList<QueryColumn> Columns)
 {
     public Type RowType => Linq.ElementType(Rows.Type);
 

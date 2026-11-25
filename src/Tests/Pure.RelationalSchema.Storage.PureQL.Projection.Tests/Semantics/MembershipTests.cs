@@ -9,7 +9,6 @@ using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
@@ -31,40 +30,18 @@ public sealed class MembershipTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "listed",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new InProjection(
-                                                new InDecimalProjection(
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalProjection(
-                                                            new FieldDecimal(
-                                                                "t.items",
-                                                                "weight"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new ListDecimal(
-                                                        new ListInteger(
-                                                            new ListLiteralInteger([2, 3])
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "listed",
+                        new InDecimalProjection(
+                            new FieldDecimal("t.items", "weight"),
+                            new ListLiteralInteger([2, 3])
+                        )
+                    ),
+                ]
             )
         );
 
@@ -76,40 +53,18 @@ public sealed class MembershipTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "listed",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new InProjection(
-                                                new InDecimalProjection(
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalProjection(
-                                                            new FieldDecimal(
-                                                                "t.items",
-                                                                "weight"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new ListDecimal(
-                                                        new ListInteger(
-                                                            new ListParamInteger("weights")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.items"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "listed",
+                        new InDecimalProjection(
+                            new FieldDecimal("t.items", "weight"),
+                            new ListParamInteger("weights")
+                        )
+                    ),
+                ]
             ),
             new Dictionary<string, IParameter>
             {
@@ -125,128 +80,52 @@ public sealed class MembershipTests
     {
         PureQLProjection projection = new(
             [Items],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.items")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "in_codes",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new InProjection(
-                                                new InStringProjection(
-                                                    new StringNullableProjection(
-                                                        new ExactStringNullableProjection(
-                                                            new FieldStringNullable(
-                                                                "t.items",
-                                                                "code"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new ListString(
-                                                        new ListSubqueryColumnString(
-                                                            "codes",
-                                                            "code",
-                                                            true
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "in_literal",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new InProjection(
-                                                new InStringProjection(
-                                                    new StringNullableProjection(
-                                                        new ExactStringNullableProjection(
-                                                            new FieldStringNullable(
-                                                                "t.items",
-                                                                "code"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new ListString(
-                                                        new ListLiteralString(["a", "c"])
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ],
-                    subqueries:
-                    [
-                        new Subquery(
-                            "codes",
-                            new Query(
-                                new PlainQuery(
-                                    new From(new FromEntity("t.items")),
-                                    [
-                                        new SelectItemProjection(
-                                            new SelectItemProjectionNullable(
-                                                new SelectItemProjectionStringNullable(
-                                                    "code",
-                                                    new ExactStringNullableProjection(
-                                                        new FieldStringNullable(
-                                                            "t.items",
-                                                            "code"
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        ),
-                                    ],
-                                    joins: null,
-                                    where: new BooleanRow(
-                                        new ComparisonRow(
-                                            new NotEqualRow(
-                                                new NotEqualStringRow(
-                                                    new StringNullableRow(
-                                                        new ExactStringNullableRow(
-                                                            new FieldStringNullable(
-                                                                "t.items",
-                                                                "code"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new StringNullableRow(
-                                                        new StringRow(
-                                                            new LiteralString("b")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                    orderBy: null,
-                                    pagination: null,
-                                    distinctBy: null
-                                )
-                            )
-                        ),
-                    ],
-                    joins: null,
-                    where: null,
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                subqueries:
+                [
+                    new SubqueryQuery(
+                        "codes",
+                        new PlainQueryWithoutPaginationWithoutOrderBy(
+                            from: new FromEntity("t.items"),
+                            where: new NotEqualStringRow(
+                                new FieldStringNullable("t.items", "code"),
+                                new LiteralString("b")
+                            ),
+                            select:
+                            [
+                                new SelectItemProjection(
+                                    "code",
+                                    new FieldStringNullable("t.items", "code")
+                                ),
+                            ]
+                        )
+                    ),
+                ],
+                from: new FromEntity("t.items"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "in_codes",
+                        new InStringProjection(
+                            new FieldStringNullable("t.items", "code"),
+                            new ListSubqueryColumnStringNullable("codes", "code")
+                        )
+                    ),
+                    new SelectItemProjection(
+                        "in_literal",
+                        new InStringProjection(
+                            new FieldStringNullable("t.items", "code"),
+                            new ListLiteralString(["a", "c"])
+                        )
+                    ),
+                ]
             )
         );
 
-        Assert.Equal(["True", "True", "False"], ResultColumn.Texts(projection, "in_codes"));
+        Assert.Equal(
+            ["True", "True", "False"],
+            ResultColumn.Texts(projection, "in_codes")
+        );
         Assert.Equal(
             ["True", "False", "False"],
             ResultColumn.Texts(projection, "in_literal")

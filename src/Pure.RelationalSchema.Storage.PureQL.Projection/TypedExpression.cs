@@ -1,5 +1,3 @@
-using PureQL.CSharp.Model.GroupKeys;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.Types;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
@@ -8,37 +6,14 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // alias that names it and the type its expression declares.
 internal sealed record TypedExpression(string Alias, IType Type, object Expression)
 {
-    public static TypedExpression Of(SelectItemProjection item)
+    public static TypedExpression Of(object item)
     {
-        return Of((ISelectItem)ModelNode.Unwrap(item));
-    }
+        object expression = ModelNode.Unwrap(ModelNode.Child(item, "Expression"));
 
-    public static TypedExpression Of(SelectItemGroup item)
-    {
-        return Of((ISelectItem)ModelNode.Unwrap(item));
-    }
-
-    public static TypedExpression Of(SelectItemTotal item)
-    {
-        return Of((ISelectItem)ModelNode.Unwrap(item));
-    }
-
-    public static TypedExpression Of(GroupKey key)
-    {
-        IGroupKey leaf = (IGroupKey)ModelNode.Unwrap(key);
         return new TypedExpression(
-            leaf.Alias,
-            leaf.Type,
-            ModelNode.Child(leaf, "Expression")
-        );
-    }
-
-    private static TypedExpression Of(ISelectItem leaf)
-    {
-        return new TypedExpression(
-            leaf.Alias,
-            leaf.Type,
-            ModelNode.Child(leaf, "Expression")
+            (string)ModelNode.Child(item, "Alias"),
+            ModelNode.TypeOf(expression),
+            expression
         );
     }
 }

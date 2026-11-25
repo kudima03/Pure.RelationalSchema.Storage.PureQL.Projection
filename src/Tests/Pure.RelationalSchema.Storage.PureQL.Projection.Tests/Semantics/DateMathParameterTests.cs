@@ -4,9 +4,7 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Parameters;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
@@ -66,7 +64,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             FixedClock.At(now),
             new TextParameter("date", dateMath),
-            new SelectItemProjectionDate("v", new DateProjection(new ParamDate("v")))
+            new SelectItemProjection("v", new ParamDate("v"))
         );
 
         Assert.Equal([date], ResultColumn.Texts(projection, "v"));
@@ -90,7 +88,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             FixedClock.At(Thursday),
             new TextParameter("time", dateMath),
-            new SelectItemProjectionTime("v", new TimeProjection(new ParamTime("v")))
+            new SelectItemProjection("v", new ParamTime("v"))
         );
 
         Assert.Equal([time], ResultColumn.Texts(projection, "v"));
@@ -112,10 +110,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             FixedClock.At(Thursday),
             new TextParameter("datetime", dateMath),
-            new SelectItemProjectionDatetime(
-                "v",
-                new DatetimeProjection(new ParamDatetime("v"))
-            )
+            new SelectItemProjection("v", new ParamDatetime("v"))
         );
 
         Assert.Equal([datetime], ResultColumn.Texts(projection, "v"));
@@ -128,7 +123,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             clock,
             new TextParameter("date", "now-10d"),
-            new SelectItemProjectionDate("v", new DateProjection(new ParamDate("v")))
+            new SelectItemProjection("v", new ParamDate("v"))
         );
 
         Assert.Equal(["2026-10-19"], ResultColumn.Texts(projection, "v"));
@@ -149,16 +144,10 @@ public sealed class DateMathParameterTests
                 ["at"] = new TextParameter("time", "now-1h"),
                 ["fixed"] = new TextParameter("date", "2026-10-01"),
             },
-            new SelectItemProjectionDate(
-                "from",
-                new DateProjection(new ParamDate("from"))
-            ),
-            new SelectItemProjectionDate("to", new DateProjection(new ParamDate("to"))),
-            new SelectItemProjectionTime("at", new TimeProjection(new ParamTime("at"))),
-            new SelectItemProjectionDate(
-                "fixed",
-                new DateProjection(new ParamDate("fixed"))
-            )
+            new SelectItemProjection("from", new ParamDate("from")),
+            new SelectItemProjection("to", new ParamDate("to")),
+            new SelectItemProjection("at", new ParamTime("at")),
+            new SelectItemProjection("fixed", new ParamDate("fixed"))
         );
         int built = clock.Reads;
 
@@ -178,7 +167,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             clock,
             new TextParameter("date", "2026-10-01"),
-            new SelectItemProjectionDate("v", new DateProjection(new ParamDate("v")))
+            new SelectItemProjection("v", new ParamDate("v"))
         );
 
         Assert.Equal(["2026-10-01"], ResultColumn.Texts(projection, "v"));
@@ -246,10 +235,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             FixedClock.At(Thursday),
             new TextParameter("date", "now-1d"),
-            new SelectItemProjectionDateNullable(
-                "v",
-                new ExactDateNullableProjection(new ParamDateNullable("v"))
-            )
+            new SelectItemProjection("v", new ParamDateNullable("v"))
         );
 
         Assert.Equal(["2026-10-28"], ResultColumn.Texts(projection, "v"));
@@ -261,10 +247,7 @@ public sealed class DateMathParameterTests
         PureQLProjection projection = Selecting(
             FixedClock.At(Thursday),
             new TextParameter("string", "now-1d"),
-            new SelectItemProjectionString(
-                "v",
-                new StringProjection(new ParamString("v"))
-            )
+            new SelectItemProjection("v", new ParamString("v"))
         );
 
         Assert.Equal(["now-1d"], ResultColumn.Texts(projection, "v"));
@@ -276,18 +259,9 @@ public sealed class DateMathParameterTests
         DateOnly before = DateOnly.FromDateTime(DateTime.UtcNow);
         PureQLProjection projection = new(
             [One],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.one")),
-                    [
-                        Item(
-                            new SelectItemProjectionDate(
-                                "v",
-                                new DateProjection(new ParamDate("v"))
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.one"),
+                select: [new SelectItemProjection("v", new ParamDate("v"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -303,7 +277,7 @@ public sealed class DateMathParameterTests
     private static PureQLProjection Selecting(
         TimeProvider clock,
         IParameter value,
-        object column
+        SelectItemProjection column
     )
     {
         return Selecting(
@@ -316,16 +290,14 @@ public sealed class DateMathParameterTests
     private static PureQLProjection Selecting(
         TimeProvider clock,
         IReadOnlyDictionary<string, IParameter> values,
-        params object[] columns
+        params SelectItemProjection[] columns
     )
     {
         return new PureQLProjection(
             [One],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.one")),
-                    [.. columns.Select(Item)]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.one"),
+                select: columns
             ),
             values,
             clock
@@ -340,37 +312,13 @@ public sealed class DateMathParameterTests
     {
         return new PureQLProjection(
             datasets,
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.orders", "o")),
-                    [
-                        Item(
-                            new SelectItemProjectionInteger(
-                                "id",
-                                new IntegerProjection(new FieldInteger("o", "id"))
-                            )
-                        ),
-                    ],
-                    subqueries: null,
-                    joins: null,
-                    where: new BooleanRow(
-                        new ComparisonRow(
-                            new GreaterThanOrEqualRow(
-                                new GreaterThanOrEqualDateRow(
-                                    new DateNullableRow(
-                                        new DateRow(new FieldDate("o", "placed_on"))
-                                    ),
-                                    new DateNullableRow(
-                                        new DateRow(new ParamDate("since"))
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    orderBy: null,
-                    pagination: null,
-                    distinctBy: null
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.orders", "o"),
+                where: new GreaterThanOrEqualDateRow(
+                    new FieldDate("o", "placed_on"),
+                    new ParamDate("since")
+                ),
+                select: [new SelectItemProjection("id", new FieldInteger("o", "id"))]
             ),
             new Dictionary<string, IParameter>
             {
@@ -378,31 +326,5 @@ public sealed class DateMathParameterTests
             },
             clock
         );
-    }
-
-    private static SelectItemProjection Item(object column)
-    {
-        return column switch
-        {
-            SelectItemProjectionInteger item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionString item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionDate item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionTime item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionDatetime item => new SelectItemProjection(
-                new SelectItemProjectionNonNullable(item)
-            ),
-            SelectItemProjectionDateNullable item => new SelectItemProjection(
-                new SelectItemProjectionNullable(item)
-            ),
-            _ => throw new ArgumentException($"{column} is not a select item."),
-        };
     }
 }

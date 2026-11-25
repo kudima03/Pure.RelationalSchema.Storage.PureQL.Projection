@@ -6,8 +6,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
-using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 using PureQL.CSharp.Model.TotalExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
@@ -35,22 +33,12 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDatetime(
-                                    "at",
-                                    new DatetimeProjection(
-                                        new FieldDatetime("t.events", "at")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.events"),
+                select:
+                [
+                    new SelectItemProjection("at", new FieldDatetime("t.events", "at")),
+                ]
             )
         );
 
@@ -75,36 +63,20 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionTime(
-                                    "shifted",
-                                    new TimeProjection(
-                                        new TimeAddSecondsTimeProjection(
-                                            new TimeProjection(
-                                                new FieldTime("t.events", "clock")
-                                            ),
-                                            new DecimalProjection(
-                                                new ExactDecimalProjection(
-                                                    new LiteralDecimal(
-                                                        decimal.Parse(
-                                                            seconds,
-                                                            CultureInfo.InvariantCulture
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.events"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "shifted",
+                        new TimeAddSecondsTimeProjection(
+                            new FieldTime("t.events", "clock"),
+                            new LiteralDecimal(
+                                decimal.Parse(seconds, CultureInfo.InvariantCulture)
                             )
-                        ),
-                    ]
-                )
+                        )
+                    ),
+                ]
             )
         );
 
@@ -116,31 +88,18 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "seconds",
-                                    new ExactDecimalProjection(
-                                        new DifferenceDecimalProjection(
-                                            new TimeDiffSecondsDecimalProjection(
-                                                new TimeProjection(
-                                                    new FieldTime("t.events", "clock")
-                                                ),
-                                                new TimeProjection(
-                                                    new LiteralTime(new TimeOnly(12, 0))
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.events"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "seconds",
+                        new TimeDiffSecondsDecimalProjection(
+                            new FieldTime("t.events", "clock"),
+                            new LiteralTime(new TimeOnly(12, 0))
+                        )
+                    ),
+                ]
             )
         );
 
@@ -152,60 +111,27 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "elapsed",
-                                    new ExactDecimalProjection(
-                                        new DifferenceDecimalProjection(
-                                            new DatetimeDiffSecondsDecimalProjection(
-                                                new DatetimeProjection(
-                                                    new FieldDatetime("t.events", "at")
-                                                ),
-                                                new DatetimeProjection(
-                                                    new LiteralDatetime(
-                                                        new DateTimeOffset(
-                                                            2024,
-                                                            1,
-                                                            1,
-                                                            0,
-                                                            0,
-                                                            0,
-                                                            TimeSpan.Zero
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.events"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "elapsed",
+                        new DatetimeDiffSecondsDecimalProjection(
+                            new FieldDatetime("t.events", "at"),
+                            new LiteralDatetime(
+                                new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero)
                             )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDatetime(
-                                    "later",
-                                    new DatetimeProjection(
-                                        new DatetimeAddSecondsDatetimeProjection(
-                                            new DatetimeProjection(
-                                                new FieldDatetime("t.events", "at")
-                                            ),
-                                            new DecimalProjection(
-                                                new ExactDecimalProjection(
-                                                    new LiteralDecimal(1.5m)
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+                        )
+                    ),
+                    new SelectItemProjection(
+                        "later",
+                        new DatetimeAddSecondsDatetimeProjection(
+                            new FieldDatetime("t.events", "at"),
+                            new LiteralDecimal(1.5m)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -224,27 +150,17 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDatetime(
-                                    "at",
-                                    new DatetimeProjection(
-                                        new LiteralDatetime(
-                                            DateTimeOffset.Parse(
-                                                literal,
-                                                CultureInfo.InvariantCulture
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.events"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "at",
+                        new LiteralDatetime(
+                            DateTimeOffset.Parse(literal, CultureInfo.InvariantCulture)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -256,29 +172,18 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDate(
-                                    "due",
-                                    new DateProjection(
-                                        new DateAddDaysDateProjection(
-                                            new DateProjection(
-                                                new FieldDate("t.events", "on")
-                                            ),
-                                            new IntegerProjection(
-                                                new LiteralInteger(3_000_000)
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.events"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "due",
+                        new DateAddDaysDateProjection(
+                            new FieldDate("t.events", "on"),
+                            new LiteralInteger(3_000_000)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -290,66 +195,25 @@ public sealed class TemporalTests
     {
         PureQLProjection projection = new(
             [Events],
-            new PureQLQuery(
-                new MainTotalQuery(
-                    new From(new FromEntity("t.events")),
-                    [
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalDateNullable(
-                                    "mean_day",
-                                    new ExactDateNullableTotal(
-                                        new AggregateDateNullableTotal(
-                                            new AverageDateNullableTotal(
-                                                new DateNullableRow(
-                                                    new DateRow(
-                                                        new FieldDate("t.events", "on")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalTimeNullable(
-                                    "mean_clock",
-                                    new ExactTimeNullableTotal(
-                                        new AggregateTimeNullableTotal(
-                                            new AverageTimeNullableTotal(
-                                                new TimeNullableRow(
-                                                    new TimeRow(
-                                                        new FieldTime("t.events", "clock")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalDatetimeNullable(
-                                    "mean_at",
-                                    new ExactDatetimeNullableTotal(
-                                        new AggregateDatetimeNullableTotal(
-                                            new AverageDatetimeNullableTotal(
-                                                new DatetimeNullableRow(
-                                                    new DatetimeRow(
-                                                        new FieldDatetime("t.events", "at")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainTotalQuery(
+                from: new FromEntity("t.events"),
+                aggregate:
+                [
+                    new SelectItemTotal(
+                        "mean_day",
+                        new AverageDateNullableTotal(new FieldDate("t.events", "on"))
+                    ),
+                    new SelectItemTotal(
+                        "mean_clock",
+                        new AverageTimeNullableTotal(new FieldTime("t.events", "clock"))
+                    ),
+                    new SelectItemTotal(
+                        "mean_at",
+                        new AverageDatetimeNullableTotal(
+                            new FieldDatetime("t.events", "at")
+                        )
+                    ),
+                ]
             )
         );
 
@@ -376,48 +240,21 @@ public sealed class TemporalTests
                     ["2024-01-01T00:00:00.000001", "00:00:00.000001"]
                 ),
             ],
-            new PureQLQuery(
-                new MainTotalQuery(
-                    new From(new FromEntity("t.ticks")),
-                    [
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalTimeNullable(
-                                    "mean_clock",
-                                    new ExactTimeNullableTotal(
-                                        new AggregateTimeNullableTotal(
-                                            new AverageTimeNullableTotal(
-                                                new TimeNullableRow(
-                                                    new TimeRow(
-                                                        new FieldTime("t.ticks", "clock")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemTotal(
-                            new SelectItemTotalNullable(
-                                new SelectItemTotalDatetimeNullable(
-                                    "mean_at",
-                                    new ExactDatetimeNullableTotal(
-                                        new AggregateDatetimeNullableTotal(
-                                            new AverageDatetimeNullableTotal(
-                                                new DatetimeNullableRow(
-                                                    new DatetimeRow(
-                                                        new FieldDatetime("t.ticks", "at")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainTotalQuery(
+                from: new FromEntity("t.ticks"),
+                aggregate:
+                [
+                    new SelectItemTotal(
+                        "mean_clock",
+                        new AverageTimeNullableTotal(new FieldTime("t.ticks", "clock"))
+                    ),
+                    new SelectItemTotal(
+                        "mean_at",
+                        new AverageDatetimeNullableTotal(
+                            new FieldDatetime("t.ticks", "at")
+                        )
+                    ),
+                ]
             )
         );
 

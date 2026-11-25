@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Numerics;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.ListParameter;
-using PureQL.CSharp.Model.Parameters;
 using PureQL.CSharp.Model.Types;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 using ModelParameter = PureQL.CSharp.Model.Parameters.IParameter;
@@ -53,8 +53,8 @@ internal sealed class ParameterValues(
         return Expression.Property(
             Expression.Constant(
                 bound is DateMath dateMath
-                    ? Activator.CreateInstance(type, parameter.Name, dateMath, Now())
-                    : Activator.CreateInstance(type, parameter.Name, bound)
+                    ? Activator.CreateInstance(type, parameter.Param, dateMath, Now())
+                    : Activator.CreateInstance(type, parameter.Param, bound)
             ),
             nameof(QueryParameter<>.Value)
         );
@@ -67,9 +67,12 @@ internal sealed class ParameterValues(
         _ = Bound(parameter);
     }
 
-    public long Integer(ParamInteger parameter)
+    // The value a parameter is bound to, as the tree holds it: null for a
+    // typed null, the items for a list. A parameter bound to date math has
+    // its value at the clock's instant.
+    public object? Read(ModelParameter parameter)
     {
-        return (long)Bound(parameter)!;
+        return Bound(parameter) is DateMath dateMath ? dateMath.At(Now()) : Bound(parameter);
     }
 
     private static bool IsList(string type)
@@ -92,10 +95,10 @@ internal sealed class ParameterValues(
     // type, its DateMath, or the items of a list in an array.
     private object? Bound(ModelParameter parameter)
     {
-        if (!_values.TryGetValue(parameter.Name, out IParameter? bound))
+        if (!_values.TryGetValue(parameter.Param, out IParameter? bound))
         {
             throw new ArgumentException(
-                $"Parameter '{parameter.Name}' is not bound to a value."
+                $"Parameter '{parameter.Param}' is not bound to a value."
             );
         }
 
@@ -106,7 +109,7 @@ internal sealed class ParameterValues(
         if (!Binds(type.Name, name) || (nullable && !type.Nullable))
         {
             throw new ArgumentException(
-                $"Parameter '{parameter.Name}' is "
+                $"Parameter '{parameter.Param}' is "
                     + $"{Describe(type.Name, type.Nullable, "nullable")} and cannot be "
                     + $"bound to a {Describe(name, nullable, "null")} parameter."
             );
@@ -115,10 +118,10 @@ internal sealed class ParameterValues(
         Type item = ValueTypes.Clr(type);
 
         return IsList(type.Name)
-            ? Items(parameter.Name, type.Name, bound, item)
+            ? Items(parameter.Param, type.Name, bound, item)
             : nullable
             ? null
-            : Literals.As(Value(parameter.Name, name, bound.Value.TextValue), item);
+            : Literals.As(Value(parameter.Param, name, bound.Value.TextValue), item);
     }
 
     private static Array Items(string parameter, string type, IParameter bound, Type item)
@@ -220,6 +223,14 @@ internal sealed class ParameterValues(
         }
     }
 
+    // A decimal is m x 10^-s with |m| < 10^28: System.Decimal holds more.
+    private static decimal InRange(decimal value)
+    {
+        return BigInteger.Abs(Exact.Parts(value).Mantissa) < Exact.PowerOfTen(Exact.Digits)
+            ? value
+            : throw new OverflowException("A decimal of more than 28 digits.");
+    }
+
     private static object Parse(string type, string text)
     {
         CultureInfo invariant = CultureInfo.InvariantCulture;
@@ -227,7 +238,7 @@ internal sealed class ParameterValues(
         return type switch
         {
             "integer" => long.Parse(text, NumberStyles.Integer, invariant),
-            "decimal" => decimal.Parse(text, NumberStyles.Float, invariant),
+            "decimal" => InRange(decimal.Parse(text, NumberStyles.Float, invariant)),
             "boolean" => bool.Parse(text),
             "date" => DateOnly.Parse(text, invariant),
             "time" => TimeOnly.Parse(text, invariant),

@@ -10,7 +10,7 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // item, named by its alias and typed by its declared PureQL type.
 internal sealed record ResultTable : ITable
 {
-    public ResultTable(IEnumerable<TypedExpression> select)
+    public ResultTable(IEnumerable<QueryColumn> select)
     {
         Columns =
         [

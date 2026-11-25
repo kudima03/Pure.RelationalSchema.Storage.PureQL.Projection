@@ -33,10 +33,7 @@
       Include="Pure.RelationalSchema.Storage.Samples"
       Version="0.1.0-preview.1.3.0"
     />
-    <PackageReference
-      Include="PureQL.CSharp.Model.Samples"
-      Version="0.1.0-preview.2.3.1"
-    />
+    <PackageReference Include="PureQL.CSharp.Model.Samples" Version="0.1.0-preview.4.0.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
@@ -46,6 +43,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Pure.RelationalSchema.Storage.PureQL.Projection\Pure.RelationalSchema.Storage.PureQL.Projection.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Functions\TimeZoneVectors.txt" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

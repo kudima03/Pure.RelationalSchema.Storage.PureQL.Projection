@@ -7,8 +7,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // computes:
 // - an operation over constants is folded to its value (unless computing it
 //   fails, which is left to the query; constant strings compare by code
-//   point), a captured parameter is never read, and a value boxed to object
-//   keeps its type;
+//   point and decimals are computed exactly, see ExactArithmetic; no double
+//   is computed), a captured parameter is never read, and a value boxed to
+//   object keeps its type;
 // - true and false fold out of and, or, not and conditionals, a value that
 //   cannot be null is not checked for null, a lifted operation over null is
 //   null, over values that cannot be null it is not lifted, and a conversion
@@ -37,6 +38,10 @@ internal sealed class Simplifier : ExpressionVisitor
         typeof(DateTime),
         typeof(TimeSpan),
         typeof(Guid),
+        typeof(PureQLMath),
+        typeof(PureQLText),
+        typeof(PureQLTime),
+        typeof(PureQLConversions),
     ];
 
     private Simplifier() { }
@@ -102,12 +107,34 @@ internal sealed class Simplifier : ExpressionVisitor
 
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
+        if (ExactArithmetic.IsRoundedQuotient(node))
+        {
+            return RoundedQuotient(node);
+        }
+
         Expression visited = base.VisitMethodCall(node);
 
         return visited is not MethodCallExpression call ? visited
             : call.Method.DeclaringType == typeof(Queryable) ? Query(call)
             : IsOrdinalComparison(call) ? CodePointComparison(call)
-            : IsPure(call) ? Fold(call)
+            : IsPure(call) && !ExactArithmetic.IsPowerOfTen(call) ? Fold(call)
+            : call;
+    }
+
+    // Math.Round of a quotient is rounded once, from the exact quotient: the
+    // quotient is not folded on its own, which would round it first.
+    private Expression RoundedQuotient(MethodCallExpression node)
+    {
+        BinaryExpression quotient = (BinaryExpression)node.Arguments[0];
+        Expression left = Visit(quotient.Left);
+        Expression right = Visit(quotient.Right);
+        MethodCallExpression call = node.Update(
+            null,
+            [Expression.Divide(left, right), node.Arguments[1]]
+        );
+
+        return left is ConstantExpression && right is ConstantExpression
+            ? Fold(call)
             : call;
     }
 
@@ -209,6 +236,7 @@ internal sealed class Simplifier : ExpressionVisitor
             : plain is not null && plain.Type == node.Type ? plain
             : plain is not null && !node.Type.IsValueType
                 ? Expression.Convert(plain, node.Type)
+            : node.Type == typeof(double) ? node
             : Fold(node);
     }
 
@@ -396,7 +424,8 @@ internal sealed class Simplifier : ExpressionVisitor
     }
 
     // The value of an expression over constants, computed now. Computing it
-    // may fail (an overflow, a division by zero, a date out of range); the
+    // may fail (an overflow, a division by zero, a date out of range, a null
+    // literal the check of a lifted operator keeps it from reading); the
     // expression is then kept, to fail the query when it runs.
     private static Expression Fold(Expression node)
     {
@@ -419,7 +448,9 @@ internal sealed class Simplifier : ExpressionVisitor
         {
             return Expression.Constant(
                 Expression
-                    .Lambda<Func<object?>>(Expression.Convert(node, typeof(object)))
+                    .Lambda<Func<object?>>(
+                        Expression.Convert(ExactArithmetic.Rewrite(node), typeof(object))
+                    )
                     .Compile(preferInterpretation: true)(),
                 node.Type
             );
@@ -438,6 +469,16 @@ internal sealed class Simplifier : ExpressionVisitor
         }
         catch (InvalidOperationException)
         {
+            return node;
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return node;
+        }
+        catch (NullReferenceException)
+        {
+            // An operation over a null literal that a lifted operator's
+            // check around it never reaches.
             return node;
         }
     }

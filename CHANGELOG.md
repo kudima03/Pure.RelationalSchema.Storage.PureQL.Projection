@@ -6,6 +6,91 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+Implements PureQL specification `0.1.0-preview.3.0.0` on
+`PureQL.CSharp.Model` `0.1.0-preview.15.0.0` (was specification
+`0.1.0-preview.2.0.1` on model `0.1.0-preview.13.0.0`; the model releases
+`0.1.0-preview.14.0.0` and `0.1.0-preview.14.1.0` are skipped).
+
+### Added
+
+- **Queries.** Combined queries (`unionAll`, `union`, `intersect`, `except`)
+  as the main query, a subquery or an input; inline rows; recursive
+  subqueries with a plain or a grouped `next` and `maxDepth`, a row beyond
+  which fails the query (`InvalidOperationException`); `orderBy` by a `select`
+  column; `pagination` with only `skip` or only `take`.
+- **Window functions** in a plain query: every aggregate over a partition, a
+  frame of rows or a range of values (`integer`, `decimal`, `date`,
+  `datetime` keys), `rowNumber`, `rank`, `denseRank`, `percentRank`,
+  `cumulativeDistribution`, `ntile`, `previous` and `next`.
+- **Operators.** `abs`, `sign`, `truncate`, `greatest` / `least`, `round`
+  with `halfEven`, decimal `integerDivide` and `modulo`, `nullIfEqual`;
+  `power`, `sqrt`, `exp`, `ln`, `log10`, `log`, `sin`, `cos`, `tan`, `asin`,
+  `acos`, `atan`, `atan2`, `pi`; the string operators, `contains` /
+  `startsWith` / `endsWith`, `foldCase`, `normalize`, `removeDiacritics`,
+  `matchesRegex` / `extractRegex` / `replaceRegex`; the date and time parts,
+  `startOf…`, months (`dateAddMonths`, `dateDiffMonths`, `datetimeAddMonths`,
+  `datetimeDiffMonths`), `dateFromParts` / `timeFromParts` /
+  `datetimeFromParts`, an optional `zone` wherever the specification has
+  one; `as…`, `tryAs…`, `asNullable`.
+- **Aggregates.** `countDistinct`, `first` / `last`, `concatAll`, `median`,
+  `percentileContinuous` / `percentileDiscrete`, `mode`, the variances,
+  standard deviations and covariances, `correlation`, `regressionSlope` /
+  `regressionIntercept` / `regressionRSquared`.
+- **Public functions and query operators**, which the tree calls where the
+  BCL has no member that computes exactly what the specification defines,
+  and which a provider recognises by their method: `PureQLMath`,
+  `PureQLText`, `PureQLTime`, `PureQLConversions`, `PureQLAggregates`,
+  `PureQLWindows` with `PureQLWindow<TRow>`, `PureQLFrame` and
+  `PureQLRangeUnit`, and `PureQLRecursion`. The README lists the tree shape
+  of every new construct. Called as code, the `IQueryable` forms of
+  `PureQLWindows.Over` and `PureQLRecursion.Recursive` compute the operator
+  over a LINQ to Objects query and refuse another provider's query with
+  `NotSupportedException`, so a provider that evaluates closed calls while
+  reading a tree (`Pure.RelationalSchema.Storage.PostgreSQL.Querying`)
+  falls back to memory instead of looping.
+- **Checks when a projection is built** (`ArgumentException`): the inputs of
+  a set operation and the rows of an inline subquery have the same aliases
+  and types that meet; the rules of a recursive subquery; an `orderBy`
+  column is a `select` alias; a parameter has one type in the document; a
+  regular expression, literal or bound, is a pattern of the dialect and has
+  the group asked for; a zone, literal or bound, is a time zone name; a bound
+  `fraction`, frame count, range distance, `offset`, `buckets` and `maxDepth`
+  are in range; a `decimal` parameter has at most 28 digits.
+
+### Changed
+
+- **Breaking:** targets .NET 11 only (`net8.0`, `net9.0` and `net10.0` are
+  dropped): `PureQL.CSharp.Model` `0.1.0-preview.15.0.0` is built with C# 15
+  unions. Every query is built with the records of that model: the `OneOf`
+  wrappers are gone, a paginated query requires `orderBy`, select items and
+  group keys are one record each (see the model's changelog).
+  `PureQLFilteredSchemaDataSet` takes the model's `BooleanRow` union.
+- **Breaking:** results follow the specification's 3.0.0 semantics where
+  they differ from what .NET computes. Run in memory, a `decimal` result is
+  computed exactly and rounded once, half away from zero, to at most 28
+  significant digits and 28 decimal places (`10 / 3` is
+  `3.333333333333333333333333333`, where `System.Decimal` gave 29 digits),
+  and a magnitude of 10²⁸ or more is an `OverflowException`; `sum` and
+  `average` are computed from the exact values in any order, so a partial
+  sum beyond 64 bits no longer fails; `add`, `subtract` and `multiply` over a
+  list of integers and decimals keep their integer steps, checked; `round`
+  to a negative number of digits rounds the exact quotient once.
+- **Breaking:** `greaterThanOrEqual` and `lessThanOrEqual` of two nulls are
+  `true`, as the specification now defines; in the tree such a comparison of
+  two nullable operands is `a >= b || (a == null && b == null)`.
+- `dateAddDays`, `timeAddSeconds` and `datetimeAddSeconds` read `operand` and
+  `days` / `seconds`; `round` with `digits` keeps the type of its operand;
+  `floor`, `ceiling` and `round` without `digits` take a `decimal`.
+- The tree of every construct of specification `0.1.0-preview.2.0.1` is
+  otherwise unchanged, so a provider that translated it still does. A query
+  that holds a function or a query operator of this library is refused by
+  `Pure.RelationalSchema.Storage.PostgreSQL.Querying` `0.1.0-preview.0.10.0`
+  and runs in memory, until the provider translates it.
+
+### Removed
+
+- Target frameworks `net8.0`, `net9.0` and `net10.0`.
+
 ## [0.1.0-preview.6.2.0] — 2026-11-11
 
 ### Added

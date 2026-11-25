@@ -10,7 +10,11 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 // holds standard query operators (Enumerable ones only over a group or a
 // list, never over a query); members and methods of the BCL's value types,
 // strings and Math; group keys; the read of a stored cell; value tuples;
-// constants of values, stored tables and columns; captured parameters; and, in its last
+// constants of values, stored tables and columns; captured parameters; the
+// functions and query operators of this library, which stand for the
+// operators the BCL has no exact member for (PureQLMath, PureQLText,
+// PureQLTime, PureQLConversions, PureQLAggregates, a window, a recursion) and
+// which a provider translates or refuses by their method; and, in its last
 // Select, the result rows. Nothing is invoked, compiled or run as a block.
 internal sealed class Untranslatable : ExpressionVisitor
 {
@@ -49,6 +53,21 @@ internal sealed class Untranslatable : ExpressionVisitor
         ExpressionType.New,
         ExpressionType.NewArrayInit,
         ExpressionType.Default,
+    ];
+
+    // The functions and query operators an operator of the specification is
+    // in the tree when the BCL has none that computes it exactly.
+    private static readonly HashSet<Type> Functions =
+    [
+        typeof(PureQLMath),
+        typeof(PureQLText),
+        typeof(PureQLTime),
+        typeof(PureQLConversions),
+        typeof(PureQLAggregates),
+        typeof(PureQLWindows),
+        typeof(PureQLRecursion),
+        typeof(PureQLFrame),
+        typeof(PureQLWindow<>),
     ];
 
     private static readonly HashSet<string> ClientSide =
@@ -101,6 +120,7 @@ internal sealed class Untranslatable : ExpressionVisitor
                     method.Name == "get_Item"
                     && owner == typeof(IReadOnlyDictionary<IColumn, ICell>)
                 )
+                || IsFunction(owner)
             );
 
         if (!translatable)
@@ -175,6 +195,7 @@ internal sealed class Untranslatable : ExpressionVisitor
             || owner == typeof(IRow)
             || owner == typeof(ICell)
             || owner == typeof(IString)
+            || IsFunction(owner)
             || owner.Name.StartsWith("QueryParameter", StringComparison.Ordinal);
 
         if (!translatable)
@@ -183,5 +204,12 @@ internal sealed class Untranslatable : ExpressionVisitor
         }
 
         return base.VisitMember(node);
+    }
+
+    private static bool IsFunction(Type owner)
+    {
+        return Functions.Contains(
+            owner.IsGenericType ? owner.GetGenericTypeDefinition() : owner
+        );
     }
 }

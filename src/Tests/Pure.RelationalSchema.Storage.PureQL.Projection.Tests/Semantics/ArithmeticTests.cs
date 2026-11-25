@@ -5,7 +5,6 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Literals;
 using PureQL.CSharp.Model.ProjectionExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
@@ -30,46 +29,25 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "quotient",
-                                    new IntegerProjection(
-                                        new ArithmeticIntegerProjection(
-                                            new IntegerDivideIntegerProjection(
-                                                new IntegerProjection(
-                                                    new FieldInteger("t.numbers", "n")
-                                                ),
-                                                new IntegerProjection(new LiteralInteger(2))
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "remainder",
-                                    new IntegerProjection(
-                                        new ArithmeticIntegerProjection(
-                                            new ModuloIntegerProjection(
-                                                new IntegerProjection(
-                                                    new FieldInteger("t.numbers", "n")
-                                                ),
-                                                new IntegerProjection(new LiteralInteger(2))
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "quotient",
+                        new IntegerDivideIntegerProjection(
+                            new FieldInteger("t.numbers", "n"),
+                            new LiteralInteger(2)
+                        )
+                    ),
+                    new SelectItemProjection(
+                        "remainder",
+                        new ModuloIntegerProjection(
+                            new FieldInteger("t.numbers", "n"),
+                            new LiteralInteger(2)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -82,33 +60,18 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "sum",
-                                    new IntegerProjection(
-                                        new ArithmeticIntegerProjection(
-                                            new AddIntegerProjection(
-                                                [
-                                                    new IntegerProjection(
-                                                        new LiteralInteger(long.MaxValue)
-                                                    ),
-                                                    new IntegerProjection(
-                                                        new LiteralInteger(1)
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "sum",
+                        new AddIntegerProjection([
+                            new LiteralInteger(long.MaxValue),
+                            new LiteralInteger(1),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -120,47 +83,21 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "result",
-                                    new IntegerProjection(
-                                        new ArithmeticIntegerProjection(
-                                            new SubtractIntegerProjection(
-                                                [
-                                                    new IntegerProjection(
-                                                        new ArithmeticIntegerProjection(
-                                                            new MultiplyIntegerProjection(
-                                                                [
-                                                                    new IntegerProjection(
-                                                                        new FieldInteger(
-                                                                            "t.numbers",
-                                                                            "n"
-                                                                        )
-                                                                    ),
-                                                                    new IntegerProjection(
-                                                                        new LiteralInteger(3)
-                                                                    ),
-                                                                ]
-                                                            )
-                                                        )
-                                                    ),
-                                                    new IntegerProjection(
-                                                        new LiteralInteger(1)
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "result",
+                        new SubtractIntegerProjection([
+                            new MultiplyIntegerProjection([
+                                new FieldInteger("t.numbers", "n"),
+                                new LiteralInteger(3),
+                            ]),
+                            new LiteralInteger(1),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -172,37 +109,18 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "ratio",
-                                    new ExactDecimalProjection(
-                                        new ArithmeticDecimalProjection(
-                                            new DivideDecimalProjection(
-                                                [
-                                                    new DecimalProjection(
-                                                        new ExactDecimalProjection(
-                                                            new FieldDecimal("t.numbers", "d")
-                                                        )
-                                                    ),
-                                                    new DecimalProjection(
-                                                        new IntegerProjection(
-                                                            new LiteralInteger(0)
-                                                        )
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "ratio",
+                        new DivideDecimalProjection([
+                            new FieldDecimal("t.numbers", "d"),
+                            new LiteralInteger(0),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -214,52 +132,21 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionBoolean(
-                                    "exact",
-                                    new BooleanProjection(
-                                        new ComparisonProjection(
-                                            new EqualProjection(
-                                                new EqualDecimalProjection(
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalProjection(
-                                                            new ArithmeticDecimalProjection(
-                                                                new AddDecimalProjection(
-                                                                    [
-                                                                        new DecimalProjection(
-                                                                            new ExactDecimalProjection(
-                                                                                new LiteralDecimal(0.1m)
-                                                                            )
-                                                                        ),
-                                                                        new DecimalProjection(
-                                                                            new ExactDecimalProjection(
-                                                                                new LiteralDecimal(0.2m)
-                                                                            )
-                                                                        ),
-                                                                    ]
-                                                                )
-                                                            )
-                                                        )
-                                                    ),
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalProjection(
-                                                            new LiteralDecimal(0.3m)
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "exact",
+                        new EqualDecimalProjection(
+                            new AddDecimalProjection([
+                                new LiteralDecimal(0.1m),
+                                new LiteralDecimal(0.2m),
+                            ]),
+                            new LiteralDecimal(0.3m)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -271,66 +158,25 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "rounded",
-                                    new IntegerProjection(
-                                        new RoundingIntegerProjection(
-                                            new RoundIntegerProjection(
-                                                new DecimalProjection(
-                                                    new ExactDecimalProjection(
-                                                        new FieldDecimal("t.numbers", "d")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "floored",
-                                    new IntegerProjection(
-                                        new RoundingIntegerProjection(
-                                            new FloorIntegerProjection(
-                                                new DecimalProjection(
-                                                    new ExactDecimalProjection(
-                                                        new FieldDecimal("t.numbers", "d")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionInteger(
-                                    "ceiled",
-                                    new IntegerProjection(
-                                        new RoundingIntegerProjection(
-                                            new CeilingIntegerProjection(
-                                                new DecimalProjection(
-                                                    new ExactDecimalProjection(
-                                                        new FieldDecimal("t.numbers", "d")
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "rounded",
+                        new RoundWithoutDigitsIntegerProjection(
+                            new FieldDecimal("t.numbers", "d")
+                        )
+                    ),
+                    new SelectItemProjection(
+                        "floored",
+                        new FloorIntegerProjection(new FieldDecimal("t.numbers", "d"))
+                    ),
+                    new SelectItemProjection(
+                        "ceiled",
+                        new CeilingIntegerProjection(new FieldDecimal("t.numbers", "d"))
+                    ),
+                ]
             )
         );
 
@@ -350,34 +196,18 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionDecimalNullable(
-                                    "rounded",
-                                    new ExactDecimalNullableProjection(
-                                        new RoundDecimalNullableProjection(
-                                            new DecimalNullableProjection(
-                                                new ExactDecimalNullableProjection(
-                                                    new FieldDecimalNullable(
-                                                        "t.numbers",
-                                                        "m"
-                                                    )
-                                                )
-                                            ),
-                                            new IntegerProjection(
-                                                new LiteralInteger(digits)
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "rounded",
+                        new RoundDecimalNullableProjection(
+                            new FieldDecimalNullable("t.numbers", "m"),
+                            new LiteralInteger(digits)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -389,63 +219,25 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionDecimalNullable(
-                                    "product",
-                                    new ExactDecimalNullableProjection(
-                                        new ArithmeticDecimalNullableProjection(
-                                            new MultiplyDecimalNullableProjection(
-                                                [
-                                                    new DecimalNullableProjection(
-                                                        new ExactDecimalNullableProjection(
-                                                            new FieldDecimalNullable(
-                                                                "t.numbers",
-                                                                "m"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new DecimalNullableProjection(
-                                                        new IntegerProjection(
-                                                            new LiteralInteger(2)
-                                                        )
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionIntegerNullable(
-                                    "quotient",
-                                    new ExactIntegerNullableProjection(
-                                        new ArithmeticIntegerNullableProjection(
-                                            new IntegerDivideIntegerNullableProjection(
-                                                new IntegerNullableProjection(
-                                                    new ExactIntegerNullableProjection(
-                                                        new LiteralIntegerNullable()
-                                                    )
-                                                ),
-                                                new IntegerNullableProjection(
-                                                    new IntegerProjection(
-                                                        new LiteralInteger(0)
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "product",
+                        new MultiplyDecimalNullableProjection([
+                            new FieldDecimalNullable("t.numbers", "m"),
+                            new LiteralInteger(2),
+                        ])
+                    ),
+                    new SelectItemProjection(
+                        "quotient",
+                        new IntegerDivideIntegerNullableProjection(
+                            new LiteralIntegerNullable(),
+                            new LiteralInteger(0)
+                        )
+                    ),
+                ]
             )
         );
 
@@ -458,35 +250,18 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNullable(
-                                new SelectItemProjectionStringNullable(
-                                    "label",
-                                    new ExactStringNullableProjection(
-                                        new ConcatStringNullableProjection(
-                                            [
-                                                new StringNullableProjection(
-                                                    new StringProjection(
-                                                        new LiteralString("a")
-                                                    )
-                                                ),
-                                                new StringNullableProjection(
-                                                    new ExactStringNullableProjection(
-                                                        new LiteralStringNullable()
-                                                    )
-                                                ),
-                                            ]
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "label",
+                        new ConcatStringNullableProjection([
+                            new LiteralString("a"),
+                            new LiteralStringNullable(),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -498,37 +273,18 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "third",
-                                    new ExactDecimalProjection(
-                                        new ArithmeticDecimalProjection(
-                                            new DivideDecimalProjection(
-                                                [
-                                                    new DecimalProjection(
-                                                        new ExactDecimalProjection(
-                                                            new LiteralDecimal(1m)
-                                                        )
-                                                    ),
-                                                    new DecimalProjection(
-                                                        new ExactDecimalProjection(
-                                                            new LiteralDecimal(3m)
-                                                        )
-                                                    ),
-                                                ]
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "third",
+                        new DivideDecimalProjection([
+                            new LiteralDecimal(1m),
+                            new LiteralDecimal(3m),
+                        ])
+                    ),
+                ]
             )
         );
 
@@ -543,22 +299,15 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "amount",
-                                    new ExactDecimalProjection(
-                                        new LiteralDecimal(90071992547409.93m)
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection(
+                        "amount",
+                        new LiteralDecimal(90071992547409.93m)
+                    ),
+                ]
             )
         );
 
@@ -573,22 +322,12 @@ public sealed class ArithmeticTests
     {
         PureQLProjection projection = new(
             [Numbers],
-            new PureQLQuery(
-                new MainPlainQuery(
-                    new From(new FromEntity("t.numbers")),
-                    [
-                        new SelectItemProjection(
-                            new SelectItemProjectionNonNullable(
-                                new SelectItemProjectionDecimal(
-                                    "d",
-                                    new ExactDecimalProjection(
-                                        new FieldDecimal("t.numbers", "d")
-                                    )
-                                )
-                            )
-                        ),
-                    ]
-                )
+            new MainPlainQueryWithoutPagination(
+                from: new FromEntity("t.numbers"),
+                select:
+                [
+                    new SelectItemProjection("d", new FieldDecimal("t.numbers", "d")),
+                ]
             )
         );
 

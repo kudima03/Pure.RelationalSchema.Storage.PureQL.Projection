@@ -4,9 +4,11 @@ using System.Reflection;
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
 // Comparisons accept nullable operands and always return a boolean: null
-// equals null, an ordering comparison against null is false, and a null value
-// is in a list exactly when the list holds a null. These are the C# semantics
-// of == and < on nullable values. Strings order ordinally (by code point in
+// equals null, an ordering comparison with one null is false, and a null
+// value is in a list exactly when the list holds a null. These are the C#
+// semantics of == and < on nullable values; two nulls are also at least and
+// at most each other, as they are equal, which C#'s >= and <= do not say, so
+// the tree adds it. Strings order ordinally (by code point in
 // SQL's "C" collation), uuids by their hexadecimal digits and false before
 // true.
 internal static class Comparison
@@ -15,6 +17,10 @@ internal static class Comparison
         nameof(string.CompareOrdinal),
         [typeof(string), typeof(string)]
     )!;
+
+    // The comparer strings order by in the tree.
+    public static Expression Ordinal { get; } =
+        Expression.Constant(StringComparer.Ordinal, typeof(IComparer<string>));
 
     public static Expression Equal(object node, Scope scope)
     {
@@ -55,6 +61,15 @@ internal static class Comparison
         return Linq.Contains(Lists.Values(list, scope, type), Typed.As(value, type));
     }
 
+    // Two values compared as equal compares them: in their common type,
+    // null equal to null.
+    public static Expression Equal(Expression left, Expression right)
+    {
+        Type type = Typed.Common(left.Type, right.Type);
+
+        return Expression.Equal(Typed.As(left, type), Typed.As(right, type));
+    }
+
     private static Expression Compared(
         object node,
         Scope scope,
@@ -77,9 +92,17 @@ internal static class Comparison
         Expression l = Typed.As(left, type);
         Expression r = Typed.As(right, type);
 
-        return type == typeof(string) ? Strings(l, r, order)
+        Expression ordered =
+            type == typeof(string) ? Strings(l, r, order)
             : type == typeof(bool?) ? Booleans(l, r, order)
             : Expression.MakeBinary(order, l, r);
+
+        return order is ExpressionType.GreaterThanOrEqual or ExpressionType.LessThanOrEqual
+            ? Expression.OrElse(
+                ordered,
+                Expression.AndAlso(Typed.IsNull(l), Typed.IsNull(r))
+            )
+            : ordered;
     }
 
     private static Expression Strings(

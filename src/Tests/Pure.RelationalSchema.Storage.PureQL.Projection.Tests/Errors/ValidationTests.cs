@@ -3,14 +3,10 @@ using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
-using PureQL.CSharp.Model.GroupExpressions;
-using PureQL.CSharp.Model.GroupKeys;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Errors;
 
@@ -42,22 +38,15 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.nobody")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.nobody", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.nobody"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.nobody", "name")
+                        ),
+                    ]
                 )
             )
         );
@@ -69,22 +58,15 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people", "p")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people", "p"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                    ]
                 )
             )
         );
@@ -96,22 +78,15 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "email",
-                                        new StringProjection(
-                                            new FieldString("t.people", "email")
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "email",
+                            new FieldString("t.people", "email")
+                        ),
+                    ]
                 )
             )
         );
@@ -123,22 +98,15 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionInteger(
-                                        "name",
-                                        new IntegerProjection(
-                                            new FieldInteger("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldInteger("t.people", "name")
+                        ),
+                    ]
                 )
             )
         );
@@ -150,22 +118,15 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "hash",
-                                        new StringProjection(
-                                            new FieldString("t.people", "hash")
-                                        )
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "hash",
+                            new FieldString("t.people", "hash")
+                        ),
+                    ]
                 )
             )
         );
@@ -180,58 +141,24 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people", "people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString(source, "name")
-                                        )
-                                    )
-                                )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people", "people"),
+                    joins:
+                    [
+                        new JoinEntity(
+                            type,
+                            "t.people",
+                            new EqualUuidRow(
+                                new FieldUuidNullable("people", "boss"),
+                                new FieldUuid("boss", "id")
                             ),
-                        ],
-                        subqueries: null,
-                        joins:
-                        [
-                            new Join(
-                                new JoinEntity(
-                                    type,
-                                    "t.people",
-                                    new BooleanRow(
-                                        new ComparisonRow(
-                                            new EqualRow(
-                                                new EqualUuidRow(
-                                                    new UuidNullableRow(
-                                                        new ExactUuidNullableRow(
-                                                            new FieldUuidNullable(
-                                                                "people",
-                                                                "boss"
-                                                            )
-                                                        )
-                                                    ),
-                                                    new UuidNullableRow(
-                                                        new UuidRow(
-                                                            new FieldUuid("boss", "id")
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    ),
-                                    "boss"
-                                )
-                            ),
-                        ],
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                            "boss"
+                        ),
+                    ],
+                    select:
+                    [
+                        new SelectItemProjection("name", new FieldString(source, "name")),
+                    ]
                 )
             )
         );
@@ -243,44 +170,27 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people", "a")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(new FieldString("a", "name"))
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries: null,
-                        joins:
-                        [
-                            new Join(
-                                new JoinEntity(
-                                    JoinKind.Inner,
-                                    "t.people",
-                                    new BooleanRow(new FieldBoolean("c", "name")),
-                                    "b"
-                                )
-                            ),
-                            new Join(
-                                new JoinEntity(
-                                    JoinKind.Inner,
-                                    "t.people",
-                                    new BooleanRow(new LiteralBoolean(true)),
-                                    "c"
-                                )
-                            ),
-                        ],
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people", "a"),
+                    joins:
+                    [
+                        new JoinEntity(
+                            JoinKind.Inner,
+                            "t.people",
+                            new FieldBoolean("c", "name"),
+                            "b"
+                        ),
+                        new JoinEntity(
+                            JoinKind.Inner,
+                            "t.people",
+                            new LiteralBoolean(true),
+                            "c"
+                        ),
+                    ],
+                    select:
+                    [
+                        new SelectItemProjection("name", new FieldString("a", "name")),
+                    ]
                 )
             )
         );
@@ -292,37 +202,23 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries: null,
-                        joins:
-                        [
-                            new Join(
-                                new JoinEntity(
-                                    JoinKind.Inner,
-                                    "t.people",
-                                    new BooleanRow(new LiteralBoolean(true))
-                                )
-                            ),
-                        ],
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    joins:
+                    [
+                        new JoinEntity(
+                            JoinKind.Inner,
+                            "t.people",
+                            new LiteralBoolean(true)
+                        ),
+                    ],
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                    ]
                 )
             )
         );
@@ -334,30 +230,16 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionUuid(
-                                        "name",
-                                        new UuidProjection(new FieldUuid("t.people", "id"))
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                        new SelectItemProjection("name", new FieldUuid("t.people", "id")),
+                    ]
                 )
             )
         );
@@ -369,70 +251,44 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries:
-                        [
-                            new Subquery(
-                                "ids",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromEntity("t.people")),
-                                        [
-                                            new SelectItemProjection(
-                                                new SelectItemProjectionNonNullable(
-                                                    new SelectItemProjectionUuid(
-                                                        "id",
-                                                        new UuidProjection(
-                                                            new FieldUuid("t.people", "id")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                            new Subquery(
-                                "ids",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromEntity("t.people")),
-                                        [
-                                            new SelectItemProjection(
-                                                new SelectItemProjectionNonNullable(
-                                                    new SelectItemProjectionUuid(
-                                                        "id",
-                                                        new UuidProjection(
-                                                            new FieldUuid("t.people", "id")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ],
-                        joins: null,
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                new MainPlainQueryWithoutPagination(
+                    subqueries:
+                    [
+                        new SubqueryQuery(
+                            "ids",
+                            new PlainQueryWithoutPaginationWithoutOrderBy(
+                                from: new FromEntity("t.people"),
+                                select:
+                                [
+                                    new SelectItemProjection(
+                                        "id",
+                                        new FieldUuid("t.people", "id")
+                                    ),
+                                ]
+                            )
+                        ),
+                        new SubqueryQuery(
+                            "ids",
+                            new PlainQueryWithoutPaginationWithoutOrderBy(
+                                from: new FromEntity("t.people"),
+                                select:
+                                [
+                                    new SelectItemProjection(
+                                        "id",
+                                        new FieldUuid("t.people", "id")
+                                    ),
+                                ]
+                            )
+                        ),
+                    ],
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                    ]
                 )
             )
         );
@@ -444,68 +300,38 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromSubquery("first")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionUuid(
+                new MainPlainQueryWithoutPagination(
+                    subqueries:
+                    [
+                        new SubqueryQuery(
+                            "first",
+                            new PlainQueryWithoutPaginationWithoutOrderBy(
+                                from: new FromSubquery("second"),
+                                select:
+                                [
+                                    new SelectItemProjection(
                                         "id",
-                                        new UuidProjection(new FieldUuid("first", "id"))
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries:
-                        [
-                            new Subquery(
-                                "first",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromSubquery("second")),
-                                        [
-                                            new SelectItemProjection(
-                                                new SelectItemProjectionNonNullable(
-                                                    new SelectItemProjectionUuid(
-                                                        "id",
-                                                        new UuidProjection(
-                                                            new FieldUuid("second", "id")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                            new Subquery(
-                                "second",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromEntity("t.people")),
-                                        [
-                                            new SelectItemProjection(
-                                                new SelectItemProjectionNonNullable(
-                                                    new SelectItemProjectionUuid(
-                                                        "id",
-                                                        new UuidProjection(
-                                                            new FieldUuid("t.people", "id")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ],
-                        joins: null,
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                                        new FieldUuid("second", "id")
+                                    ),
+                                ]
+                            )
+                        ),
+                        new SubqueryQuery(
+                            "second",
+                            new PlainQueryWithoutPaginationWithoutOrderBy(
+                                from: new FromEntity("t.people"),
+                                select:
+                                [
+                                    new SelectItemProjection(
+                                        "id",
+                                        new FieldUuid("t.people", "id")
+                                    ),
+                                ]
+                            )
+                        ),
+                    ],
+                    from: new FromSubquery("first"),
+                    select: [new SelectItemProjection("id", new FieldUuid("first", "id"))]
                 )
             )
         );
@@ -517,50 +343,31 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromSubquery("ids")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNullable(
-                                    new SelectItemProjectionUuidNullable(
+                new MainPlainQueryWithoutPagination(
+                    subqueries:
+                    [
+                        new SubqueryQuery(
+                            "ids",
+                            new PlainQueryWithoutPaginationWithoutOrderBy(
+                                from: new FromEntity("t.people"),
+                                select:
+                                [
+                                    new SelectItemProjection(
                                         "id",
-                                        new ExactUuidNullableProjection(
-                                            new FieldUuidNullable("ids", "id")
-                                        )
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries:
-                        [
-                            new Subquery(
-                                "ids",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromEntity("t.people")),
-                                        [
-                                            new SelectItemProjection(
-                                                new SelectItemProjectionNonNullable(
-                                                    new SelectItemProjectionUuid(
-                                                        "id",
-                                                        new UuidProjection(
-                                                            new FieldUuid("t.people", "id")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ],
-                        joins: null,
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                                        new FieldUuid("t.people", "id")
+                                    ),
+                                ]
+                            )
+                        ),
+                    ],
+                    from: new FromSubquery("ids"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "id",
+                            new FieldUuidNullable("ids", "id")
+                        ),
+                    ]
                 )
             )
         );
@@ -579,69 +386,37 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries:
-                        [
-                            new Subquery(
-                                "ids",
-                                new Query(
-                                    new PlainQuery(
-                                        new From(new FromEntity("t.people")),
-                                        [
-                                            new SelectItemProjection(
-                                                new SelectItemProjectionNonNullable(
-                                                    new SelectItemProjectionUuid(
-                                                        "id",
-                                                        new UuidProjection(
-                                                            new FieldUuid("t.people", "id")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                        ]
-                                    )
-                                )
-                            ),
-                        ],
-                        joins: null,
-                        where: new BooleanRow(
-                            new ComparisonRow(
-                                new InRow(
-                                    new InUuidRow(
-                                        new UuidNullableRow(
-                                            new ExactUuidNullableRow(
-                                                new FieldUuidNullable("t.people", "boss")
-                                            )
-                                        ),
-                                        new ListUuid(
-                                            new ListSubqueryColumnUuid(
-                                                subquery,
-                                                field,
-                                                nullable
-                                            )
-                                        )
-                                    )
-                                )
+                new MainPlainQueryWithoutPagination(
+                    subqueries:
+                    [
+                        new SubqueryQuery(
+                            "ids",
+                            new PlainQueryWithoutPaginationWithoutOrderBy(
+                                from: new FromEntity("t.people"),
+                                select:
+                                [
+                                    new SelectItemProjection(
+                                        "id",
+                                        new FieldUuid("t.people", "id")
+                                    ),
+                                ]
                             )
                         ),
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: null
-                    )
+                    ],
+                    from: new FromEntity("t.people"),
+                    where: new InUuidRow(
+                        new FieldUuidNullable("t.people", "boss"),
+                        nullable
+                            ? new ListSubqueryColumnUuidNullable(subquery, field)
+                            : new ListSubqueryColumnUuid(subquery, field)
+                    ),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                    ]
                 )
             )
         );
@@ -655,41 +430,15 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainGroupedQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new GroupKey(
-                                new GroupKeyNonNullable(
-                                    new GroupKeyString(
-                                        "name",
-                                        new StringRow(new FieldString("t.people", "name"))
-                                    )
-                                )
-                            ),
-                        ],
-                        [
-                            nullable
-                                ? new SelectItemGroup(
-                                    new SelectItemGroupNullable(
-                                        new SelectItemGroupStringNullable(
-                                            "name",
-                                            new ExactStringNullableGroup(
-                                                new KeyStringNullable(key)
-                                            )
-                                        )
-                                    )
-                                )
-                                : new SelectItemGroup(
-                                    new SelectItemGroupNonNullable(
-                                        new SelectItemGroupString(
-                                            "name",
-                                            new StringGroup(new KeyString(key))
-                                        )
-                                    )
-                                ),
-                        ]
-                    )
+                new MainGroupedQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    groupBy: [new GroupKey("name", new FieldString("t.people", "name"))],
+                    select:
+                    [
+                        nullable
+                            ? new SelectItemGroup("name", new KeyStringNullable(key))
+                            : new SelectItemGroup("name", new KeyString(key)),
+                    ]
                 )
             )
         );
@@ -701,38 +450,14 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainGroupedQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new GroupKey(
-                                new GroupKeyNonNullable(
-                                    new GroupKeyString(
-                                        "key",
-                                        new StringRow(new FieldString("t.people", "name"))
-                                    )
-                                )
-                            ),
-                            new GroupKey(
-                                new GroupKeyNonNullable(
-                                    new GroupKeyUuid(
-                                        "key",
-                                        new UuidRow(new FieldUuid("t.people", "id"))
-                                    )
-                                )
-                            ),
-                        ],
-                        [
-                            new SelectItemGroup(
-                                new SelectItemGroupNonNullable(
-                                    new SelectItemGroupString(
-                                        "name",
-                                        new StringGroup(new KeyString("key"))
-                                    )
-                                )
-                            ),
-                        ]
-                    )
+                new MainGroupedQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    groupBy:
+                    [
+                        new GroupKey("key", new FieldString("t.people", "name")),
+                        new GroupKey("key", new FieldUuid("t.people", "id")),
+                    ],
+                    select: [new SelectItemGroup("name", new KeyString("key"))]
                 )
             )
         );
@@ -744,28 +469,16 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries: null,
-                        joins: null,
-                        where: null,
-                        orderBy: null,
-                        pagination: null,
-                        distinctBy: ["id"]
-                    )
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                    ],
+                    distinctBy: ["id"]
                 )
             )
         );
@@ -779,28 +492,17 @@ public sealed class ValidationTests
         _ = Assert.Throws<ArgumentException>(() =>
             new PureQLProjection(
                 [People],
-                new PureQLQuery(
-                    new MainPlainQuery(
-                        new From(new FromEntity("t.people")),
-                        [
-                            new SelectItemProjection(
-                                new SelectItemProjectionNonNullable(
-                                    new SelectItemProjectionString(
-                                        "name",
-                                        new StringProjection(
-                                            new FieldString("t.people", "name")
-                                        )
-                                    )
-                                )
-                            ),
-                        ],
-                        subqueries: null,
-                        joins: null,
-                        where: null,
-                        orderBy: null,
-                        pagination: new Pagination(skip, take),
-                        distinctBy: null
-                    )
+                new MainPlainQueryWithPagination(
+                    from: new FromEntity("t.people"),
+                    select:
+                    [
+                        new SelectItemProjection(
+                            "name",
+                            new FieldString("t.people", "name")
+                        ),
+                    ],
+                    orderBy: [new OrderItemProjectionColumn("name")],
+                    pagination: new Pagination(skip: skip, take: take)
                 )
             )
         );

@@ -63,9 +63,8 @@ internal sealed class ExpectedTable(IStoredTableDataSet expected)
                         columns.Select(column =>
                             Canonical(
                                 row.Cells.Single(cell =>
-                                        cell.Key.Name.TextValue == column.Name.TextValue
-                                    )
-                                    .Value.Value.TextValue,
+                                    cell.Key.Name.TextValue == column.Name.TextValue
+                                ).Value.Value.TextValue,
                                 column.Type.Name.TextValue
                             )
                         )
@@ -80,8 +79,7 @@ internal sealed class ExpectedTable(IStoredTableDataSet expected)
             ? "NULL"
             : columnType switch
             {
-                "double" or "decimal" => double
-                    .Parse(text, CultureInfo.InvariantCulture)
+                "double" or "decimal" => double.Parse(text, CultureInfo.InvariantCulture)
                     .ToString("G12", CultureInfo.InvariantCulture),
                 "datetime" => DateTime
                     .Parse(

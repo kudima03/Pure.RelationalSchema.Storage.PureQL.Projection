@@ -2,16 +2,18 @@ using PureQL.CSharp.Model;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 
-// One orderBy item of either context.
-internal sealed record OrderKey(object Expression, SortDirection Direction)
+// One orderBy item: an expression of the query's context, or the alias of a
+// select column of the query, whose expression it then sorts by.
+internal sealed record OrderKey(object? Expression, string? Column, SortDirection Direction)
 {
-    public static OrderKey Of(OrderItemProjection item)
+    public static OrderKey Of(object item)
     {
-        return new OrderKey(item.Expression, item.Direction);
-    }
+        object leaf = ModelNode.Unwrap(item);
 
-    public static OrderKey Of(OrderItemGroup item)
-    {
-        return new OrderKey(item.Expression, item.Direction);
+        return new OrderKey(
+            ModelNode.Optional(leaf, "Expression"),
+            (string?)ModelNode.Optional(leaf, "Column"),
+            (SortDirection)ModelNode.Child(leaf, "Direction")
+        );
     }
 }

@@ -20,8 +20,10 @@ public enum Refusal
 // provider answers it from a database; or refuses it, as a translating
 // provider refuses a query it cannot translate; or fails it with any other
 // exception, as a database error does.
-internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Exception? failure = null)
-    : IQueryProvider
+internal sealed class RecordingProvider(
+    Refusal refusal = Refusal.Never,
+    Exception? failure = null
+) : IQueryProvider
 {
     private readonly Refusal _refusal = refusal;
 
@@ -75,7 +77,10 @@ internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Excepti
             throw _failure;
         }
 
-        object? result = Expression.Lambda(new InMemory().Visit(expression)).Compile().DynamicInvoke();
+        object? result = Expression
+            .Lambda(new InMemory().Visit(expression))
+            .Compile()
+            .DynamicInvoke();
 
         return _refusal == Refusal.OnFirstValue && result is IEnumerable values
             ? Refused(values)
@@ -87,13 +92,18 @@ internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Excepti
     {
         foreach (object? value in values)
         {
-            throw new NotSupportedException($"The query is refused {Refusal.OnFirstValue}.");
+            throw new NotSupportedException(
+                $"The query is refused {Refusal.OnFirstValue}."
+            );
         }
 
         yield break;
     }
 
-    // A provided table is its rows, as LINQ to Objects queries them.
+    // A provided table is its rows, as LINQ to Objects queries them, and a
+    // decimal +, -, * and / is computed as the specification defines it
+    // (PureQLMath), as a store with exact decimals computes it, rather than
+    // with System.Decimal's rounding to 29 digits.
     private sealed class InMemory : ExpressionVisitor
     {
         protected override Expression VisitConstant(ConstantExpression node)
@@ -101,6 +111,30 @@ internal sealed class RecordingProvider(Refusal refusal = Refusal.Never, Excepti
             return node.Value is ProvidedTable table
                 ? Expression.Constant(table.Rows.AsQueryable(), typeof(IQueryable<IRow>))
                 : node;
+        }
+
+        protected override Expression VisitBinary(BinaryExpression node)
+        {
+            Expression left = Visit(node.Left);
+            Expression right = Visit(node.Right);
+            string? name =
+                (Nullable.GetUnderlyingType(left.Type) ?? left.Type) != typeof(decimal)
+                    ? null
+                : node.NodeType == ExpressionType.Add ? nameof(PureQLMath.Add)
+                : node.NodeType == ExpressionType.Subtract ? nameof(PureQLMath.Subtract)
+                : node.NodeType == ExpressionType.Multiply ? nameof(PureQLMath.Multiply)
+                : node.NodeType == ExpressionType.Divide ? nameof(PureQLMath.Divide)
+                : null;
+
+            return name is null
+                ? node.Update(left, node.Conversion, right)
+                : Expression.MakeBinary(
+                    node.NodeType,
+                    left,
+                    right,
+                    node.IsLiftedToNull,
+                    typeof(PureQLMath).GetMethod(name, [typeof(decimal), typeof(decimal)])
+                );
         }
     }
 

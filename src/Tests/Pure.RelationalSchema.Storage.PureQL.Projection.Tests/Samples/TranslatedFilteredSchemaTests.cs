@@ -7,9 +7,7 @@ using PureQL.CSharp.Model;
 using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.Lists;
 using PureQL.CSharp.Model.Literals;
-using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
-using PureQL.CSharp.Model.SelectItems;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 
@@ -17,7 +15,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // PostgreSQL is still one SQL statement, run by the provider of the tables:
 // the conditions are part of it, each at the scan of its table, and the
 // result is the one the same query gives over the same tables, filtered the
-// same way, held in memory. The fixture's tables are filtered as a host
+// same way, held in memory. A sample the provider refuses
+// (TranslatedSampleTests.Refused) runs in memory over the filtered tables
+// and gives that result too. The fixture's tables are filtered as a host
 // would filter them for a user: the users of one tenant, the orders that
 // are not cancelled, the products in stock and the order items of more than
 // one unit; the employees are not filtered. Needs Docker.
@@ -50,49 +50,27 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
     // The users of one tenant: Ann, Bob and Cara.
     private static BooleanRow OwnUsers =>
         new(
-            new ComparisonRow(
-                new EqualRow(
-                    new EqualUuidRow(
-                        new UuidNullableRow(
-                            new UuidRow(new FieldUuid("users", "user_tenant_id"))
-                        ),
-                        new UuidNullableRow(
-                            new UuidRow(new LiteralUuid(Guid.Parse(Tenant)))
-                        )
-                    )
-                )
+            new EqualUuidRow(
+                new FieldUuid("users", "user_tenant_id"),
+                new LiteralUuid(Guid.Parse(Tenant))
             )
         );
 
     // The orders that are shipped or pending: all but one of Cara's.
     private static BooleanRow OpenOrders =>
         new(
-            new ComparisonRow(
-                new InRow(
-                    new InStringRow(
-                        new StringNullableRow(
-                            new ExactStringNullableRow(
-                                new FieldStringNullable("orders", "order_status")
-                            )
-                        ),
-                        new ListString(new ListLiteralString(["shipped", "pending"]))
-                    )
-                )
+            new InStringRow(
+                new FieldStringNullable("orders", "order_status"),
+                new ListLiteralString(["shipped", "pending"])
             )
         );
 
     // The shipped orders: one of Ann's, Bob's and one of Cara's.
     private static BooleanRow Shipped =>
         new(
-            new ComparisonRow(
-                new EqualRow(
-                    new EqualStringRow(
-                        new StringNullableRow(
-                            new StringRow(new FieldString("orders", "order_status"))
-                        ),
-                        new StringNullableRow(new StringRow(new LiteralString("shipped")))
-                    )
-                )
+            new EqualStringRow(
+                new FieldString("orders", "order_status"),
+                new LiteralString("shipped")
             )
         );
 
@@ -101,23 +79,15 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
 
     private static BooleanRow SeveralUnits =>
         new(
-            new ComparisonRow(
-                new GreaterThanRow(
-                    new GreaterThanDecimalRow(
-                        new DecimalNullableRow(
-                            new ExactDecimalNullableRow(
-                                new FieldDecimalNullable("order_items", "item_qty")
-                            )
-                        ),
-                        new DecimalNullableRow(new IntegerRow(new LiteralInteger(1)))
-                    )
-                )
+            new GreaterThanDecimalRow(
+                new FieldDecimalNullable("order_items", "item_qty"),
+                new LiteralInteger(1)
             )
         );
 
     [Theory]
     [MemberData(nameof(SamplesWithResult))]
-    public void SampleOverFilteredTablesIsTranslatedAndReturnsTheFilteredResult(
+    public void SampleOverFilteredTablesReturnsTheFilteredResultTranslatedUnlessRefused(
         string name
     )
     {
@@ -127,8 +97,7 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
         PureQLProjection actual = new(Filtered(_database.Datasets), sample.Query);
 
         AssertSame(sample, expected, actual);
-        Assert.Null(actual.FallbackReason);
-        Assert.Equal(QueryExecution.Translated, actual.Execution);
+        TranslatedSampleTests.AssertRan(name, actual);
     }
 
     [Theory]
@@ -272,61 +241,28 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
         const string users = "schema_with_foreign_keys.users";
         const string orders = "schema_with_foreign_keys.orders";
 
-        return new PureQLQuery(
-            new MainPlainQuery(
-                new From(new FromEntity(users, "u")),
-                [
-                    new SelectItemProjection(
-                        new SelectItemProjectionNonNullable(
-                            new SelectItemProjectionString(
-                                "user_name",
-                                new StringProjection(new FieldString("u", "user_name"))
-                            )
-                        )
+        return new MainPlainQueryWithoutPagination(
+            from: new FromEntity(users, "u"),
+            joins:
+            [
+                new JoinEntity(
+                    JoinKind.Left,
+                    orders,
+                    new EqualUuidRow(
+                        new FieldUuid("o", "order_user_id"),
+                        new FieldUuid("u", "user_id")
                     ),
-                    new SelectItemProjection(
-                        new SelectItemProjectionNullable(
-                            new SelectItemProjectionDecimalNullable(
-                                "order_total",
-                                new ExactDecimalNullableProjection(
-                                    new FieldDecimalNullable("o", "order_total")
-                                )
-                            )
-                        )
-                    ),
-                ],
-                subqueries: null,
-                joins:
-                [
-                    new Join(
-                        new JoinEntity(
-                            JoinKind.Left,
-                            orders,
-                            new BooleanRow(
-                                new ComparisonRow(
-                                    new EqualRow(
-                                        new EqualUuidRow(
-                                            new UuidNullableRow(
-                                                new UuidRow(
-                                                    new FieldUuid("o", "order_user_id")
-                                                )
-                                            ),
-                                            new UuidNullableRow(
-                                                new UuidRow(new FieldUuid("u", "user_id"))
-                                            )
-                                        )
-                                    )
-                                )
-                            ),
-                            "o"
-                        )
-                    ),
-                ],
-                where: null,
-                orderBy: null,
-                pagination: null,
-                distinctBy: null
-            )
+                    "o"
+                ),
+            ],
+            select:
+            [
+                new SelectItemProjection("user_name", new FieldString("u", "user_name")),
+                new SelectItemProjection(
+                    "order_total",
+                    new FieldDecimalNullable("o", "order_total")
+                ),
+            ]
         );
     }
 }
