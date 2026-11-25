@@ -168,10 +168,129 @@ internal static class LocalProvider
                 ),
             ];
 
-            return Linq.IsQueryOperator(node.Method)
-                && !Linq.IsQueryable(arguments[0].Type)
-                    ? Exactly((MethodCallExpression)Linq.OverEnumerable(node.Method, arguments))
-                : Exactly(node.Update(Visit(node.Object), arguments));
+            return Framed(
+                Linq.IsQueryOperator(node.Method) && !Linq.IsQueryable(arguments[0].Type)
+                    ? Exactly(
+                        (MethodCallExpression)Linq.OverEnumerable(node.Method, arguments)
+                    )
+                    : Exactly(node.Update(Visit(node.Object), arguments))
+            );
+        }
+
+        // A sum, a mean or a count over the rows of a window's frame, read
+        // from the running sums of the partition (PureQLWindow) instead of
+        // folded from the frame's rows for every row: a running total over
+        // n rows then costs n steps, not n squared. The selector and the
+        // predicate must read nothing but their row.
+        private static Expression Framed(Expression expression)
+        {
+            if (expression is not MethodCallExpression call)
+            {
+                return expression;
+            }
+
+            Expression? values =
+                call.Method.DeclaringType == typeof(PureQLAggregates)
+                && call.Method.Name
+                    is nameof(PureQLAggregates.Sum)
+                        or nameof(PureQLAggregates.Average)
+                && call.Arguments[0] is MethodCallExpression selected
+                && selected.Method.DeclaringType == typeof(Enumerable)
+                && selected.Method.Name == nameof(Enumerable.Select)
+                && selected.Arguments[1] is LambdaExpression
+                    ? selected
+                : call.Method.DeclaringType == typeof(Enumerable)
+                && call.Method.Name == nameof(Enumerable.LongCount)
+                    ? call
+                : null;
+
+            (Expression Window, LambdaExpression? Predicate)? frame = values
+                is MethodCallExpression source
+                ? Frame(source.Arguments[0])
+                : null;
+
+            if (
+                values is not MethodCallExpression fold
+                || frame is null
+                || fold.Arguments.Skip(1).Any(argument => !Closed.Is(argument))
+                || (frame.Value.Predicate is not null && !Closed.Is(frame.Value.Predicate))
+            )
+            {
+                return expression;
+            }
+
+            Expression window = frame.Value.Window;
+            LambdaExpression? predicate = frame.Value.Predicate;
+            Type row = window.Type.GetGenericArguments()[0];
+            Expression filter = predicate is null
+                ? Expression.Constant(
+                    null,
+                    typeof(Func<,>).MakeGenericType(row, typeof(bool))
+                )
+                : predicate;
+            BindingFlags hidden = BindingFlags.NonPublic | BindingFlags.Instance;
+
+            if (fold != call)
+            {
+                return Expression.Call(
+                    window,
+                    window.Type.GetMethod(
+                        call.Method.Name,
+                        hidden,
+                        [typeof(object), fold.Arguments[1].Type, filter.Type]
+                    )!,
+                    Expression.Constant(new object()),
+                    fold.Arguments[1],
+                    filter
+                );
+            }
+
+            LambdaExpression? counted =
+                call.Arguments.Count == 2 ? call.Arguments[1] as LambdaExpression
+                : predicate;
+
+            return call.Arguments.Count == 2 && predicate is not null ? expression
+                : counted is null
+                    ? Expression.Call(
+                        window,
+                        window.Type.GetMethod(nameof(PureQLWindow<>.Count), hidden, [])!
+                    )
+                : Expression.Call(
+                    window,
+                    window.Type.GetMethod(
+                        nameof(PureQLWindow<>.Count),
+                        hidden,
+                        [typeof(object), counted.Type]
+                    )!,
+                    Expression.Constant(new object()),
+                    counted
+                );
+        }
+
+        // The window whose frame a sequence is, and the predicate its rows
+        // are filtered by, if it is window.Rows or window.Rows.Where(...).
+        private static (Expression Window, LambdaExpression? Predicate)? Frame(
+            Expression rows
+        )
+        {
+            return
+                rows is MethodCallExpression filtered
+                && filtered.Method.DeclaringType == typeof(Enumerable)
+                && filtered.Method.Name == nameof(Enumerable.Where)
+                && filtered.Arguments[1] is LambdaExpression predicate
+                && predicate.Parameters.Count == 1
+                && Frame(filtered.Arguments[0]) is (Expression window, null)
+                    ? (window, predicate)
+                : rows
+                    is MemberExpression
+                {
+                    Member.Name: nameof(PureQLWindow<>.Rows),
+                    Expression: ParameterExpression owner
+                }
+                && owner.Type.IsGenericType
+                && owner.Type.GetGenericTypeDefinition() == typeof(PureQLWindow<>)
+                    ? (owner, null)
+                : null;
         }
 
         // A lambda over a query, as a recursion's next is over the rows of

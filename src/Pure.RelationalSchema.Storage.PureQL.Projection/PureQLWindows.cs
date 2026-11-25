@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -110,6 +111,7 @@ public static class PureQLWindows
                 }
             }
 
+            Dictionary<object, (BigInteger[] Sums, int[] Counts)> prefixes = [];
             RangeBounds<TPeer>? range = frame.IsRange
                 ? new RangeBounds<TPeer>(keys, frame)
                 : null;
@@ -128,6 +130,7 @@ public static class PureQLWindows
                 yield return result(
                     new PureQLWindow<TRow>(
                         sorted,
+                        prefixes,
                         peerStart,
                         peerEnd,
                         dense,
