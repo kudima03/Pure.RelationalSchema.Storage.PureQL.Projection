@@ -14,6 +14,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // RECURSIVE, or one statement per level when next groups), and over a plain
 // sequence, which computes it (and a third, which LINQ to Objects runs the
 // tree's form with).
+// Called as code, the IQueryable form computes the operator over a query
+// of LINQ to Objects, builds a query of a projection's own provider, and
+// refuses a query of any other provider with NotSupportedException
+// (Linq.Composable).
 public static class PureQLRecursion
 {
     private static readonly MethodInfo QueryableRecursive = typeof(PureQLRecursion)
@@ -30,7 +34,21 @@ public static class PureQLRecursion
         long maxDepth
     )
     {
-        return seed.Provider.CreateQuery<T>(
+        if (seed.Provider is EnumerableQuery)
+        {
+            Func<IQueryable<T>, IQueryable<T>> step = next.Compile();
+
+            return Linq.Deferred(() =>
+                    Levels(seed, level => step(level.AsQueryable()), maxDepth)
+                )
+                .AsQueryable();
+        }
+
+        return Linq.Composable(
+                seed.Provider,
+                $"{nameof(PureQLRecursion)}.{nameof(Recursive)}"
+            )
+            .CreateQuery<T>(
             Expression.Call(
                 QueryableRecursive.MakeGenericMethod(typeof(T)),
                 seed.Expression,

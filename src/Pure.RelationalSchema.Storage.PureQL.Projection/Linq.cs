@@ -512,6 +512,36 @@ internal static class Linq
         return call.Method.DeclaringType == typeof(Queryable) && call.Method.Name == name;
     }
 
+    // The provider a query operator of this library (PureQLWindows.Over,
+    // PureQLRecursion.Recursive) called as code over a query that is not
+    // LINQ to Objects' (which computes it at once) builds its query with: only
+    // a projection's own provider, which runs it in memory. Any other
+    // provider can only translate the operator as a node of its tree; one
+    // that calls it instead, as a value it reads from the tree
+    // (Pure.RelationalSchema.Storage.PostgreSQL.Querying inlines a call that
+    // returns a query and reads no lambda parameter), would be given the same
+    // node back, without end, so it is refused with NotSupportedException,
+    // which makes a projection run the query in memory.
+    public static IQueryProvider Composable(IQueryProvider provider, string name)
+    {
+        return provider is ProjectionProvider
+            ? provider
+            : throw new NotSupportedException(
+                $"{name} is a node of a tree for a provider to translate; it is run "
+                    + "in memory only, not over a query of "
+                    + $"{provider.GetType().Name}."
+            );
+    }
+
+    // The rows a function gives, computed when they are first enumerated.
+    public static IEnumerable<T> Deferred<T>(Func<IEnumerable<T>> rows)
+    {
+        foreach (T row in rows())
+        {
+            yield return row;
+        }
+    }
+
     // Whether a method is a query operator over an IQueryable: one of
     // Queryable's, or one of this library's (a window, a recursion), each of
     // which has a counterpart over plain sequences beside it.

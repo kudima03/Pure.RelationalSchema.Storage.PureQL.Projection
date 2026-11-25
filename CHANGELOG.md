@@ -42,7 +42,12 @@ Implements PureQL specification `0.1.0-preview.3.0.0` on
   `PureQLText`, `PureQLTime`, `PureQLConversions`, `PureQLAggregates`,
   `PureQLWindows` with `PureQLWindow<TRow>`, `PureQLFrame` and
   `PureQLRangeUnit`, and `PureQLRecursion`. The README lists the tree shape
-  of every new construct.
+  of every new construct. Called as code, the `IQueryable` forms of
+  `PureQLWindows.Over` and `PureQLRecursion.Recursive` compute the operator
+  over a LINQ to Objects query and refuse another provider's query with
+  `NotSupportedException`, so a provider that evaluates closed calls while
+  reading a tree (`Pure.RelationalSchema.Storage.PostgreSQL.Querying`)
+  falls back to memory instead of looping.
 - **Checks when a projection is built** (`ArgumentException`): the inputs of
   a set operation and the rows of an inline subquery have the same aliases
   and types that meet; the rules of a recursive subquery; an `orderBy`

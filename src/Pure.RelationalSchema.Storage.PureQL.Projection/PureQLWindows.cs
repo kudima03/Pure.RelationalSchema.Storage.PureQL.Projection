@@ -15,6 +15,10 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // Like a Queryable operator it comes in two forms: over an IQueryable with
 // quoted lambdas, which is what the tree holds and a provider translates
 // (SQL's OVER clause), and over a plain sequence, which computes it.
+// Called as code, the IQueryable form computes the operator over a query
+// of LINQ to Objects, builds a query of a projection's own provider, and
+// refuses a query of any other provider with NotSupportedException
+// (Linq.Composable).
 public static class PureQLWindows
 {
     private static readonly MethodInfo QueryableOver = typeof(PureQLWindows)
@@ -35,7 +39,18 @@ public static class PureQLWindows
     )
         where TPartition : notnull
     {
-        return rows.Provider.CreateQuery<TResult>(
+        return rows.Provider is EnumerableQuery
+            ? Over(
+                    rows.AsEnumerable(),
+                    partitionBy.Compile(),
+                    orderBy.Compile(),
+                    peers.Compile(),
+                    frame,
+                    result.Compile()
+                )
+                .AsQueryable()
+            : Linq.Composable(rows.Provider, $"{nameof(PureQLWindows)}.{nameof(Over)}")
+            .CreateQuery<TResult>(
             Expression.Call(
                 QueryableOver.MakeGenericMethod(
                     typeof(TRow),
