@@ -8,13 +8,16 @@ using PureQL.CSharp.Model.Fields;
 using PureQL.CSharp.Model.GroupExpressions;
 using PureQL.CSharp.Model.Keys;
 using PureQL.CSharp.Model.Lists;
+using PureQL.CSharp.Model.Literals;
+using PureQL.CSharp.Model.ProjectionExpressions;
 using PureQL.CSharp.Model.RowExpressions;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Semantics;
 
 // Queries over tables of thousands of rows finish in well under the time a
 // nested loop over the product of the tables takes: a join and a membership
-// test cost the rows of both sides, not their product. The bounds are
+// test cost the rows of both sides, not their product; and a deeply nested
+// expression costs its length. The bounds are
 // generous, so that a slow machine passes while a quadratic join (tens of
 // seconds for the chain below) cannot.
 public sealed class ScaleTests
@@ -126,6 +129,60 @@ public sealed class ScaleTests
         Assert.True(
             watch.Elapsed < Bound,
             $"The membership test took {watch.Elapsed.TotalSeconds:F1} s."
+        );
+    }
+
+    // An operator over a nullable operand checks it for null and reads it, but
+    // holds it once: a chain of a hundred lifted operators, each over the one
+    // before, is built, simplified and run in time linear in its length, not
+    // in two to the power of it.
+    [Fact]
+    public void ChainOfAHundredNestedLiftedOperatorsIsFast()
+    {
+        IStoredSchemaDataSet amounts = new InlineTable(
+            "s",
+            "amounts",
+            ("id", new LongColumnType()),
+            ("amount", new DoubleColumnType())
+        ).With(["1", "1"], ["2", ""], ["3", "10.25"]);
+        RoundDecimalNullableProjection chain = Rounded(
+            new FieldDecimalNullable("s.amounts", "amount")
+        );
+
+        for (int level = 1; level < 100; level++)
+        {
+            chain = Rounded(chain);
+        }
+
+        Stopwatch watch = Stopwatch.StartNew();
+        IReadOnlyList<string> values = ResultColumn.Texts(
+            new PureQLProjection(
+                [amounts],
+                new MainPlainQueryWithoutPagination(
+                    from: new FromEntity("s.amounts"),
+                    select: [new SelectItemProjection("v", chain)],
+                    orderBy: [new OrderItemProjectionExpression(
+                        new FieldInteger("s.amounts", "id")
+                    )]
+                )
+            ),
+            "v"
+        );
+        watch.Stop();
+
+        Assert.Equal(["101", "", "110"], values);
+        Assert.True(
+            watch.Elapsed < Bound,
+            $"The chain took {watch.Elapsed.TotalSeconds:F1} s."
+        );
+    }
+
+    // round(operand + 0.5, 0): one more for a whole number.
+    private static RoundDecimalNullableProjection Rounded(DecimalNullableProjection operand)
+    {
+        return new RoundDecimalNullableProjection(
+            new AddDecimalNullableProjection([operand, new LiteralDecimal(0.5m)]),
+            new LiteralInteger(0)
         );
     }
 
