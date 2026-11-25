@@ -89,6 +89,8 @@ internal static class LocalProvider
             ReferenceEqualityComparer.Instance
         )];
 
+        private readonly Dictionary<ParameterExpression, ParameterExpression> _levels = [];
+
         private int _depth;
 
         public override Expression? Visit(Expression? node)
@@ -325,18 +327,25 @@ internal static class LocalProvider
                 ),
             ];
 
+            foreach ((ParameterExpression query, ParameterExpression rows) in lambda.Parameters.Zip(
+                parameters
+            ))
+            {
+                _levels[query] = rows;
+            }
+
             _depth++;
-            Expression body = Visit(
-                new Substitution(
-                    lambda.Parameters.Zip(parameters).ToDictionary(
-                        pair => pair.First,
-                        pair => (Expression)pair.Second
-                    )
-                ).Visit(lambda.Body)
-            )!;
+            Expression body = Visit(lambda.Body)!;
             _depth--;
 
             return Expression.Lambda(body, parameters);
+        }
+
+        // A level's query parameter, replaced by its plain sequence while
+        // the operators over it are turned into those of plain sequences.
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            return _levels.TryGetValue(node, out ParameterExpression? rows) ? rows : node;
         }
 
         private static bool IsSequence(Type type)
@@ -356,19 +365,6 @@ internal static class LocalProvider
             }
 
             return table;
-        }
-    }
-
-    // An expression with parameters replaced.
-    private sealed class Substitution(
-        IReadOnlyDictionary<ParameterExpression, Expression> replacements
-    ) : ExpressionVisitor
-    {
-        protected override Expression VisitParameter(ParameterExpression node)
-        {
-            return replacements.TryGetValue(node, out Expression? replacement)
-                ? replacement
-                : node;
         }
     }
 
