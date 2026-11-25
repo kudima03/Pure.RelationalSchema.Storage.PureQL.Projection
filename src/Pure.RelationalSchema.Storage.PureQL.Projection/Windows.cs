@@ -160,7 +160,7 @@ internal static class Windows
             : ModelNode.Optional(distance, "Months") is object months
                 ? Distance(months, PureQLRangeUnit.Months, scope)
             : Distance(
-                ModelNode.Child(distance, "Seconds"),
+                ModelNode.Unwrap(ModelNode.Child(distance, "Seconds")),
                 PureQLRangeUnit.Seconds,
                 scope
             ),
