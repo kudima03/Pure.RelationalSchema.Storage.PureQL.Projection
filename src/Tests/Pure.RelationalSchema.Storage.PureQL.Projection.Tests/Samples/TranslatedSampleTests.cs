@@ -17,69 +17,245 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
     // run in memory: they hold a function or a query operator of this library
     // (a window, a recursion, the string, math, time and conversion
     // functions), inline rows, or a shape of the BCL its translator does not
-    // know yet (string.Join, a DateOnly built from parts, the Max of an
-    // array, an ordered FirstOrDefault over a group, ...). A sample that leaves
+    // know yet (string.Join, a DateOnly built from parts or from a day number,
+    // DateOnly.ToDateTime, string.Normalize, the Max of an array, an ordered
+    // FirstOrDefault over a group, ...). A sample that leaves
     // this list when the provider learns its constructs fails the test, and
     // is removed from it.
     internal static readonly HashSet<string> Refused =
     [
+        "AbsentAndNullableOperandsQuery",
+        "AbsSignAndTruncateInATotalQuery",
         "AbsSignAndTruncateQuery",
         "ActivityTimelineQuery",
+        "AddedAmountsInAGroupedQuery",
+        "AddedAmountsInATotalQuery",
+        "AddingAndTakingTheDifferenceQuery",
         "AgeBandsQuery",
+        "AggregateEdgesOverAllRowsQuery",
+        "AggregatesOverExactValuesQuery",
         "AncestorsQuery",
+        "AsNullableOfEveryTypeQuery",
+        "AsStringOfEveryTypeQuery",
+        "AsStringOfOperatorResultsQuery",
+        "BlankValuesOfEveryTypeAsNullQuery",
         "CalendarOfDaysQuery",
+        "CircularMeanHourPerUserQuery",
+        "CodesMatchedByRegexQuery",
+        "ComputedKeysSelectorsAndDefaultsInWindowsQuery",
+        "ConcatAllInATotalQuery",
+        "ConcatAllNamesPerCountryQuery",
+        "ConcatAllNamesPerOrderFromASubqueryQuery",
         "ConcatAllPerTenantQuery",
+        "ConcatAllRepeatedOnEveryRowQuery",
+        "ConstantOperandsNeverNullableQuery",
+        "ContextsOfRecursiveStepsQuery",
+        "ConversionsInATotalQuery",
         "ConversionsQuery",
+        "CountDistinctInATotalQuery",
+        "CountDistinctOverWindowsQuery",
+        "CountDistinctSelectorKindsQuery",
+        "CouponEffectivenessPerCouponQuery",
         "CovarianceAndCorrelationPerTenantQuery",
         "DailyRevenueTrendQuery",
         "DatePartsQuery",
+        "DatesCombinedWithDatetimesQuery",
         "DatesFromPartsQuery",
+        "DatetimeZoneKindsQuery",
+        "DecimalRemainderCornersQuery",
+        "DecimalRemaindersInAGroupedQuery",
+        "DecimalRemaindersInATotalQuery",
         "DecimalRemaindersQuery",
+        "DeclaredOperatorTypesInGroupsQuery",
         "DescendantsQuery",
+        "DurationsInPartsQuery",
+        "EveryAggregateOverARangeQuery",
+        "EveryAggregateOverWindowsQuery",
+        "EveryOperatorSignatureInAGroupedSelectQuery",
+        "EveryOperatorSignatureInAPlainSelectQuery",
+        "EveryOperatorSignatureInATotalQuery",
         "ExplicitWideningQuery",
+        "FirstAndLastPerStatusOverAllRowsQuery",
         "FirstAndLastPerUserQuery",
+        "FixedWidthReportLinesQuery",
         "FoldCaseQuery",
+        "FrameOfEveryFormQuery",
+        "FromPartsInAGroupedQuery",
+        "FromPartsInATotalQuery",
+        "FromPartsOverWindowsQuery",
+        "GreatestAndLeastInATotalQuery",
+        "GreatestAndLeastOfEveryTypeQuery",
+        "GreatestAndLeastOverAggregatesQuery",
         "GreatestAndLeastQuery",
         "GroupByMonthQuery",
+        "GroupedQueryAtItsEdgesQuery",
+        "GroupedSortByColumnsAndExpressionsQuery",
+        "GroupingWithoutAccentsQuery",
+        "GrowthPerUserQuery",
+        "HierarchyWalkWithAggregatedStepsQuery",
         "HourAsAnAngleQuery",
         "InlineStatusRowsQuery",
+        "InOverEveryKindOfListQuery",
+        "JoinOnNormalizedSkuQuery",
+        "LastTwelveMonthsPerUserQuery",
+        "LatestOrderPerUserFromASubqueryQuery",
         "LiftedOverEveryOperandQuery",
+        "LineTotalsAfterCouponDiscountQuery",
         "LocalBusinessDayQuery",
+        "LocalDatesGroupedAndTotalledQuery",
+        "LocalDatesInEveryClauseQuery",
+        "LocalDayBucketsQuery",
+        "LocalInstantRoundTripsQuery",
+        "LocalInstantsInEveryClauseQuery",
+        "LocalInstantsInGroupedAndTotalQueriesQuery",
+        "LocalMonthIdentitiesQuery",
+        "LocalMonthKindsQuery",
+        "LocalMonthsInEveryClauseQuery",
+        "LocalMonthsInGroupedAndTotalQueriesQuery",
         "LocalMonthsQuery",
+        "LocalPartKindsQuery",
+        "LocalPartsInConditionsQuery",
+        "LocalPartsInEveryClauseQuery",
+        "LocalPartsInGroupedAndTotalQueriesQuery",
+        "LocalPeriodStartKindsQuery",
+        "LocalPeriodStartsInEveryClauseQuery",
+        "LocalPeriodStartsInGroupedAndTotalQueriesQuery",
         "LocalTimesAsInstantsQuery",
         "LocalWeekdayAndHourQuery",
+        "MatchingWithoutCaseOverJoinsQuery",
+        "MonthArithmeticOfLocalDatesQuery",
         "MonthsBetweenQuery",
         "MonthsInALocalCalendarQuery",
+        "MonthsWithoutOrdersFilledWithZeroQuery",
         "MovingAveragesQuery",
+        "NormalizeCornersQuery",
+        "NormalizeInATotalQuery",
+        "NormalizeMatchingOverJoinsQuery",
         "NormalizeQuery",
+        "NullableOperandsByRoleQuery",
+        "NullableRoleOperandsInAGroupedQuery",
+        "NullableRoleOperandsInATotalQuery",
+        "NumericFunctionCornersQuery",
+        "NumericFunctionsInEveryClauseQuery",
+        "OperandsReadFromDeclaredTypesQuery",
+        "OperatorsOverAListInEveryContextQuery",
+        "OperatorsWithAndWithoutAZoneQuery",
+        "OperatorTypingAtItsEdgesQuery",
+        "OrderLabelsOverJoinsQuery",
+        "OrdersActiveInAPeriodQuery",
+        "OrdersPerDayOfADatetimeQuery",
+        "OrdersPerListedStatusQuery",
+        "OrdersWithTaxFromAParameterRowQuery",
+        "PaddingAndJoiningCornersQuery",
+        "PaddingAndJoiningInATotalQuery",
         "PaddingAndJoiningQuery",
+        "PagedSetOperationInputsQuery",
+        "PairStatisticsInAGroupedQuery",
+        "PairStatisticsInATotalQuery",
+        "PairStatisticsOperandKindsQuery",
+        "PairStatisticsOverWindowsQuery",
         "PartitionTotalsQuery",
+        "PartsAndBackQuery",
+        "PartsLiftedOverEveryPartQuery",
+        "PathCountsPerDepthQuery",
+        "PowersAndLogarithmsCornersQuery",
+        "PowersAndLogarithmsInEveryClauseQuery",
         "PowersAndLogarithmsQuery",
         "PreviousAndNextOrderQuery",
+        "PriceDeviationPerProductQuery",
+        "PriceStatisticsPerProductQuery",
+        "RangeDistancesOverDatesQuery",
+        "RangeDistancesOverNumbersQuery",
         "RangeFramesQuery",
         "RankingQuery",
+        "ReadingTextInATotalQuery",
+        "ReadingTextOfEveryTypeQuery",
         "ReadingTextQuery",
+        "RecursiveColumnTypesQuery",
+        "RecursiveNextWithJoinsAndAliasesQuery",
+        "RecursiveSeedsOfEveryKindQuery",
+        "RecursiveSubqueryReadersQuery",
+        "RegressionInAGroupedQuery",
+        "RegressionInATotalQuery",
+        "RegressionOperandKindsQuery",
+        "RegressionOverWindowsQuery",
+        "RegularExpressionDialectQuery",
+        "RegularExpressionsInATotalQuery",
         "RegularExpressionsQuery",
+        "RemoveDiacriticsCornersQuery",
+        "RemoveDiacriticsInATotalQuery",
+        "RemoveDiacriticsMatchingOverJoinsQuery",
         "RemoveDiacriticsQuery",
+        "ReplacePositionSplitPartCornersQuery",
+        "ReplacePositionSplitPartInATotalQuery",
         "ReplacePositionSplitPartQuery",
+        "RoundedAverageAndQuotientPerTenantQuery",
+        "RoundedIntegersAsIntegerOperandsQuery",
+        "RoundHalfToEvenCornersQuery",
+        "RoundHalfToEvenInATotalQuery",
+        "RoundHalfToEvenOverWindowsQuery",
+        "RoundingDecimalResultsQuery",
+        "RoundingIntegersToTensAndHundredsQuery",
+        "RowCountsOfEverySetOperationQuery",
         "RowExpressionsInWindowsQuery",
         "RunningTotalOfDailySumsQuery",
         "RunningTotalsQuery",
+        "ScoresAgainstTheDistributionQuery",
+        "SortingBySelectWindowColumnsQuery",
+        "StandardDeviationByHandQuery",
+        "StatisticsForEveryTypeQuery",
+        "StatisticsFromAGroupedSubqueryQuery",
         "StatisticsPerStatusQuery",
+        "StreaksAndFirstValuesQuery",
         "StringLengthQuery",
         "StringMatchingQuery",
         "SubstringQuery",
         "TemporalAveragesPerUserQuery",
+        "TemporalMeansInATotalQuery",
+        "TemporalMeansOfComputedValuesQuery",
+        "TemporalMeansOverWindowsQuery",
+        "TemporalMeansWithPredicatesQuery",
+        "TextKeysJoinedToTypedKeysQuery",
         "TopOrdersPerTenantQuery",
+        "TotalQueryJoinedOnTrueQuery",
         "TreeInReadingOrderQuery",
         "TreeRollUpQuery",
+        "TrialsEndingWithinThreeDaysQuery",
+        "TrigonometricIdentitiesQuery",
+        "TrigonometryOverAggregatesInATotalQuery",
         "TrimQuery",
+        "TwoRecursiveSubqueriesQuery",
+        "UnparsedPostalCodesPerCountryQuery",
         "UpperLowerQuery",
+        "UsersPerEmailDomainByRegexQuery",
+        "UsersPerEmailDomainQuery",
         "WholeNumbersQuery",
+        "WidenedSeedColumnsOfARecursionQuery",
+        "WindowFunctionsByKindQuery",
+        "WindowsInEveryPositionQuery",
+        "WindowsKeyedByRowExpressionsQuery",
+        "WindowsOverNullableFieldsQuery",
+        "ZoneExpressionKindsQuery",
+        "ZoneFreeOperatorsInEveryClauseQuery",
+        "ZoneNameFormsQuery",
+    ];
+
+    // The samples whose result over the stored fixtures differs from the
+    // sample's because the provider reads a stored value wrong, each run by a
+    // skipped test of its own until the provider is fixed.
+    internal static readonly HashSet<string> MisreadByTheProvider =
+    [
+        "BlankValuesOfEveryTypeAsNullQuery",
     ];
 
     public static TheoryData<string> SamplesWithResult =>
-        SampleCatalogueTests.SamplesWithResult;
+        [
+            .. Sample
+                .All.Where(sample =>
+                    sample.Result is not null && !MisreadByTheProvider.Contains(sample.Name)
+                )
+                .Select(sample => sample.Name),
+        ];
 
     // Run through the provider of the stored tables: translated, or refused
     // with NotSupportedException and run in memory, as Execution says; a
@@ -127,9 +303,23 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         AssertRan(name, actual);
     }
 
+    // Refused, the query reads the users through the provider, which reads a
+    // time cell as HH:mm: Fay's user_edge_time 23:59:59 is 23:59:00
+    // (kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying#101).
+    [Fact(
+        Skip = "A stored time is read without its seconds: "
+            + "kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying#101"
+    )]
+    public void BlankValuesOfEveryTypeAsNullReturnsItsExpectedResultInMemory()
+    {
+        SampleReturnsItsExpectedResultTranslatedUnlessRefused(
+            "BlankValuesOfEveryTypeAsNullQuery"
+        );
+    }
+
     [Theory]
     [MemberData(nameof(SamplesWithParameters))]
-    public void SampleWithBoundParametersIsTranslated(string name)
+    public void SampleWithBoundParametersIsTranslatedUnlessRefused(string name)
     {
         PureQLProjection projection = new(
             _database.Datasets,
@@ -139,7 +329,6 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
 
         _ = projection.ToList();
 
-        Assert.Null(projection.FallbackReason);
-        Assert.Equal(QueryExecution.Translated, projection.Execution);
+        AssertRan(name, projection);
     }
 }

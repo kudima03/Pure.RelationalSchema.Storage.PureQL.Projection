@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A lifted operator over an operand that is itself a lifted operation or an
+  `if` held the operand twice, once checked for null and once read, so the
+  tree doubled at every level of nesting: thirty nested `round(add(…))` did
+  not finish building. The check and the value are now built from the
+  operand's parts, and a nested expression costs its length.
+- `previous` / `next` of a `boolean` whose operand and `default` are the
+  literals `true` and `false` failed to build (`ArgumentException`): the
+  conditional was simplified to its test, of type `bool` where the column is
+  `bool?`.
+
+### Changed
+
+- Tests run every sample of `PureQL.CSharp.Model.Samples`
+  0.1.0-preview.4.1.0, 386 queries (was 151 of 0.1.0-preview.4.0.0). The
+  provider refuses 214 of them (was 53) and 14 read no stored table (was 1);
+  `BlankValuesOfEveryTypeAsNullQuery` over the PostgreSQL fixtures is skipped
+  until the provider reads a stored time with its seconds
+  (kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying#101).
+
 ## [0.1.0-preview.7.0.0] — 2026-11-25
 
 Implements PureQL specification `0.1.0-preview.3.0.0` on

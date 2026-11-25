@@ -1,6 +1,7 @@
 using Pure.Primitives.Bool;
 using Pure.Primitives.Date;
 using Pure.Primitives.Number;
+using Pure.Primitives.Time;
 using Pure.RelationalSchema.Storage.Abstractions;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.ListParameter;
 using Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Parameter;
@@ -19,6 +20,11 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // memory and run through the provider of the fixtures' tables.
 public sealed class SampleCatalogueTests
 {
+    // A value for every parameter of every sample that has parameters, each
+    // of the one type the catalogue gives it. The list parameters of
+    // ListParametersThatMayBeEmptyQuery are bound to empty lists, the nullable
+    // filters of OptionalFiltersSwitchedOffByNullQuery to typed nulls: the
+    // case each is about.
     internal static readonly Dictionary<string, IParameter> Parameters = new()
     {
         ["min_age"] = new DecimalParameter(new Decimal(18m)),
@@ -37,6 +43,55 @@ public sealed class SampleCatalogueTests
         ["user_ids"] = new UuidListParameter([
             new Guid(new System.Guid("00000001-0000-0000-0000-000000000000")),
         ]),
+        ["fraction"] = new DecimalParameter(new Decimal(0.5m)),
+        ["group"] = new IntegerParameter(new Long(1)),
+        ["zone"] = new StringParameter(new String("Europe/Berlin")),
+        ["pattern"] = new StringParameter(new String("([a-z]+)")),
+        ["separator"] = new StringParameter(new String(", ")),
+        ["offset"] = new IntegerParameter(new Long(2)),
+        ["buckets"] = new IntegerParameter(new Long(3)),
+        ["page_size"] = new IntegerParameter(new Long(2)),
+        ["skipped_users"] = new IntegerParameter(new Long(1)),
+        ["user_id"] = new UuidParameter(
+            new Guid(new System.Guid("00000001-0000-0000-0000-000000000000"))
+        ),
+        ["status"] = new NullableStringParameter(),
+        ["placed_since"] = new NullableDateTimeParameter(),
+        ["tax_rate"] = new DecimalParameter(new Decimal(0.2m)),
+        ["as_of"] = new DateParameter(new Date(new DateOnly(2024, 3, 1))),
+        ["note"] = new StringParameter(new String("net of tax")),
+        ["counts"] = new IntegerListParameter([new Long(1), new Long(2)]),
+        ["round_totals"] = new DecimalListParameter([
+            new Decimal(100m),
+            new Decimal(250.5m),
+        ]),
+        ["use_integer"] = new BooleanParameter(new True()),
+        ["use_decimal"] = new BooleanParameter(new True()),
+        ["use_string"] = new BooleanParameter(new True()),
+        ["use_boolean"] = new BooleanParameter(new True()),
+        ["use_date"] = new BooleanParameter(new True()),
+        ["use_time"] = new BooleanParameter(new True()),
+        ["use_datetime"] = new BooleanParameter(new True()),
+        ["use_uuid"] = new BooleanParameter(new True()),
+        ["integers"] = new IntegerListParameter([]),
+        ["decimals"] = new DecimalListParameter([]),
+        ["strings"] = new StringListParameter([]),
+        ["booleans"] = new BooleanListParameter([]),
+        ["dates"] = new DateListParameter([]),
+        ["times"] = new TimeListParameter([]),
+        ["datetimes"] = new DateTimeListParameter([]),
+        ["uuids"] = new UuidListParameter([]),
+        ["amount"] = new NullableIntegerParameter(),
+        ["label"] = new StringParameter(new String("from parameters")),
+        ["flag"] = new BooleanParameter(new True()),
+        ["day"] = new DateParameter(new Date(new DateOnly(2024, 2, 29))),
+        ["at"] = new DateTimeParameter(
+            new DateTime(new Date(new DateOnly(2024, 2, 29)), new Time(new TimeOnly(12, 0)))
+        ),
+        ["time"] = new TimeParameter(new Time(new TimeOnly(23, 59, 59))),
+        ["id"] = new UuidParameter(
+            new Guid(new System.Guid("00000002-0000-0000-0000-000000000000"))
+        ),
     };
 
     public static TheoryData<string> SamplesWithResult =>
@@ -50,7 +105,20 @@ public sealed class SampleCatalogueTests
     // in memory: there is no provider to give them to.
     internal static readonly string[] ReadingNoStoredTable =
     [
+        "BisectionOfARateQuery",
+        "FoldCaseCornersQuery",
+        "FoldCaseInATotalQuery",
+        "GreatCircleDistanceQuery",
+        "GroupedNextOverTotalAndCombinedSeedsQuery",
+        "GroupingByNormalizedKeysQuery",
+        "GroupingWithoutCaseQuery",
+        "InlineRowsOfEveryCellTypeQuery",
+        "QuadrantsOfTwoInlineListsQuery",
         "RateOfReturnByIterationQuery",
+        "RoundAndTruncateKeepTheOperandTypeQuery",
+        "RoundedIntegersAcrossGroupedClausesQuery",
+        "RoundedIntegersFromSubqueriesQuery",
+        "WalkThatStopsAtACycleQuery",
     ];
 
     public static TheoryData<string> SamplesWithParameters =>
@@ -61,9 +129,9 @@ public sealed class SampleCatalogueTests
         ];
 
     [Fact]
-    public void CatalogueHoldsOneHundredFiftyOneSamples()
+    public void CatalogueHoldsThreeHundredEightySixSamples()
     {
-        Assert.Equal(151, Sample.All.Count);
+        Assert.Equal(386, Sample.All.Count);
     }
 
     [Theory]
@@ -171,6 +239,14 @@ public sealed class SampleCatalogueTests
         PureQLProjection projection = new(datasets, Sample.Named(name).Query, Parameters);
 
         Assert.Null(Record.Exception(() => projection.ToList()));
+
+        if (ReadingNoStoredTable.Contains(name))
+        {
+            Assert.Equal(QueryExecution.InMemory, projection.Execution);
+            Assert.Empty(provider.Queries);
+            return;
+        }
+
         Assert.Equal(QueryExecution.Translated, projection.Execution);
         Assert.All(
             datasets.SelectMany(dataset => dataset.Values).Cast<ProvidedTable>(),
