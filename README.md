@@ -105,7 +105,7 @@ The public static classes below hold what an operator of the specification is in
 | `PureQLWindows` | `Over(rows, partitionBy, orderBy, peers, frame, result)`: the window operator, over an `IQueryable` (what the tree holds) and over a plain sequence (what computes it) |
 | `PureQLWindow<TRow>` | what a window function reads for a row: `Row`, `Rows` (the rows of its frame), `RowNumber`, `Rank`, `DenseRank`, `PercentRank`, `CumulativeDistribution`, `Ntile(buckets)`, `Has(offset)`, `At(offset)` |
 | `PureQLFrame`, `PureQLRangeUnit` | the frame of a window: `Partition`, `Rows(preceding, following)`, `Range(descending, preceding, unit, following, unit)`; `null` is every row on that side |
-| `PureQLRecursion` | `Recursive(seed, next, maxDepth)`: the operator of a recursive subquery, in the same two forms |
+| `PureQLRecursion` | `Recursive(seed, next, maxDepth)`: the operator of a recursive subquery, in the same two forms, and a third over a plain sequence whose `next` takes each level as an `IQueryable`, which LINQ to Objects runs the tree's form with when the tree is run as it is over an `EnumerableQuery` |
 
 ### Parameters
 
