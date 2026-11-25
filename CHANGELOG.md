@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.0-preview.7.0.0] — 2026-11-25
+
 Implements PureQL specification `0.1.0-preview.3.0.0` on
 `PureQL.CSharp.Model` `0.1.0-preview.15.0.0` (was specification
 `0.1.0-preview.2.0.1` on model `0.1.0-preview.13.0.0`; the model releases
