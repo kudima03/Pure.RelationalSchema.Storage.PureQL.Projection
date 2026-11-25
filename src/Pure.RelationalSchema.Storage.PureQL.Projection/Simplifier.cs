@@ -244,9 +244,10 @@ internal sealed class Simplifier : ExpressionVisitor
     {
         return IsConstant(node.Test, true) ? node.IfTrue
             : IsConstant(node.Test, false) ? node.IfFalse
-            : IsConstant(node.IfTrue, true) && IsConstant(node.IfFalse, false) ? node.Test
+            : IsConstant(node.IfTrue, true) && IsConstant(node.IfFalse, false)
+                ? Typed.As(node.Test, node.Type)
             : IsConstant(node.IfTrue, false) && IsConstant(node.IfFalse, true)
-                ? Not(node.Test)
+                ? Typed.As(Not(node.Test), node.Type)
             : node;
     }
 

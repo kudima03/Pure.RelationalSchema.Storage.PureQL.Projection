@@ -119,6 +119,40 @@ public sealed class PreviousNextTests
         );
     }
 
+    // A boolean read from the row before, or the default where there is none,
+    // is the boolean column it is declared: true and false do not fold it
+    // into the test of whether there is a row before (that test is not the
+    // column's type).
+    [Fact]
+    public void PreviousOfTrueWithTheDefaultFalseIsWhetherThereIsARowBefore()
+    {
+        Assert.Equal(
+            ["False", "True", "False", "True", "True", "True"],
+            Values(
+                new PreviousBooleanProjection(
+                    new LiteralBoolean(true),
+                    new LiteralBoolean(false),
+                    PerUserById
+                )
+            )
+        );
+    }
+
+    [Fact]
+    public void NextOfFalseWithTheDefaultTrueIsWhetherThereIsNoRowAfter()
+    {
+        Assert.Equal(
+            ["False", "False", "False", "False", "True", "True"],
+            Values(
+                new NextBooleanProjection(
+                    new LiteralBoolean(false),
+                    new LiteralBoolean(true),
+                    PerUserById
+                )
+            )
+        );
+    }
+
     [Fact]
     public void PreviousWithALiteralOffsetReadsThatManyRowsBefore()
     {

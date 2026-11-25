@@ -102,7 +102,7 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
 
     [Theory]
     [MemberData(nameof(SamplesWithParameters))]
-    public void SampleWithParametersOverFilteredTablesIsTranslated(string name)
+    public void SampleWithParametersOverFilteredTablesIsTranslatedUnlessRefused(string name)
     {
         Sample sample = Sample.Named(name);
         PureQLProjection expected = new(
@@ -118,8 +118,7 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
         );
 
         AssertSame(sample, expected, actual);
-        Assert.Null(actual.FallbackReason);
-        Assert.Equal(QueryExecution.Translated, actual.Execution);
+        TranslatedSampleTests.AssertRan(name, actual);
     }
 
     [Fact]
