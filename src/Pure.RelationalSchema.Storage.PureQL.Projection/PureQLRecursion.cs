@@ -12,7 +12,8 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection;
 // operator it comes in two forms: over an IQueryable with a quoted lambda,
 // which is what the tree holds and a provider translates (SQL's WITH
 // RECURSIVE, or one statement per level when next groups), and over a plain
-// sequence, which computes it.
+// sequence, which computes it (and a third, which LINQ to Objects runs the
+// tree's form with).
 public static class PureQLRecursion
 {
     private static readonly MethodInfo QueryableRecursive = typeof(PureQLRecursion)
@@ -41,6 +42,27 @@ public static class PureQLRecursion
 
     public static IEnumerable<T> Recursive<T>(
         this IEnumerable<T> seed,
+        Func<IEnumerable<T>, IEnumerable<T>> next,
+        long maxDepth
+    )
+    {
+        return Levels(seed, next, maxDepth);
+    }
+
+    // The form LINQ to Objects runs the tree's form with, when the tree is
+    // run as it is over an EnumerableQuery (AsQueryable): there next keeps
+    // its query parameter, and is given each level as a query over it.
+    public static IEnumerable<T> Recursive<T>(
+        this IEnumerable<T> seed,
+        Func<IQueryable<T>, IEnumerable<T>> next,
+        long maxDepth
+    )
+    {
+        return Levels(seed, level => next(level.AsQueryable()), maxDepth);
+    }
+
+    private static List<T> Levels<T>(
+        IEnumerable<T> seed,
         Func<IEnumerable<T>, IEnumerable<T>> next,
         long maxDepth
     )
