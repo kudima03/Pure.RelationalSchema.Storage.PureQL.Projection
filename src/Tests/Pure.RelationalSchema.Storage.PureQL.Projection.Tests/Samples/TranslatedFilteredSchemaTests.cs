@@ -15,7 +15,9 @@ namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 // PostgreSQL is still one SQL statement, run by the provider of the tables:
 // the conditions are part of it, each at the scan of its table, and the
 // result is the one the same query gives over the same tables, filtered the
-// same way, held in memory. The fixture's tables are filtered as a host
+// same way, held in memory. A sample the provider refuses
+// (TranslatedSampleTests.Refused) runs in memory over the filtered tables
+// and gives that result too. The fixture's tables are filtered as a host
 // would filter them for a user: the users of one tenant, the orders that
 // are not cancelled, the products in stock and the order items of more than
 // one unit; the employees are not filtered. Needs Docker.
@@ -85,7 +87,7 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
 
     [Theory]
     [MemberData(nameof(SamplesWithResult))]
-    public void SampleOverFilteredTablesIsTranslatedAndReturnsTheFilteredResult(
+    public void SampleOverFilteredTablesReturnsTheFilteredResultTranslatedUnlessRefused(
         string name
     )
     {
@@ -95,8 +97,7 @@ public sealed class TranslatedFilteredSchemaTests(PostgreSqlDatabase database)
         PureQLProjection actual = new(Filtered(_database.Datasets), sample.Query);
 
         AssertSame(sample, expected, actual);
-        Assert.Null(actual.FallbackReason);
-        Assert.Equal(QueryExecution.Translated, actual.Execution);
+        TranslatedSampleTests.AssertRan(name, actual);
     }
 
     [Theory]
