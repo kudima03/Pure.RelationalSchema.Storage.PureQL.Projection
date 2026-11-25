@@ -1,4 +1,5 @@
 using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
+using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 
 namespace Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Samples;
 
@@ -13,40 +14,34 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
     private readonly PostgreSqlDatabase _database = database;
 
     // The samples Pure.RelationalSchema.Storage.PostgreSQL.Querying
-    // 0.1.0-preview.0.10.0 refuses with NotSupportedException, so that they
+    // 0.1.0-preview.0.12.0 (translator Linq.Expressions.Translation.PostgreSql
+    // 0.1.0-preview.0.10.0) refuses with NotSupportedException, so that they
     // run in memory: they hold a function or a query operator of this library
-    // (a window, a recursion, the string, math, time and conversion
-    // functions), inline rows, or a shape of the BCL its translator does not
-    // know yet (string.Join, a DateOnly built from parts or from a day number,
-    // DateOnly.ToDateTime, string.Normalize, the Max of an array, an ordered
-    // FirstOrDefault over a group, ...). A sample that leaves
-    // this list when the provider learns its constructs fails the test, and
-    // is removed from it.
+    // (a window, a recursion, the string, math, time, conversion and
+    // statistics functions), the Min of uuids, which PostgreSQL orders
+    // otherwise than .NET, or a shape of the BCL its translator does not know
+    // yet (an int conversion of a Math.Min, ...). A sample that leaves this
+    // list when the provider learns its constructs fails the test, and is
+    // removed from it.
     internal static readonly HashSet<string> Refused =
     [
         "AbsentAndNullableOperandsQuery",
         "AbsSignAndTruncateInATotalQuery",
         "AbsSignAndTruncateQuery",
-        "ActivityTimelineQuery",
         "AddedAmountsInAGroupedQuery",
-        "AddedAmountsInATotalQuery",
         "AddingAndTakingTheDifferenceQuery",
         "AgeBandsQuery",
-        "AggregateEdgesOverAllRowsQuery",
         "AggregatesOverExactValuesQuery",
         "AncestorsQuery",
         "AsNullableOfEveryTypeQuery",
         "AsStringOfEveryTypeQuery",
         "AsStringOfOperatorResultsQuery",
         "BlankValuesOfEveryTypeAsNullQuery",
-        "CalendarOfDaysQuery",
         "CircularMeanHourPerUserQuery",
         "CodesMatchedByRegexQuery",
         "ComputedKeysSelectorsAndDefaultsInWindowsQuery",
         "ConcatAllInATotalQuery",
         "ConcatAllNamesPerCountryQuery",
-        "ConcatAllNamesPerOrderFromASubqueryQuery",
-        "ConcatAllPerTenantQuery",
         "ConcatAllRepeatedOnEveryRowQuery",
         "ConstantOperandsNeverNullableQuery",
         "ContextsOfRecursiveStepsQuery",
@@ -55,12 +50,9 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "CountDistinctInATotalQuery",
         "CountDistinctOverWindowsQuery",
         "CountDistinctSelectorKindsQuery",
-        "CouponEffectivenessPerCouponQuery",
         "CovarianceAndCorrelationPerTenantQuery",
         "DailyRevenueTrendQuery",
         "DatePartsQuery",
-        "DatesCombinedWithDatetimesQuery",
-        "DatesFromPartsQuery",
         "DatetimeZoneKindsQuery",
         "DecimalRemainderCornersQuery",
         "DecimalRemaindersInAGroupedQuery",
@@ -75,32 +67,23 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "EveryOperatorSignatureInAPlainSelectQuery",
         "EveryOperatorSignatureInATotalQuery",
         "ExplicitWideningQuery",
-        "FirstAndLastPerStatusOverAllRowsQuery",
-        "FirstAndLastPerUserQuery",
         "FixedWidthReportLinesQuery",
         "FoldCaseQuery",
         "FrameOfEveryFormQuery",
         "FromPartsInAGroupedQuery",
         "FromPartsInATotalQuery",
         "FromPartsOverWindowsQuery",
-        "GreatestAndLeastInATotalQuery",
         "GreatestAndLeastOfEveryTypeQuery",
         "GreatestAndLeastOverAggregatesQuery",
-        "GreatestAndLeastQuery",
         "GroupByMonthQuery",
-        "GroupedQueryAtItsEdgesQuery",
         "GroupedSortByColumnsAndExpressionsQuery",
         "GroupingWithoutAccentsQuery",
         "GrowthPerUserQuery",
         "HierarchyWalkWithAggregatedStepsQuery",
         "HourAsAnAngleQuery",
-        "InlineStatusRowsQuery",
-        "InOverEveryKindOfListQuery",
         "JoinOnNormalizedSkuQuery",
         "LastTwelveMonthsPerUserQuery",
-        "LatestOrderPerUserFromASubqueryQuery",
         "LiftedOverEveryOperandQuery",
-        "LineTotalsAfterCouponDiscountQuery",
         "LocalBusinessDayQuery",
         "LocalDatesGroupedAndTotalledQuery",
         "LocalDatesInEveryClauseQuery",
@@ -126,7 +109,6 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "MonthArithmeticOfLocalDatesQuery",
         "MonthsBetweenQuery",
         "MonthsInALocalCalendarQuery",
-        "MonthsWithoutOrdersFilledWithZeroQuery",
         "MovingAveragesQuery",
         "NormalizeCornersQuery",
         "NormalizeInATotalQuery",
@@ -137,15 +119,10 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "NullableRoleOperandsInATotalQuery",
         "NumericFunctionCornersQuery",
         "NumericFunctionsInEveryClauseQuery",
-        "OperandsReadFromDeclaredTypesQuery",
         "OperatorsOverAListInEveryContextQuery",
         "OperatorsWithAndWithoutAZoneQuery",
-        "OperatorTypingAtItsEdgesQuery",
         "OrderLabelsOverJoinsQuery",
-        "OrdersActiveInAPeriodQuery",
         "OrdersPerDayOfADatetimeQuery",
-        "OrdersPerListedStatusQuery",
-        "OrdersWithTaxFromAParameterRowQuery",
         "PaddingAndJoiningCornersQuery",
         "PaddingAndJoiningInATotalQuery",
         "PaddingAndJoiningQuery",
@@ -196,7 +173,6 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "RoundHalfToEvenOverWindowsQuery",
         "RoundingDecimalResultsQuery",
         "RoundingIntegersToTensAndHundredsQuery",
-        "RowCountsOfEverySetOperationQuery",
         "RowExpressionsInWindowsQuery",
         "RunningTotalOfDailySumsQuery",
         "RunningTotalsQuery",
@@ -217,10 +193,8 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "TemporalMeansWithPredicatesQuery",
         "TextKeysJoinedToTypedKeysQuery",
         "TopOrdersPerTenantQuery",
-        "TotalQueryJoinedOnTrueQuery",
         "TreeInReadingOrderQuery",
         "TreeRollUpQuery",
-        "TrialsEndingWithinThreeDaysQuery",
         "TrigonometricIdentitiesQuery",
         "TrigonometryOverAggregatesInATotalQuery",
         "TrimQuery",
@@ -240,22 +214,8 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         "ZoneNameFormsQuery",
     ];
 
-    // The samples whose result over the stored fixtures differs from the
-    // sample's because the provider reads a stored value wrong, each run by a
-    // skipped test of its own until the provider is fixed.
-    internal static readonly HashSet<string> MisreadByTheProvider =
-    [
-        "BlankValuesOfEveryTypeAsNullQuery",
-    ];
-
     public static TheoryData<string> SamplesWithResult =>
-        [
-            .. Sample
-                .All.Where(sample =>
-                    sample.Result is not null && !MisreadByTheProvider.Contains(sample.Name)
-                )
-                .Select(sample => sample.Name),
-        ];
+        SampleCatalogueTests.SamplesWithResult;
 
     // Run through the provider of the stored tables: translated, or refused
     // with NotSupportedException and run in memory, as Execution says; a
@@ -303,32 +263,39 @@ public sealed class TranslatedSampleTests(PostgreSqlDatabase database)
         AssertRan(name, actual);
     }
 
-    // Refused, the query reads the users through the provider, which reads a
-    // time cell as HH:mm: Fay's user_edge_time 23:59:59 is 23:59:00
-    // (kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying#101).
-    [Fact(
-        Skip = "A stored time is read without its seconds: "
-            + "kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying#101"
-    )]
-    public void BlankValuesOfEveryTypeAsNullReturnsItsExpectedResultInMemory()
-    {
-        SampleReturnsItsExpectedResultTranslatedUnlessRefused(
-            "BlankValuesOfEveryTypeAsNullQuery"
-        );
-    }
-
+    // The catalogue gives no result for a sample with parameters: over the
+    // stored fixtures, it returns what it returns over the same fixtures held
+    // in memory, with the same values bound.
     [Theory]
     [MemberData(nameof(SamplesWithParameters))]
-    public void SampleWithBoundParametersIsTranslatedUnlessRefused(string name)
+    public void SampleWithBoundParametersReturnsTheInMemoryResultTranslatedUnlessRefused(
+        string name
+    )
     {
-        PureQLProjection projection = new(
+        Sample sample = Sample.Named(name);
+        ExpectedTable expected = new(
+            new PureQLProjection(
+                [new SchemaDataSetWithForeignKeys(), new AuditSchemaDataSet()],
+                sample.Query,
+                SampleCatalogueTests.Parameters
+            )
+        );
+
+        PureQLProjection actual = new(
             _database.Datasets,
-            Sample.Named(name).Query,
+            sample.Query,
             SampleCatalogueTests.Parameters
         );
 
-        _ = projection.ToList();
+        if (sample.IsOrdered)
+        {
+            expected.AssertOrdered(actual);
+        }
+        else
+        {
+            expected.AssertUnordered(actual);
+        }
 
-        AssertRan(name, projection);
+        AssertRan(name, actual);
     }
 }

@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Tests run the samples over PostgreSQL with
+  `Pure.RelationalSchema.Storage.PostgreSQL.Querying` 0.1.0-preview.0.12.0
+  and its translator, `Linq.Expressions.Translation.PostgreSql`
+  0.1.0-preview.0.10.0 (was 0.1.0-preview.0.10.0 with a direct reference to
+  the translator 0.1.0-preview.0.9.0, now dropped). The provider refuses 187
+  of the 386 samples (was 214): the 27 it now translates (`string.Join` of
+  `concatAll`, an ordered `FirstOrDefault` of `first` / `last`, dates from
+  parts, `greatest` / `least`, inline rows, …) return their expected result
+  in one SQL statement. `BlankValuesOfEveryTypeAsNullQuery` is no longer
+  skipped over PostgreSQL: the provider reads a stored time with its seconds
+  (kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying#101). A sample
+  with parameters, which has no expected result, is compared over PostgreSQL
+  with its result over the same fixtures in memory.
+
 ## [0.1.0-preview.7.0.1] — 2026-11-25
 
 ### Fixed
