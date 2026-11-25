@@ -100,7 +100,10 @@ internal sealed class RecordingProvider(
         yield break;
     }
 
-    // A provided table is its rows, as LINQ to Objects queries them.
+    // A provided table is its rows, as LINQ to Objects queries them, and a
+    // decimal +, -, * and / is computed as the specification defines it
+    // (PureQLMath), as a store with exact decimals computes it, rather than
+    // with System.Decimal's rounding to 29 digits.
     private sealed class InMemory : ExpressionVisitor
     {
         protected override Expression VisitConstant(ConstantExpression node)
@@ -108,6 +111,30 @@ internal sealed class RecordingProvider(
             return node.Value is ProvidedTable table
                 ? Expression.Constant(table.Rows.AsQueryable(), typeof(IQueryable<IRow>))
                 : node;
+        }
+
+        protected override Expression VisitBinary(BinaryExpression node)
+        {
+            Expression left = Visit(node.Left);
+            Expression right = Visit(node.Right);
+            string? name =
+                (Nullable.GetUnderlyingType(left.Type) ?? left.Type) != typeof(decimal)
+                    ? null
+                : node.NodeType == ExpressionType.Add ? nameof(PureQLMath.Add)
+                : node.NodeType == ExpressionType.Subtract ? nameof(PureQLMath.Subtract)
+                : node.NodeType == ExpressionType.Multiply ? nameof(PureQLMath.Multiply)
+                : node.NodeType == ExpressionType.Divide ? nameof(PureQLMath.Divide)
+                : null;
+
+            return name is null
+                ? node.Update(left, node.Conversion, right)
+                : Expression.MakeBinary(
+                    node.NodeType,
+                    left,
+                    right,
+                    node.IsLiftedToNull,
+                    typeof(PureQLMath).GetMethod(name, [typeof(decimal), typeof(decimal)])
+                );
         }
     }
 

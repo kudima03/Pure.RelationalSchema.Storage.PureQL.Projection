@@ -1,3 +1,4 @@
+using Pure.Primitives.Bool;
 using Pure.Primitives.Date;
 using Pure.Primitives.Number;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -7,6 +8,7 @@ using Pure.RelationalSchema.Storage.PureQL.Projection.Tests.Data;
 using Pure.RelationalSchema.Storage.Samples.SchemaDataSets;
 using DateTime = Pure.Primitives.DateTime.DateTime;
 using Decimal = Pure.Primitives.Number.Decimal;
+using Guid = Pure.Primitives.Guid.Guid;
 using IParameter = Pure.RelationalSchema.Storage.PureQL.Projection.Parameters.Abstractions.Parameter.IParameter;
 using String = Pure.Primitives.String.String;
 
@@ -30,6 +32,11 @@ public sealed class SampleCatalogueTests
         ["since"] = new DateTimeParameter(
             new DateTime(new Date(new DateOnly(2024, 1, 1)))
         ),
+        ["filter_by_status"] = new BooleanParameter(new True()),
+        ["filter_by_user"] = new BooleanParameter(new False()),
+        ["user_ids"] = new UuidListParameter([
+            new Guid(new System.Guid("00000001-0000-0000-0000-000000000000")),
+        ]),
     };
 
     public static TheoryData<string> SamplesWithResult =>
@@ -39,6 +46,13 @@ public sealed class SampleCatalogueTests
                 .Select(sample => sample.Name),
         ];
 
+    // The samples that read no stored table (only inline rows), and so run
+    // in memory: there is no provider to give them to.
+    internal static readonly string[] ReadingNoStoredTable =
+    [
+        "RateOfReturnByIterationQuery",
+    ];
+
     public static TheoryData<string> SamplesWithParameters =>
         [
             .. Sample
@@ -47,9 +61,9 @@ public sealed class SampleCatalogueTests
         ];
 
     [Fact]
-    public void CatalogueHoldsEightySixSamples()
+    public void CatalogueHoldsOneHundredFiftyOneSamples()
     {
-        Assert.Equal(86, Sample.All.Count);
+        Assert.Equal(151, Sample.All.Count);
     }
 
     [Theory]
@@ -125,6 +139,14 @@ public sealed class SampleCatalogueTests
         else
         {
             expected.AssertUnordered(actual);
+        }
+
+        if (ReadingNoStoredTable.Contains(name))
+        {
+            Assert.Equal(QueryExecution.InMemory, actual.Execution);
+            Assert.Null(actual.FallbackReason);
+            Assert.Empty(provider.Queries);
+            return;
         }
 
         Assert.Equal(QueryExecution.Translated, actual.Execution);
