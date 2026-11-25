@@ -424,7 +424,8 @@ internal sealed class Simplifier : ExpressionVisitor
     }
 
     // The value of an expression over constants, computed now. Computing it
-    // may fail (an overflow, a division by zero, a date out of range); the
+    // may fail (an overflow, a division by zero, a date out of range, a null
+    // literal the check of a lifted operator keeps it from reading); the
     // expression is then kept, to fail the query when it runs.
     private static Expression Fold(Expression node)
     {
@@ -472,6 +473,12 @@ internal sealed class Simplifier : ExpressionVisitor
         }
         catch (TimeZoneNotFoundException)
         {
+            return node;
+        }
+        catch (NullReferenceException)
+        {
+            // An operation over a null literal that a lifted operator's
+            // check around it never reaches.
             return node;
         }
     }
