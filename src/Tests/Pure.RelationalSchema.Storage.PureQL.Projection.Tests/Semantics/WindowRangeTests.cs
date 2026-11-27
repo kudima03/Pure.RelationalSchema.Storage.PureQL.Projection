@@ -157,6 +157,8 @@ public sealed class WindowRangeTests
 
     private static readonly DistanceDateMonths OneMonth = new(1L);
 
+    private const decimal AlmostThreeQuarters = 0.7499999999999999999999999999m;
+
     [Fact]
     public void IntegerPrecedingReachesThatFarBelowTheCurrentKeyBothBoundsIncluded()
     {
@@ -451,6 +453,67 @@ public sealed class WindowRangeTests
             DecimalSums(
                 new RangeDecimal(preceding: new LiteralDecimal(0.5m)),
                 SortDirection.Desc
+            )
+        );
+    }
+
+    // A distance is never computed into a bound (Window evaluation): a key
+    // just beyond a distance of 28 significant digits is outside the window,
+    // although the bound key -/+ distance needs 29 digits, which rounding to
+    // 28 would move onto that key (#293). 2.25 - 0.7499999999999999999999999999
+    // is 1.5000000000000000000000000001, so the rows of 1.5 are outside;
+    // 1.5 + 0.7499999999999999999999999999 is 2.2499999999999999999999999999,
+    // so the row of 2.25 is outside.
+    [Fact(
+        Skip = "Bug #293: a decimal range bound key -/+ distance is rounded to 28 "
+            + "digits onto the next key, which the window then takes in"
+    )]
+    public void DecimalPrecedingJustBelowAKeyLeavesThatKeyOutside()
+    {
+        Assert.Equal(
+            ["1", "7", "7", "14", "24", "32", "64"],
+            DecimalSums(new RangeDecimal(preceding: new LiteralDecimal(AlmostThreeQuarters)))
+        );
+    }
+
+    [Fact(
+        Skip = "Bug #293: a decimal range bound key -/+ distance is rounded to 28 "
+            + "digits onto the next key, which the window then takes in"
+    )]
+    public void DecimalFollowingJustBelowAKeyLeavesThatKeyOutside()
+    {
+        Assert.Equal(
+            ["7", "14", "14", "24", "16", "32", "64"],
+            DecimalSums(new RangeDecimal(following: new LiteralDecimal(AlmostThreeQuarters)))
+        );
+    }
+
+    [Fact(
+        Skip = "Bug #293: a decimal range bound key -/+ distance is rounded to 28 "
+            + "digits onto the next key, which the window then takes in"
+    )]
+    public void DecimalDescendingPrecedingJustBelowAKeyLeavesThatKeyOutside()
+    {
+        Assert.Equal(
+            ["7", "14", "14", "24", "16", "32", "64"],
+            DecimalSums(
+                new RangeDecimal(preceding: new LiteralDecimal(AlmostThreeQuarters)),
+                SortDirection.Desc
+            )
+        );
+    }
+
+    [Fact(
+        Skip = "Bug #293: a decimal range bound key -/+ distance is rounded to 28 "
+            + "digits onto the next key, which the window then takes in"
+    )]
+    public void DecimalParameterDistanceJustBelowAKeyLeavesThatKeyOutside()
+    {
+        Assert.Equal(
+            ["1", "7", "7", "14", "24", "32", "64"],
+            DecimalSums(
+                new RangeDecimal(preceding: new ParamDecimal("distance")),
+                parameters: Exact("0.7499999999999999999999999999")
             )
         );
     }
